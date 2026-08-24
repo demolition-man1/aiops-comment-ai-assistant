@@ -51,3 +51,11 @@ export function uploadFile<T>(url: string, formData: FormData) {
     timeout: 300000
   })
 }
+
+export function downloadFile(url: string, params?: Record<string, unknown>) {
+  return http.get<Blob, Blob>(url, {
+    params,
+    responseType: 'blob',
+    timeout: 300000
+  })
+}

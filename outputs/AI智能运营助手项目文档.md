@@ -471,9 +471,11 @@ client
 1. 用户点击任务中心，前端调用 /api/tasks。
 2. Spring Boot 聚合 biz_analysis_task、biz_crawl_task 和 biz_sync_execution，生成统一任务视图。
 3. 用户可按任务类型、状态和关键词筛选，也可查看详情或重试历史任务。
-4. 用户点击数据报表，前端调用 /api/reports。
-5. Spring Boot 聚合首页概览、评论趋势、情感分布、问题分布和商品排行。
-6. 前端通过 ECharts 和表格展示全局运营复盘数据。
+4. 用户点击导出 CSV 时，前端调用 /api/tasks/export，后端复用相同筛选条件导出完整任务记录。
+5. 用户点击数据报表，前端调用 /api/reports。
+6. Spring Boot 优先读取 Redis 报表缓存，缓存不存在时聚合首页概览、评论趋势、情感分布、问题分布和商品排行。
+7. 前端通过 ECharts 和表格展示全局运营复盘数据。
+8. 用户点击报表导出时，前端调用 /api/reports/export，后端导出 UTF-8 BOM CSV，方便 Excel 打开。
 ```
 
 ## 7. 功能模块
@@ -599,7 +601,10 @@ client
 
 - 统一任务中心聚合 CSV 导入、爬虫导入、评论分析和定时同步执行记录。
 - 支持按任务类型、状态和关键词筛选，支持任务详情查看和重试。
+- 支持任务记录 CSV 导出，导出内容与当前筛选条件一致，便于排查失败任务和项目汇报。
 - 数据报表中心展示全局概览、评论趋势、情感分布、差评问题分布和商品排行。
+- 数据报表支持 Redis 缓存，减少首页报表、趋势分布和商品排行的重复聚合查询。
+- 支持全局运营报表 CSV 导出，包含概览指标、趋势、情感分布、问题分布和商品排行。
 - 顶部快捷按钮分别进入独立页面，而不是页面内锚点或占位按钮。
 
 ## 8. 数据库设计
@@ -782,6 +787,9 @@ CSV 原文件不建议直接存入 MySQL，建议存入阿里云 OSS，MySQL 只
 | ai:content:{hash} | text | AI 文案缓存 |
 | ai:compare:product:{leftProductId}:{rightProductId} | JSON | 商品对比报告缓存 |
 | ai:translation:comment:{commentId}:{language} | JSON | 单条评论翻译结果缓存 |
+| report:overview | JSON | 全局报表总览缓存，默认 10 分钟 |
+| report:distributions | JSON | 全局报表统计分布缓存，默认 10 分钟 |
+| report:product-rank:{limit} | JSON | 商品排行缓存，默认 10 分钟 |
 | rate:ai:user:{userId} | number / bucket | 用户 AI 调用限流标识，当前由 Bucket4j 执行令牌桶算法 |
 | hot:keywords:product:{productId} | JSON | 商品高频关键词缓存 |
 

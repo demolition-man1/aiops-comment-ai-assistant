@@ -10,4 +10,6 @@ public interface TaskCenterService {
     TaskRecordVO getTask(String recordKey);
 
     TaskVO retryTask(String recordKey);
+
+    byte[] exportTasksCsv(String taskType, String taskStatus, String keyword);
 }

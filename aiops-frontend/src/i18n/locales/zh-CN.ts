@@ -245,16 +245,19 @@ export default {
     target: '目标',
     errorMessage: '错误信息',
     retry: '重试',
+    exportCsv: '导出 CSV',
     detail: '任务详情',
     recordKey: '任务标识',
     sourceTable: '来源表',
     startTime: '开始时间',
     endTime: '结束时间',
-    retryCreated: '已创建重试任务'
+    retryCreated: '已创建重试任务',
+    exported: '任务 CSV 已导出'
   },
   reports: {
     title: '数据报表',
     subtitle: '聚合评论趋势、情感分布和商品排行，用于运营复盘',
+    exportCsv: '导出 CSV',
     productHint: '全量商品池',
     commentHint: '评论挖掘样本',
     scoreHint: '整体满意度参考',
@@ -268,7 +271,8 @@ export default {
     topRatedCount: '高评分商品数',
     hotProducts: '热门商品排行',
     highRiskProducts: '高风险商品排行',
-    topRatedProducts: '高评分商品排行'
+    topRatedProducts: '高评分商品排行',
+    exported: '报表 CSV 已导出'
   },
   compare: {
     title: '商品 A / B 对比',

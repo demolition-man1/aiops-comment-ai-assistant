@@ -128,4 +128,7 @@ test('scheduled sync task center and reports pages render labels through i18n', 
   assert.ok(!syncCenterView.includes('定时同步中心'))
   assert.ok(!taskCenterView.includes('统一任务中心'))
   assert.ok(!reportsView.includes('数据报表中心'))
+  assert.ok(zh.includes('exportCsv:'))
+  assert.ok(en.includes('exportCsv:'))
+  assert.ok(pt.includes('exportCsv:'))
 })

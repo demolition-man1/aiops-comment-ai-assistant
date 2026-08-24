@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import type { EChartsOption } from 'echarts'
+import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { BarChart3, MessageSquareWarning, RefreshCw, ShoppingBag, Star } from 'lucide-vue-next'
+import { BarChart3, Download, MessageSquareWarning, RefreshCw, ShoppingBag, Star } from 'lucide-vue-next'
 
 import { reportApi } from '@/api/modules'
-import type { DashboardData, Product, ReportOverview } from '@/api/types'
+import type { DashboardData, ProductRank, ReportOverview } from '@/api/types'
 import ChartPanel from '@/components/ChartPanel.vue'
 import MetricCard from '@/components/MetricCard.vue'
+import { saveBlob } from '@/utils/download'
 import { formatPercent } from '@/utils/metricFormat'
 
 const { t } = useI18n()
 const loading = ref(false)
+const exporting = ref(false)
 const overview = reactive<ReportOverview>({
   productCount: 0,
   sellerCount: 0,
@@ -37,7 +40,7 @@ const distributions = ref<DashboardData>({
   trendDistribution: []
 })
 
-const ranks = reactive<Record<string, Product[]>>({
+const ranks = reactive<ProductRank>({
   hotProducts: [],
   highRiskProducts: [],
   topRatedProducts: []
@@ -71,6 +74,17 @@ const loadData = async () => {
     ranks.topRatedProducts = rankData.topRatedProducts || []
   } finally {
     loading.value = false
+  }
+}
+
+const exportReport = async () => {
+  exporting.value = true
+  try {
+    const blob = await reportApi.exportCsv()
+    saveBlob(blob, `aiops-report-${Date.now()}.csv`)
+    ElMessage.success(t('reports.exported'))
+  } finally {
+    exporting.value = false
   }
 }
 
@@ -148,10 +162,16 @@ onMounted(loadData)
         <h2 class="section-title">{{ t('reports.title') }}</h2>
         <span class="muted">{{ t('reports.subtitle') }}</span>
       </div>
-      <el-button type="primary" @click="loadData">
-        <RefreshCw :size="16" />
-        {{ t('common.refresh') }}
-      </el-button>
+      <div class="toolbar-actions">
+        <el-button :loading="exporting" @click="exportReport">
+          <Download :size="16" />
+          {{ t('reports.exportCsv') }}
+        </el-button>
+        <el-button type="primary" @click="loadData">
+          <RefreshCw :size="16" />
+          {{ t('common.refresh') }}
+        </el-button>
+      </div>
     </div>
 
     <div class="grid metrics">

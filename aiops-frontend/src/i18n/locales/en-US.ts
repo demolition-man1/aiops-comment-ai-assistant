@@ -245,16 +245,19 @@ export default {
     target: 'Target',
     errorMessage: 'Error Message',
     retry: 'Retry',
+    exportCsv: 'Export CSV',
     detail: 'Task Details',
     recordKey: 'Record Key',
     sourceTable: 'Source Table',
     startTime: 'Start Time',
     endTime: 'End Time',
-    retryCreated: 'Retry task created'
+    retryCreated: 'Retry task created',
+    exported: 'Task CSV exported'
   },
   reports: {
     title: 'Data Reports',
     subtitle: 'Aggregate review trends, sentiment distribution, and product rankings for operations reviews',
+    exportCsv: 'Export CSV',
     productHint: 'Full product pool',
     commentHint: 'Review mining sample',
     scoreHint: 'Overall satisfaction reference',
@@ -268,7 +271,8 @@ export default {
     topRatedCount: 'Top-rated Products',
     hotProducts: 'Hot Product Ranking',
     highRiskProducts: 'High-risk Product Ranking',
-    topRatedProducts: 'Top-rated Product Ranking'
+    topRatedProducts: 'Top-rated Product Ranking',
+    exported: 'Report CSV exported'
   },
   compare: {
     title: 'Product A / B Comparison',

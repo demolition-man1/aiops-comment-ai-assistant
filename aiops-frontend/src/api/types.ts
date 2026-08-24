@@ -71,6 +71,12 @@ export interface Product {
   negativeRate?: number
 }
 
+export interface ProductRank {
+  hotProducts: Product[]
+  highRiskProducts: Product[]
+  topRatedProducts: Product[]
+}
+
 export interface Comment {
   id: number
   reviewId?: string

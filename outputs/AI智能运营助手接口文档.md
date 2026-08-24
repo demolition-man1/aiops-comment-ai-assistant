@@ -1518,6 +1518,30 @@ Body 同“创建同步配置”。
 
 返回新创建任务的 `TaskVO`，字段同“查询导入任务详情”。
 
+## 导出任务 CSV
+
+**Path：** /api/tasks/export
+
+**Method：** GET
+
+**接口描述：** 按当前任务筛选条件导出统一任务中心记录。导出内容复用 `/api/tasks` 的筛选逻辑，但不分页，返回 UTF-8 BOM CSV 文件，便于 Excel 直接打开。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| taskType | 否 | comment_analysis | csv_import / crawler_import / comment_analysis / scheduled_sync |
+| taskStatus | 否 | success | pending / processing / success / failed |
+| keyword | 否 | product_id | 搜索任务名称、目标或错误信息 |
+
+### 返回数据
+
+Content-Type：`text/csv;charset=UTF-8`
+
+Content-Disposition：`attachment; filename="aiops-tasks.csv"`
+
+CSV 字段：`recordKey, taskName, taskType, taskStatus, progress, targetType, targetId, sourceTable, errorMessage, startTime, endTime, createTime`
+
 # 数据报表相关接口
 
 ## 查询报表总览
@@ -1528,7 +1552,7 @@ Body 同“创建同步配置”。
 
 **Method：** GET
 
-**接口描述：** 返回全局运营指标、评论趋势、情感分布、差评问题分布和核心商品排行。
+**接口描述：** 返回全局运营指标、评论趋势、情感分布、差评问题分布和核心商品排行。该接口结果写入 Redis，默认缓存 10 分钟，缓存键为 `report:overview`。
 
 ### 返回数据
 
@@ -1560,7 +1584,7 @@ Body 同“创建同步配置”。
 
 **Method：** GET
 
-**接口描述：** 返回评分、情感、类目、差评问题和关键词分布。
+**接口描述：** 返回评分、情感、类目、差评问题和关键词分布。该接口结果写入 Redis，默认缓存 10 分钟，缓存键为 `report:distributions`。
 
 ## 查询商品排行
 
@@ -1575,6 +1599,32 @@ Body 同“创建同步配置”。
 | 参数名称 | 是否必须 | 示例 | 备注 |
 |---|---|---|---|
 | limit | 否 | 10 | 每个榜单返回数量，最大 50 |
+
+### 返回数据
+
+| 名称 | 类型 | 备注 |
+|---|---|---|
+| hotProducts | array | 热门商品排行 |
+| highRiskProducts | array | 高风险商品排行 |
+| topRatedProducts | array | 高评分商品排行 |
+
+该接口结果写入 Redis，默认缓存 10 分钟，缓存键为 `report:product-rank:{limit}`。
+
+## 导出报表 CSV
+
+**Path：** /api/reports/export
+
+**Method：** GET
+
+**接口描述：** 导出全局运营总览、评论趋势、情感分布、差评问题分布和商品排行。导出数据优先复用 `/api/reports/overview` 的 Redis 缓存，返回 UTF-8 BOM CSV 文件。
+
+### 返回数据
+
+Content-Type：`text/csv;charset=UTF-8`
+
+Content-Disposition：`attachment; filename="aiops-report.csv"`
+
+CSV 分区：`[Overview]`、`[Trend]`、`[Sentiment]`、`[Problem]`、`[Hot Products]`、`[High Risk Products]`、`[Top Rated Products]`
 
 # 数据看板相关接口
 

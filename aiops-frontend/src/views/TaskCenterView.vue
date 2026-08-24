@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { Eye, RefreshCw, RotateCcw, Search } from 'lucide-vue-next'
+import { Download, Eye, RefreshCw, RotateCcw, Search } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { taskCenterApi } from '@/api/modules'
 import type { TaskRecord } from '@/api/types'
+import { saveBlob } from '@/utils/download'
 
 const { t } = useI18n()
 const loading = ref(false)
+const exporting = ref(false)
 const retryingKey = ref('')
 const drawerVisible = ref(false)
 const selectedTask = ref<TaskRecord>()
@@ -85,6 +87,21 @@ const retryTask = async (row: TaskRecord) => {
   }
 }
 
+const exportTasks = async () => {
+  exporting.value = true
+  try {
+    const blob = await taskCenterApi.exportCsv({
+      taskType: filters.taskType || undefined,
+      taskStatus: filters.taskStatus || undefined,
+      keyword: filters.keyword || undefined
+    })
+    saveBlob(blob, `aiops-tasks-${Date.now()}.csv`)
+    ElMessage.success(t('tasks.exported'))
+  } finally {
+    exporting.value = false
+  }
+}
+
 onMounted(loadTasks)
 </script>
 
@@ -95,10 +112,16 @@ onMounted(loadTasks)
         <h2 class="section-title">{{ t('tasks.title') }}</h2>
         <span class="muted">{{ t('tasks.subtitle') }}</span>
       </div>
-      <el-button @click="loadTasks">
-        <RefreshCw :size="16" />
-        {{ t('common.refresh') }}
-      </el-button>
+      <div class="toolbar-actions">
+        <el-button :loading="exporting" @click="exportTasks">
+          <Download :size="16" />
+          {{ t('tasks.exportCsv') }}
+        </el-button>
+        <el-button @click="loadTasks">
+          <RefreshCw :size="16" />
+          {{ t('common.refresh') }}
+        </el-button>
+      </div>
     </div>
 
     <div class="panel">

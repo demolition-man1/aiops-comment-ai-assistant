@@ -1,4 +1,4 @@
-import { http, uploadFile } from './http'
+import { downloadFile, http, uploadFile } from './http'
 import type {
   AiContent,
   AnalysisResult,
@@ -14,6 +14,7 @@ import type {
   PageResult,
   Product,
   ProductCompareReport,
+  ProductRank,
   ReportOverview,
   SyncConfig,
   SyncExecution,
@@ -100,7 +101,8 @@ export const syncApi = {
 export const taskCenterApi = {
   page: (params: Record<string, unknown>) => http.get<PageResult<TaskRecord>, PageResult<TaskRecord>>('/tasks', { params }),
   detail: (recordKey: string) => http.get<TaskRecord, TaskRecord>(`/tasks/${encodeURIComponent(recordKey)}`),
-  retry: (recordKey: string) => http.post<Task, Task>(`/tasks/${encodeURIComponent(recordKey)}/retry`)
+  retry: (recordKey: string) => http.post<Task, Task>(`/tasks/${encodeURIComponent(recordKey)}/retry`),
+  exportCsv: (params: Record<string, unknown>) => downloadFile('/tasks/export', params)
 }
 
 export const reportApi = {
@@ -108,7 +110,8 @@ export const reportApi = {
   trends: () => http.get<ReportOverview['trendDistribution'], ReportOverview['trendDistribution']>('/reports/trends'),
   distributions: () => http.get<DashboardData, DashboardData>('/reports/distributions'),
   productRank: (params: Record<string, unknown>) =>
-    http.get<Record<string, Product[]>, Record<string, Product[]>>('/reports/product-rank', { params })
+    http.get<ProductRank, ProductRank>('/reports/product-rank', { params }),
+  exportCsv: () => downloadFile('/reports/export')
 }
 
 export const aiApi = {

@@ -8,6 +8,8 @@ const dataImportView = await readFile(new URL('../src/views/DataImportView.vue',
 const syncCenterView = await readFile(new URL('../src/views/SyncCenterView.vue', import.meta.url), 'utf8')
 const taskCenterView = await readFile(new URL('../src/views/TaskCenterView.vue', import.meta.url), 'utf8')
 const reportsView = await readFile(new URL('../src/views/ReportsView.vue', import.meta.url), 'utf8')
+const apiModules = await readFile(new URL('../src/api/modules.ts', import.meta.url), 'utf8')
+const httpClient = await readFile(new URL('../src/api/http.ts', import.meta.url), 'utf8')
 
 test('sidebar actionable entries use router routes instead of placeholders', () => {
   assert.ok(!layout.includes('href="javascript:void(0)"'))
@@ -45,6 +47,17 @@ test('topbar action buttons are wired to visible destinations', () => {
   assert.match(syncCenterView, /syncApi/)
   assert.match(taskCenterView, /taskCenterApi/)
   assert.match(reportsView, /reportApi/)
+})
+
+test('task center and report pages expose csv export downloads', () => {
+  assert.match(apiModules, /downloadFile/)
+  assert.match(apiModules, /taskCenterApi[\s\S]*exportCsv/)
+  assert.match(apiModules, /reportApi[\s\S]*exportCsv/)
+  assert.match(httpClient, /responseType:\s*'blob'/)
+  assert.match(taskCenterView, /taskCenterApi\.exportCsv/)
+  assert.match(reportsView, /reportApi\.exportCsv/)
+  assert.match(taskCenterView, /tasks\.exportCsv/)
+  assert.match(reportsView, /reports\.exportCsv/)
 })
 
 test('csv files are selected first and uploaded only when import starts', () => {

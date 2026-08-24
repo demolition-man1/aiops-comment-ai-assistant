@@ -3,20 +3,22 @@ package com.aiops.controller;
 import com.aiops.result.Result;
 import com.aiops.service.ReportService;
 import com.aiops.vo.DashboardVO;
-import com.aiops.vo.ProductVO;
+import com.aiops.vo.ProductRankVO;
 import com.aiops.vo.ReportOverviewVO;
 import com.aiops.vo.TrendItemVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/reports")
@@ -46,8 +48,18 @@ public class ReportController {
 
     @GetMapping("/product-rank")
     @Operation(summary = "商品排行", description = "返回热门商品、高风险商品和高评分商品列表")
-    public Result<Map<String, List<ProductVO>>> productRank(
+    public Result<ProductRankVO> productRank(
             @Parameter(description = "排行数量") @RequestParam(defaultValue = "10") Integer limit) {
         return Result.success(reportService.productRank(limit));
+    }
+
+    @GetMapping(value = "/export", produces = "text/csv;charset=UTF-8")
+    @Operation(summary = "导出报表 CSV", description = "导出全局运营总览、趋势、分布和商品排行，适合 Excel 打开")
+    public ResponseEntity<byte[]> exportOverview() {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"aiops-report.csv\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(reportService.exportOverviewCsv());
     }
 }

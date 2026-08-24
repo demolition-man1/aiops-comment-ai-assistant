@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -51,23 +52,7 @@ public class TaskCenterServiceImpl implements TaskCenterService {
     @Override
     public PageResult<TaskRecordVO> pageTasks(Integer pageNum, Integer pageSize, String taskType,
                                               String taskStatus, String keyword) {
-        List<TaskRecordVO> tasks = new ArrayList<>();
-        analysisTaskMapper.selectList(new LambdaQueryWrapper<BizAnalysisTask>().orderByDesc(BizAnalysisTask::getCreateTime))
-                .forEach(task -> tasks.add(toAnalysisRecord(task)));
-        crawlTaskMapper.selectList(new LambdaQueryWrapper<BizCrawlTask>().orderByDesc(BizCrawlTask::getCreateTime))
-                .forEach(task -> tasks.add(toCrawlerRecord(task)));
-        syncExecutionMapper.selectList(new LambdaQueryWrapper<BizSyncExecution>().orderByDesc(BizSyncExecution::getCreateTime))
-                .forEach(task -> tasks.add(toSyncRecord(task)));
-
-        List<TaskRecordVO> filtered = tasks.stream()
-                .filter(task -> !hasText(taskType) || taskType.equals(task.getTaskType()))
-                .filter(task -> !hasText(taskStatus) || taskStatus.equals(task.getTaskStatus()))
-                .filter(task -> !hasText(keyword) || containsKeyword(task, keyword))
-                .sorted(Comparator.comparing(TaskRecordVO::getCreateTime,
-                                Comparator.nullsLast(Comparator.naturalOrder()))
-                        .reversed())
-                .toList();
-
+        List<TaskRecordVO> filtered = filteredTasks(taskType, taskStatus, keyword);
         int currentPage = normalizePageNum(pageNum);
         int currentSize = normalizePageSize(pageSize);
         int fromIndex = Math.min((currentPage - 1) * currentSize, filtered.size());
@@ -124,6 +109,19 @@ public class TaskCenterServiceImpl implements TaskCenterService {
         throw new BusinessException(400, "任务标识格式错误");
     }
 
+    @Override
+    public byte[] exportTasksCsv(String taskType, String taskStatus, String keyword) {
+        StringBuilder builder = new StringBuilder();
+        appendLine(builder, "recordKey", "taskName", "taskType", "taskStatus", "progress", "targetType",
+                "targetId", "sourceTable", "errorMessage", "startTime", "endTime", "createTime");
+        for (TaskRecordVO task : filteredTasks(taskType, taskStatus, keyword)) {
+            appendLine(builder, task.getRecordKey(), task.getTaskName(), task.getTaskType(), task.getTaskStatus(),
+                    task.getProgress(), task.getTargetType(), task.getTargetId(), task.getSourceTable(),
+                    task.getErrorMessage(), task.getStartTime(), task.getEndTime(), task.getCreateTime());
+        }
+        return ("\uFEFF" + builder).getBytes(StandardCharsets.UTF_8);
+    }
+
     private TaskVO retryAnalysisTask(Long taskId) {
         BizAnalysisTask task = analysisTaskMapper.selectById(taskId);
         if (task == null) {
@@ -160,6 +158,28 @@ public class TaskCenterServiceImpl implements TaskCenterService {
             throw new BusinessException(404, "同步执行记录不存在");
         }
         return execution.getConfigId();
+    }
+
+    private List<TaskRecordVO> filteredTasks(String taskType, String taskStatus, String keyword) {
+        return collectTaskRecords().stream()
+                .filter(task -> !hasText(taskType) || taskType.equals(task.getTaskType()))
+                .filter(task -> !hasText(taskStatus) || taskStatus.equals(task.getTaskStatus()))
+                .filter(task -> !hasText(keyword) || containsKeyword(task, keyword.trim()))
+                .sorted(Comparator.comparing(TaskRecordVO::getCreateTime,
+                                Comparator.nullsLast(Comparator.naturalOrder()))
+                        .reversed())
+                .toList();
+    }
+
+    private List<TaskRecordVO> collectTaskRecords() {
+        List<TaskRecordVO> tasks = new ArrayList<>();
+        analysisTaskMapper.selectList(new LambdaQueryWrapper<BizAnalysisTask>().orderByDesc(BizAnalysisTask::getCreateTime))
+                .forEach(task -> tasks.add(toAnalysisRecord(task)));
+        crawlTaskMapper.selectList(new LambdaQueryWrapper<BizCrawlTask>().orderByDesc(BizCrawlTask::getCreateTime))
+                .forEach(task -> tasks.add(toCrawlerRecord(task)));
+        syncExecutionMapper.selectList(new LambdaQueryWrapper<BizSyncExecution>().orderByDesc(BizSyncExecution::getCreateTime))
+                .forEach(task -> tasks.add(toSyncRecord(task)));
+        return tasks;
     }
 
     private TaskRecordVO toAnalysisRecord(BizAnalysisTask task) {
@@ -247,5 +267,26 @@ public class TaskCenterServiceImpl implements TaskCenterService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private void appendLine(StringBuilder builder, Object... values) {
+        for (int index = 0; index < values.length; index++) {
+            if (index > 0) {
+                builder.append(',');
+            }
+            builder.append(csvValue(values[index]));
+        }
+        builder.append('\n');
+    }
+
+    private String csvValue(Object value) {
+        if (value == null) {
+            return "";
+        }
+        String text = String.valueOf(value);
+        if (text.contains(",") || text.contains("\"") || text.contains("\n") || text.contains("\r")) {
+            return "\"" + text.replace("\"", "\"\"") + "\"";
+        }
+        return text;
     }
 }

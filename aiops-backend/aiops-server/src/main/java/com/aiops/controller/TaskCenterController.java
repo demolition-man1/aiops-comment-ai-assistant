@@ -9,6 +9,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,6 +36,19 @@ public class TaskCenterController {
             @Parameter(description = "任务状态") @RequestParam(required = false) String taskStatus,
             @Parameter(description = "关键词") @RequestParam(required = false) String keyword) {
         return Result.success(taskCenterService.pageTasks(pageNum, pageSize, taskType, taskStatus, keyword));
+    }
+
+    @GetMapping(value = "/export", produces = "text/csv;charset=UTF-8")
+    @Operation(summary = "导出任务 CSV", description = "按当前任务筛选条件导出导入、爬虫、分析和定时同步记录")
+    public ResponseEntity<byte[]> exportTasks(
+            @Parameter(description = "任务类型") @RequestParam(required = false) String taskType,
+            @Parameter(description = "任务状态") @RequestParam(required = false) String taskStatus,
+            @Parameter(description = "关键词") @RequestParam(required = false) String keyword) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"aiops-tasks.csv\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(taskCenterService.exportTasksCsv(taskType, taskStatus, keyword));
     }
 
     @GetMapping("/{recordKey}")

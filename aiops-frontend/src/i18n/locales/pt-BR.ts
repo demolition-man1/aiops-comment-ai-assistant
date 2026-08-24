@@ -245,16 +245,19 @@ export default {
     target: 'Alvo',
     errorMessage: 'Mensagem de erro',
     retry: 'Tentar novamente',
+    exportCsv: 'Exportar CSV',
     detail: 'Detalhes da tarefa',
     recordKey: 'Identificador',
     sourceTable: 'Tabela de origem',
     startTime: 'Início',
     endTime: 'Fim',
-    retryCreated: 'Tarefa de repetição criada'
+    retryCreated: 'Tarefa de repetição criada',
+    exported: 'CSV de tarefas exportado'
   },
   reports: {
     title: 'Relatórios',
     subtitle: 'Agregue tendências, sentimentos e rankings de produtos para revisão operacional',
+    exportCsv: 'Exportar CSV',
     productHint: 'Base total de produtos',
     commentHint: 'Amostra de mineração de avaliações',
     scoreHint: 'Referência geral de satisfação',
@@ -268,7 +271,8 @@ export default {
     topRatedCount: 'Produtos bem avaliados',
     hotProducts: 'Ranking de produtos populares',
     highRiskProducts: 'Ranking de produtos de risco',
-    topRatedProducts: 'Ranking de produtos bem avaliados'
+    topRatedProducts: 'Ranking de produtos bem avaliados',
+    exported: 'CSV de relatório exportado'
   },
   compare: {
     title: 'Comparação de Produtos A / B',
