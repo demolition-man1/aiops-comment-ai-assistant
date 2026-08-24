@@ -1,6 +1,8 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
+import { i18n } from '@/i18n'
+
 import type { ApiResult } from './types'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
@@ -25,14 +27,14 @@ http.interceptors.response.use(
       if (result.code === 200) {
         return result.data as never
       }
-      const message = result.msg || '请求失败'
+      const message = result.msg || i18n.global.t('common.requestFailed')
       ElMessage.error(message)
       return Promise.reject(new Error(message))
     }
     return response.data
   },
   (error) => {
-    const message = error?.response?.data?.msg || error?.message || '网络请求失败'
+    const message = error?.response?.data?.msg || error?.message || i18n.global.t('common.networkFailed')
     if (error?.response?.status === 401) {
       localStorage.removeItem('aiops_token')
       localStorage.removeItem('aiops_user')

@@ -9,6 +9,7 @@ import {
 } from 'lucide-vue-next'
 import type { EChartsOption } from 'echarts'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { dashboardApi, productApi, commentApi } from '@/api/modules'
 import type { Comment, DashboardData, Overview, Product } from '@/api/types'
@@ -16,6 +17,7 @@ import ChartPanel from '@/components/ChartPanel.vue'
 import MetricCard from '@/components/MetricCard.vue'
 import { formatPercent, toProgressPercent } from '@/utils/metricFormat'
 
+const { t } = useI18n()
 const loading = ref(false)
 const overview = reactive<Overview>({
   productCount: 0,
@@ -27,6 +29,18 @@ const overview = reactive<Overview>({
 const dashboard = ref<DashboardData>()
 const products = ref<Product[]>([])
 const negativeComments = ref<Comment[]>([])
+const sentimentTypes = new Set(['positive', 'neutral', 'negative'])
+const problemTypes = new Set(['quality', 'logistics', 'price', 'service', 'size', 'other', 'unclassified', 'pending'])
+
+const displaySentiment = (value?: string) => {
+  const key = value?.trim()
+  return key && sentimentTypes.has(key) ? t(`enums.sentiment.${key}`) : key || t('common.unknown')
+}
+
+const displayProblemType = (value?: string) => {
+  const key = value?.trim()
+  return key && problemTypes.has(key) ? t(`enums.problemType.${key}`) : key || t('enums.problemType.pending')
+}
 
 const loadData = async () => {
   loading.value = true
@@ -59,7 +73,7 @@ const sentimentOption = computed<EChartsOption>(() => ({
       radius: ['48%', '72%'],
       center: ['50%', '45%'],
       data: (dashboard.value?.sentimentDistribution || []).map((item) => ({
-        name: item.name,
+        name: displaySentiment(item.name),
         value: item.count
       }))
     }
@@ -74,18 +88,18 @@ const trendOption = computed<EChartsOption>(() => ({
     data: (dashboard.value?.trendDistribution || []).map((item) => item.timeBucket)
   },
   yAxis: [
-    { type: 'value', name: '评论数' },
-    { type: 'value', name: '负面率', axisLabel: { formatter: '{value}%' } }
+    { type: 'value', name: t('dashboard.chart.commentCount') },
+    { type: 'value', name: t('dashboard.chart.negativeRate'), axisLabel: { formatter: '{value}%' } }
   ],
   series: [
     {
-      name: '评论数',
+      name: t('dashboard.chart.commentCount'),
       type: 'bar',
       data: (dashboard.value?.trendDistribution || []).map((item) => item.commentCount),
       itemStyle: { color: '#2563eb' }
     },
     {
-      name: '负面率',
+      name: t('dashboard.chart.negativeRate'),
       type: 'line',
       yAxisIndex: 1,
       smooth: true,
@@ -106,7 +120,7 @@ const keywordOption = computed<EChartsOption>(() => ({
   },
   series: [
     {
-      name: '出现次数',
+      name: t('dashboard.chart.occurrenceCount'),
       type: 'bar',
       data: (dashboard.value?.negativeKeywordRank || []).map((item) => item.count),
       itemStyle: { color: '#f59e0b' }
@@ -121,59 +135,64 @@ onMounted(loadData)
   <section class="page" v-loading="loading">
     <div class="toolbar">
       <div>
-        <h2 class="section-title">今日运营概览</h2>
-        <span class="muted">汇总商品、评论、评分和负面风险指标</span>
+        <h2 class="section-title">{{ t('dashboard.title') }}</h2>
+        <span class="muted">{{ t('dashboard.subtitle') }}</span>
       </div>
       <el-button type="primary" @click="loadData">
         <RefreshCw :size="16" />
-        刷新数据
+        {{ t('dashboard.refreshData') }}
       </el-button>
     </div>
 
     <div class="grid metrics">
-      <MetricCard title="商品数量" :value="overview.productCount" hint="已导入商品总数" tone="blue">
+      <MetricCard :title="t('dashboard.productCount')" :value="overview.productCount" :hint="t('dashboard.importedProducts')" tone="blue">
         <Boxes :size="22" />
       </MetricCard>
-      <MetricCard title="商家数量" :value="overview.sellerCount" hint="Olist 数据商家覆盖" tone="green">
+      <MetricCard :title="t('dashboard.sellerCount')" :value="overview.sellerCount" :hint="t('dashboard.sellerCoverage')" tone="green">
         <ShoppingBag :size="22" />
       </MetricCard>
-      <MetricCard title="评论总量" :value="overview.commentCount" hint="可用于评论挖掘的数据" tone="amber">
+      <MetricCard :title="t('dashboard.commentTotal')" :value="overview.commentCount" :hint="t('dashboard.availableComments')" tone="amber">
         <MessageSquareWarning :size="22" />
       </MetricCard>
-      <MetricCard title="平均评分" :value="Number(overview.avgScore || 0).toFixed(2)" :hint="`负面占比 ${formatPercent(overview.negativeRate)}`" tone="red">
+      <MetricCard
+        :title="t('common.avgScore')"
+        :value="Number(overview.avgScore || 0).toFixed(2)"
+        :hint="t('dashboard.negativeRateHint', { rate: formatPercent(overview.negativeRate) })"
+        tone="red"
+      >
         <Star :size="22" />
       </MetricCard>
     </div>
 
     <div class="grid two section-gap">
-      <ChartPanel title="评论趋势与负面率" :option="trendOption" :height="320" />
-      <ChartPanel title="情感分布" :option="sentimentOption" :height="320" />
+      <ChartPanel :title="t('dashboard.trendTitle')" :option="trendOption" :height="320" />
+      <ChartPanel :title="t('dashboard.sentimentTitle')" :option="sentimentOption" :height="320" />
     </div>
 
     <div class="grid two section-gap">
-      <ChartPanel title="差评高频词" :option="keywordOption" :height="310" />
+      <ChartPanel :title="t('dashboard.negativeKeywordsTitle')" :option="keywordOption" :height="310" />
 
       <div class="panel">
         <div class="status-line">
-          <div class="panel-title">近期负面评论</div>
+          <div class="panel-title">{{ t('dashboard.recentNegative') }}</div>
           <el-tag type="danger" effect="plain">
             <AlertTriangle :size="14" />
-            风险关注
+            {{ t('dashboard.riskFocus') }}
           </el-tag>
         </div>
         <el-table :data="negativeComments" height="260" size="small">
-          <el-table-column prop="productId" label="商品ID" width="130" show-overflow-tooltip />
-          <el-table-column prop="reviewScore" label="评分" width="70" />
-          <el-table-column label="问题类型" width="110">
+          <el-table-column prop="productId" :label="t('common.productId')" width="130" show-overflow-tooltip />
+          <el-table-column prop="reviewScore" :label="t('common.score')" width="70" />
+          <el-table-column :label="t('dashboard.problemType')" width="110">
             <template #default="{ row }">
               <el-tag type="warning" effect="plain">
-                {{ row.effectiveProblemType || row.systemProblemType || '待识别' }}
+                {{ displayProblemType(row.effectiveProblemType || row.systemProblemType) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="评论内容">
+          <el-table-column :label="t('dashboard.reviewContent')">
             <template #default="{ row }">
-              <span class="comment-cell">{{ row.cleanContent || row.reviewContent || row.reviewTitle || '-' }}</span>
+              <span class="comment-cell">{{ row.cleanContent || row.reviewContent || row.reviewTitle || t('common.dash') }}</span>
             </template>
           </el-table-column>
         </el-table>
@@ -181,13 +200,13 @@ onMounted(loadData)
     </div>
 
     <div class="panel section-gap">
-      <div class="panel-title">商品风险速览</div>
+      <div class="panel-title">{{ t('dashboard.productRiskOverview') }}</div>
       <el-table :data="products" size="small">
-        <el-table-column prop="productId" label="商品ID" min-width="220" show-overflow-tooltip />
-        <el-table-column prop="categoryName" label="类目" width="160" show-overflow-tooltip />
-        <el-table-column prop="reviewCount" label="评论数" width="100" />
-        <el-table-column prop="avgScore" label="平均评分" width="110" />
-        <el-table-column label="负面占比" width="140">
+        <el-table-column prop="productId" :label="t('common.productId')" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="categoryName" :label="t('common.category')" width="160" show-overflow-tooltip />
+        <el-table-column prop="reviewCount" :label="t('common.commentCount')" width="100" />
+        <el-table-column prop="avgScore" :label="t('common.avgScore')" width="110" />
+        <el-table-column :label="t('common.negativeRate')" width="140">
           <template #default="{ row }">
             <el-progress :percentage="toProgressPercent(row.negativeRate)" :stroke-width="8" :show-text="false" />
             <span class="muted">{{ formatPercent(row.negativeRate) }}</span>
