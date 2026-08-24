@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 
 const layout = await readFile(new URL('../src/layouts/MainLayout.vue', import.meta.url), 'utf8')
 const router = await readFile(new URL('../src/router/index.ts', import.meta.url), 'utf8')
+const dataImportView = await readFile(new URL('../src/views/DataImportView.vue', import.meta.url), 'utf8')
 
 test('sidebar actionable entries use router routes instead of placeholders', () => {
   assert.ok(!layout.includes('href="javascript:void(0)"'))
@@ -33,4 +34,12 @@ test('topbar action buttons are wired to visible destinations', () => {
   assert.match(layout, /@click="goTaskCenter"/)
   assert.match(layout, /@click="goDataReports"/)
   assert.match(layout, /#task-center/)
+})
+
+test('csv files are selected first and uploaded only when import starts', () => {
+  assert.match(dataImportView, /:auto-upload="false"/)
+  assert.doesNotMatch(dataImportView, /:http-request="uploadCsv"/)
+  assert.match(dataImportView, /selectedFile/)
+  assert.match(dataImportView, /uploadSelectedCsv/)
+  assert.match(dataImportView, /await uploadSelectedCsv\(\)/)
 })

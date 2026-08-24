@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Database, FileUp, Globe2, Play, ShieldCheck } from 'lucide-vue-next'
-import { ElMessage, type UploadRequestOptions } from 'element-plus'
+import { ElMessage, type UploadFile } from 'element-plus'
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -12,6 +12,7 @@ const uploadLoading = ref(false)
 const importLoading = ref(false)
 const crawlerLoading = ref(false)
 const uploaded = ref<FileUploadResult>()
+const selectedFile = ref<File>()
 const csvTask = ref<Task>()
 const crawlerTask = ref<Task>()
 const stopCsvPolling = ref<(() => void) | null>(null)
@@ -32,29 +33,47 @@ const crawlerForm = reactive({
   remark: ''
 })
 
-const uploadCsv = async (options: UploadRequestOptions) => {
+const selectCsvFile = (file: UploadFile) => {
+  selectedFile.value = file.raw
+  uploaded.value = undefined
+}
+
+const removeCsvFile = () => {
+  selectedFile.value = undefined
+  uploaded.value = undefined
+}
+
+const uploadSelectedCsv = async () => {
+  if (!selectedFile.value) {
+    return uploaded.value
+  }
+
   uploadLoading.value = true
   try {
-    uploaded.value = await fileApi.uploadCsv(options.file as File)
+    uploaded.value = await fileApi.uploadCsv(selectedFile.value)
     ElMessage.success(t('importCenter.uploadSuccess'))
+    return uploaded.value
   } finally {
     uploadLoading.value = false
   }
 }
 
 const startCsvImport = async () => {
-  if (!uploaded.value && !csvForm.dataPath.trim()) {
+  if (!selectedFile.value && !uploaded.value && !csvForm.dataPath.trim()) {
     ElMessage.warning(t('importCenter.uploadRequired'))
     return
   }
 
   importLoading.value = true
   try {
-    const dataPath = uploaded.value ? undefined : csvForm.dataPath.trim() || undefined
+    const uploadResult = selectedFile.value && !uploaded.value
+      ? await uploadSelectedCsv()
+      : uploaded.value
+    const dataPath = uploadResult ? undefined : csvForm.dataPath.trim() || undefined
     csvTask.value = await dataImportApi.importCsv({
-      fileId: uploaded.value?.fileId,
-      objectKey: uploaded.value?.objectKey,
-      fileUrl: uploaded.value?.fileUrl,
+      fileId: uploadResult?.fileId,
+      objectKey: uploadResult?.objectKey,
+      fileUrl: uploadResult?.fileUrl,
       dataPath,
       dataSource: csvForm.dataSource,
       importMode: csvForm.importMode
@@ -142,10 +161,13 @@ const crawlerProgress = computed(() => Number(crawlerTask.value?.progress || 0))
 
         <el-upload
           drag
-          :http-request="uploadCsv"
+          action="#"
+          :auto-upload="false"
           :show-file-list="true"
           accept=".csv"
           :limit="1"
+          :on-change="selectCsvFile"
+          :on-remove="removeCsvFile"
         >
           <el-icon class="el-icon--upload"><FileUp /></el-icon>
           <div class="el-upload__text">{{ t('importCenter.uploadHint') }}</div>
@@ -173,9 +195,9 @@ const crawlerProgress = computed(() => Number(crawlerTask.value?.progress || 0))
           </el-form-item>
         </el-form>
 
-        <div v-if="uploaded" class="insight-block">
-          <strong>{{ uploaded.originalName }}</strong>
-          <p class="muted">{{ t('importCenter.ossKey', { key: uploaded.objectKey }) }}</p>
+        <div v-if="uploaded || selectedFile" class="insight-block">
+          <strong>{{ uploaded?.originalName || selectedFile?.name }}</strong>
+          <p v-if="uploaded" class="muted">{{ t('importCenter.ossKey', { key: uploaded.objectKey }) }}</p>
         </div>
 
         <div class="status-line section-gap">
