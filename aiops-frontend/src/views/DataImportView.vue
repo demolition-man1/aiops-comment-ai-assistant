@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Database, FileUp, Globe2, Play, ShieldCheck } from 'lucide-vue-next'
-import { ElMessage, type UploadFile } from 'element-plus'
+import { ElMessage, type UploadFile, type UploadInstance } from 'element-plus'
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -13,10 +13,12 @@ const importLoading = ref(false)
 const crawlerLoading = ref(false)
 const uploaded = ref<FileUploadResult>()
 const selectedFile = ref<File>()
+const uploadRef = ref<UploadInstance>()
 const csvTask = ref<Task>()
 const crawlerTask = ref<Task>()
 const stopCsvPolling = ref<(() => void) | null>(null)
 const stopCrawlerPolling = ref<(() => void) | null>(null)
+const singleCsvRequiredColumns = ['product_id', 'review_score']
 
 const csvForm = reactive({
   dataSource: 'olist',
@@ -33,14 +35,49 @@ const crawlerForm = reactive({
   remark: ''
 })
 
-const selectCsvFile = (file: UploadFile) => {
-  selectedFile.value = file.raw
+const normalizeCsvColumn = (column: string) => column.trim().replace(/^\uFEFF/, '').replace(/^"|"$/g, '')
+
+const readSingleCsvHeader = async (file: File) => {
+  const text = await file.slice(0, 64 * 1024).text()
+  return text.split(/\r?\n/)[0] || ''
+}
+
+const missingSingleCsvColumns = (headerLine: string) => {
+  const columns = headerLine.split(',').map(normalizeCsvColumn)
+  return singleCsvRequiredColumns.filter((column) => !columns.includes(column))
+}
+
+const clearSelectedCsv = () => {
+  selectedFile.value = undefined
   uploaded.value = undefined
 }
 
-const removeCsvFile = () => {
-  selectedFile.value = undefined
+const validateSingleCsvFile = async (file: UploadFile) => {
+  const rawFile = file.raw
+  if (!rawFile) {
+    clearSelectedCsv()
+    return false
+  }
+
+  const missing = missingSingleCsvColumns(await readSingleCsvHeader(rawFile))
+  if (missing.length > 0) {
+    clearSelectedCsv()
+    uploadRef.value?.clearFiles()
+    ElMessage.error(t('importCenter.singleCsvSchemaError', { columns: missing.join(', ') }))
+    return false
+  }
+
+  selectedFile.value = rawFile
   uploaded.value = undefined
+  return true
+}
+
+const selectCsvFile = async (file: UploadFile) => {
+  await validateSingleCsvFile(file)
+}
+
+const removeCsvFile = () => {
+  clearSelectedCsv()
 }
 
 const uploadSelectedCsv = async () => {
@@ -160,6 +197,7 @@ const crawlerProgress = computed(() => Number(crawlerTask.value?.progress || 0))
         </div>
 
         <el-upload
+          ref="uploadRef"
           drag
           action="#"
           :auto-upload="false"
