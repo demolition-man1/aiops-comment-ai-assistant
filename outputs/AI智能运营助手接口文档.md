@@ -48,6 +48,10 @@
 
 AI 报告、AI 文案、差评回复、商品对比报告等高成本接口接入 Bucket4j 用户级限流。默认配置为每个用户、每类 AI 业务 60 秒最多 20 次；超过限制时返回 `429`，前端应提示用户稍后再试。
 
+### 多语言参数说明
+
+AI 生成类接口中的 `language` 支持 `zh-CN`、`en-US`、`pt-BR`，用于控制 AI 生成内容的输出语言。当前前端语言切换后，会在生成运营报告、营销文案、差评回复和商品 A/B 对比报告时自动传递当前语言。原始评论内容仍保持数据源原文展示。
+
 ### 异步任务维护说明
 
 评论分析、CSV 导入、爬虫导入等异步任务会写入 MySQL 与 Redis。系统通过 Quartz 定时扫描长时间处于 `processing` 的任务，默认 30 分钟未更新则自动标记为 `failed`，避免任务状态长期卡住。
@@ -1517,6 +1521,7 @@ Python 内部服务由 Java 后端调用，一般部署在内网或本机，不�
 | contentType | string | 必须 |  | 文案类型 | title / detail / promotion / short_video |
 | styleType | string | 非必须 | simple | 文案风格 |  |
 | analysisSummary | string | 非必须 |  | 分析摘要 |  |
+| language | string | 非必须 | zh-CN | 生成语言，支持 zh-CN / en-US / pt-BR |  |
 | extraRequirement | string | 非必须 |  | 额外要求 |  |
 
 ### 返回数据

@@ -7,9 +7,18 @@
 - Vue3 + TypeScript + Vite
 - Vue Router + Pinia
 - Element Plus
+- vue-i18n
 - ECharts
 - Axios
 - lucide-vue-next
+
+## 语言切换
+
+前端支持简体中文、英文和巴西葡语。当前语言保存在浏览器 `localStorage` 的 `aiops_locale` 中。
+
+- 界面文案、Element Plus 组件内置文案会跟随当前语言切换。
+- AI 运营报告、AI 文案、差评回复和商品对比请求会把当前语言作为 `language` 参数传给后端。
+- 原始评论内容保持数据源原文展示，一期不自动翻译评论原文。
 
 ## 本地联调启动顺序
 
