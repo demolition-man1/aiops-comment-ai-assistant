@@ -2,10 +2,12 @@
 import { Database, FileUp, Globe2, Play, ShieldCheck } from 'lucide-vue-next'
 import { ElMessage, type UploadRequestOptions } from 'element-plus'
 import { computed, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { dataImportApi, fileApi, pollTask } from '@/api/modules'
 import type { FileUploadResult, Task } from '@/api/types'
 
+const { t } = useI18n()
 const uploadLoading = ref(false)
 const importLoading = ref(false)
 const crawlerLoading = ref(false)
@@ -27,14 +29,14 @@ const crawlerForm = reactive({
   targetType: 'product_comment',
   maxCount: 100,
   delaySeconds: 3,
-  remark: '仅科研学习演示，禁止高频大规模爬取'
+  remark: ''
 })
 
 const uploadCsv = async (options: UploadRequestOptions) => {
   uploadLoading.value = true
   try {
     uploaded.value = await fileApi.uploadCsv(options.file as File)
-    ElMessage.success('CSV 已上传到对象存储')
+    ElMessage.success(t('importCenter.uploadSuccess'))
   } finally {
     uploadLoading.value = false
   }
@@ -42,7 +44,7 @@ const uploadCsv = async (options: UploadRequestOptions) => {
 
 const startCsvImport = async () => {
   if (!uploaded.value && !csvForm.dataPath.trim()) {
-    ElMessage.warning('请先上传 CSV 文件，或填写本地 Olist 数据目录')
+    ElMessage.warning(t('importCenter.uploadRequired'))
     return
   }
 
@@ -65,11 +67,11 @@ const startCsvImport = async () => {
         csvTask.value = latestTask
         if (latestTask.taskStatus === 'success') {
           importLoading.value = false
-          ElMessage.success('CSV 数据导入完成')
+          ElMessage.success(t('importCenter.csvImportDone'))
         }
         if (latestTask.taskStatus === 'failed') {
           importLoading.value = false
-          ElMessage.error(latestTask.errorMessage || 'CSV 导入失败')
+          ElMessage.error(latestTask.errorMessage || t('importCenter.csvImportFailed'))
         }
       },
       3000,
@@ -84,13 +86,16 @@ const startCsvImport = async () => {
 
 const startCrawlerImport = async () => {
   if (!crawlerForm.targetUrl) {
-    ElMessage.warning('请输入公开评论页面 URL')
+    ElMessage.warning(t('importCenter.crawlerUrlRequired'))
     return
   }
 
   crawlerLoading.value = true
   try {
-    crawlerTask.value = await dataImportApi.importCrawler({ ...crawlerForm })
+    crawlerTask.value = await dataImportApi.importCrawler({
+      ...crawlerForm,
+      remark: crawlerForm.remark || t('importCenter.researchRemark')
+    })
     stopCrawlerPolling.value?.()
     stopCrawlerPolling.value = pollTask(
       () => dataImportApi.task(crawlerTask.value!.taskId, crawlerTask.value!.importType || 'crawler'),
@@ -98,11 +103,11 @@ const startCrawlerImport = async () => {
         crawlerTask.value = latestTask
         if (latestTask.taskStatus === 'success') {
           crawlerLoading.value = false
-          ElMessage.success('爬虫导入任务完成')
+          ElMessage.success(t('importCenter.crawlerDone'))
         }
         if (latestTask.taskStatus === 'failed') {
           crawlerLoading.value = false
-          ElMessage.error(latestTask.errorMessage || '爬虫导入失败')
+          ElMessage.error(latestTask.errorMessage || t('importCenter.crawlerFailed'))
         }
       },
       3000,
@@ -123,15 +128,15 @@ const crawlerProgress = computed(() => Number(crawlerTask.value?.progress || 0))
   <section class="page">
     <div class="toolbar">
       <div>
-        <h2 class="section-title">数据导入中心</h2>
-        <span class="muted">支持阿里云 OSS 上传 CSV，也支持低频公开样例爬虫导入</span>
+        <h2 class="section-title">{{ t('importCenter.title') }}</h2>
+        <span class="muted">{{ t('importCenter.subtitle') }}</span>
       </div>
     </div>
 
     <div class="grid two">
       <div class="panel">
         <div class="status-line">
-          <div class="panel-title">CSV 文件导入</div>
+          <div class="panel-title">{{ t('importCenter.csvTitle') }}</div>
           <FileUp class="text-blue" :size="22" />
         </div>
 
@@ -143,48 +148,48 @@ const crawlerProgress = computed(() => Number(crawlerTask.value?.progress || 0))
           :limit="1"
         >
           <el-icon class="el-icon--upload"><FileUp /></el-icon>
-          <div class="el-upload__text">拖拽 CSV 到这里，或点击上传</div>
+          <div class="el-upload__text">{{ t('importCenter.uploadHint') }}</div>
           <template #tip>
-            <div class="el-upload__tip">推荐使用 Olist CSV，文件会先上传到阿里云 OSS，再触发后端导入任务。</div>
+            <div class="el-upload__tip">{{ t('importCenter.uploadTip') }}</div>
           </template>
         </el-upload>
 
         <el-form class="section-gap" label-position="top">
-          <el-form-item label="数据来源">
+          <el-form-item :label="t('importCenter.dataSource')">
             <el-select v-model="csvForm.dataSource" style="width: 100%">
-              <el-option label="Olist Kaggle 数据集" value="olist" />
-              <el-option label="平台导出 CSV" value="platform_csv" />
+              <el-option :label="t('importCenter.olistSource')" value="olist" />
+              <el-option :label="t('importCenter.platformCsv')" value="platform_csv" />
             </el-select>
           </el-form-item>
-          <el-form-item label="导入模式">
+          <el-form-item :label="t('importCenter.importMode')">
             <el-radio-group v-model="csvForm.importMode">
-              <el-radio-button label="full">全量导入</el-radio-button>
-              <el-radio-button label="incremental">增量导入</el-radio-button>
+              <el-radio-button label="full">{{ t('importCenter.fullImport') }}</el-radio-button>
+              <el-radio-button label="incremental">{{ t('importCenter.incrementalImport') }}</el-radio-button>
             </el-radio-group>
           </el-form-item>
-          <el-form-item label="本地 Olist 数据目录">
-            <el-input v-model="csvForm.dataPath" placeholder="例如 D:\666\olist-brazilian-ecommerce" />
-            <div class="muted">完整 Olist 导入推荐填写本机目录，目录内放 9 个 CSV；浏览器上传适合单个 CSV 归档到 OSS。</div>
+          <el-form-item :label="t('importCenter.localOlistPath')">
+            <el-input v-model="csvForm.dataPath" :placeholder="t('importCenter.localPathPlaceholder')" />
+            <div class="muted">{{ t('importCenter.localPathTip') }}</div>
           </el-form-item>
         </el-form>
 
         <div v-if="uploaded" class="insight-block">
           <strong>{{ uploaded.originalName }}</strong>
-          <p class="muted">OSS Key：{{ uploaded.objectKey }}</p>
+          <p class="muted">{{ t('importCenter.ossKey', { key: uploaded.objectKey }) }}</p>
         </div>
 
         <div class="status-line section-gap">
           <el-progress :percentage="csvProgress" style="flex: 1" />
           <el-button type="primary" :loading="uploadLoading || importLoading" @click="startCsvImport">
             <Play :size="16" />
-            开始导入
+            {{ t('importCenter.startImport') }}
           </el-button>
         </div>
       </div>
 
       <div class="panel">
         <div class="status-line">
-          <div class="panel-title">公开评论爬虫导入</div>
+          <div class="panel-title">{{ t('importCenter.crawlerTitle') }}</div>
           <Globe2 class="text-green" :size="22" />
         </div>
 
@@ -192,29 +197,29 @@ const crawlerProgress = computed(() => Number(crawlerTask.value?.progress || 0))
           type="warning"
           show-icon
           :closable="false"
-          title="仅用于学习研究原型演示，请控制频率和数量，禁止商用高频采集。"
+          :title="t('importCenter.crawlerWarning')"
         />
 
         <el-form class="section-gap" label-position="top">
-          <el-form-item label="平台">
+          <el-form-item :label="t('importCenter.platform')">
             <el-select v-model="crawlerForm.platform" style="width: 100%">
-              <el-option label="演示平台" value="demo" />
-              <el-option label="淘宝公开样例" value="taobao" />
-              <el-option label="拼多多公开样例" value="pdd" />
-              <el-option label="Temu 公开样例" value="temu" />
+              <el-option :label="t('importCenter.demoPlatform')" value="demo" />
+              <el-option :label="t('importCenter.taobaoSample')" value="taobao" />
+              <el-option :label="t('importCenter.pddSample')" value="pdd" />
+              <el-option :label="t('importCenter.temuSample')" value="temu" />
             </el-select>
           </el-form-item>
-          <el-form-item label="目标 URL">
-            <el-input v-model="crawlerForm.targetUrl" placeholder="粘贴公开商品评论页面 URL" />
+          <el-form-item :label="t('importCenter.targetUrl')">
+            <el-input v-model="crawlerForm.targetUrl" :placeholder="t('importCenter.targetUrlPlaceholder')" />
           </el-form-item>
-          <el-form-item label="采集数量与延时">
+          <el-form-item :label="t('importCenter.crawlLimitDelay')">
             <div class="inline-fields">
               <el-input-number v-model="crawlerForm.maxCount" :min="1" :max="500" />
               <el-input-number v-model="crawlerForm.delaySeconds" :min="1" :max="30" />
             </div>
           </el-form-item>
-          <el-form-item label="备注">
-            <el-input v-model="crawlerForm.remark" type="textarea" :rows="3" />
+          <el-form-item :label="t('importCenter.remark')">
+            <el-input v-model="crawlerForm.remark" type="textarea" :rows="3" :placeholder="t('importCenter.researchRemark')" />
           </el-form-item>
         </el-form>
 
@@ -222,7 +227,7 @@ const crawlerProgress = computed(() => Number(crawlerTask.value?.progress || 0))
           <el-progress :percentage="crawlerProgress" style="flex: 1" />
           <el-button type="success" :loading="crawlerLoading" @click="startCrawlerImport">
             <Database :size="16" />
-            创建爬虫任务
+            {{ t('importCenter.createCrawlerTask') }}
           </el-button>
         </div>
       </div>
@@ -231,18 +236,18 @@ const crawlerProgress = computed(() => Number(crawlerTask.value?.progress || 0))
     <div class="grid three section-gap">
       <div class="panel workflow-card">
         <span class="number">1</span>
-        <strong>上传或采集</strong>
-        <span class="muted">CSV 走 OSS 上传，爬虫走 Python 服务低频采集。</span>
+        <strong>{{ t('importCenter.workflowUpload') }}</strong>
+        <span class="muted">{{ t('importCenter.workflowUploadDesc') }}</span>
       </div>
       <div class="panel workflow-card">
         <span class="number">2</span>
-        <strong>清洗入库</strong>
-        <span class="muted">Java 创建导入任务，Python 完成字段清洗、情感和标签预处理。</span>
+        <strong>{{ t('importCenter.workflowClean') }}</strong>
+        <span class="muted">{{ t('importCenter.workflowCleanDesc') }}</span>
       </div>
       <div class="panel workflow-card">
         <span class="number">3</span>
-        <strong>分析展示</strong>
-        <span class="muted">导入完成后可进入评论工作台生成报告、回复和对比分析。</span>
+        <strong>{{ t('importCenter.workflowAnalyze') }}</strong>
+        <span class="muted">{{ t('importCenter.workflowAnalyzeDesc') }}</span>
         <ShieldCheck class="text-green" :size="22" />
       </div>
     </div>

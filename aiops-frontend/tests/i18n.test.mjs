@@ -11,6 +11,9 @@ const dashboardView = await readFile(new URL('../src/views/DashboardView.vue', i
 const loginView = await readFile(new URL('../src/views/LoginView.vue', import.meta.url), 'utf8')
 const settingsView = await readFile(new URL('../src/views/SettingsView.vue', import.meta.url), 'utf8')
 const httpClient = await readFile(new URL('../src/api/http.ts', import.meta.url), 'utf8')
+const commentWorkbenchView = await readFile(new URL('../src/views/CommentWorkbenchView.vue', import.meta.url), 'utf8')
+const alertCenterView = await readFile(new URL('../src/views/AlertCenterView.vue', import.meta.url), 'utf8')
+const dataImportView = await readFile(new URL('../src/views/DataImportView.vue', import.meta.url), 'utf8')
 
 test('i18n supports chinese english and portuguese locales', () => {
   for (const locale of ['zh-CN', 'en-US', 'pt-BR']) {
@@ -54,4 +57,24 @@ test('core pages and request fallbacks use i18n', () => {
   assert.ok(!loginView.includes('商家运营后台'))
   assert.ok(!settingsView.includes('系统设置'))
   assert.match(httpClient, /i18n\.global\.t/)
+})
+
+test('enum translations include sentiment and problem type values', () => {
+  for (const value of ['positive', 'neutral', 'negative', 'quality', 'logistics', 'price', 'service', 'size', 'other']) {
+    assert.ok(zh.includes(value), `zh missing enum ${value}`)
+    assert.ok(en.includes(value), `en missing enum ${value}`)
+    assert.ok(pt.includes(value), `pt missing enum ${value}`)
+  }
+})
+
+test('review operations pages render labels through i18n', () => {
+  for (const source of [commentWorkbenchView, alertCenterView, dataImportView]) {
+    assert.match(source, /useI18n/)
+  }
+  assert.match(commentWorkbenchView, /displaySentiment/)
+  assert.match(commentWorkbenchView, /displayProblemType/)
+  assert.match(alertCenterView, /displayProblemType/)
+  assert.ok(!commentWorkbenchView.includes('评论智能工作台'))
+  assert.ok(!alertCenterView.includes('告警中心'))
+  assert.ok(!dataImportView.includes('数据导入中心'))
 })
