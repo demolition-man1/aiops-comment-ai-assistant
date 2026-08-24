@@ -4,7 +4,10 @@ import { Bot, Database, RotateCcw, Save, Shield, SlidersHorizontal } from 'lucid
 import { computed, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { useAuthStore } from '@/stores/auth'
+
 const { t } = useI18n()
+const auth = useAuthStore()
 const settings = reactive({
   taskPollingSeconds: Number(localStorage.getItem('aiops_task_polling_seconds') || 3),
   alertNegativeRate: Number(localStorage.getItem('aiops_alert_negative_rate') || 20),
@@ -16,7 +19,7 @@ const settings = reactive({
 
 const tokenStatus = computed(() => (localStorage.getItem('aiops_token') ? t('settings.loggedIn') : t('settings.notLoggedIn')))
 const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
-const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'
+const showRuntimeStatus = computed(() => import.meta.env.DEV || auth.user?.role === 'admin')
 
 const save = () => {
   localStorage.setItem('aiops_task_polling_seconds', String(settings.taskPollingSeconds))
@@ -60,17 +63,17 @@ const reset = () => {
       </div>
     </div>
 
-    <div class="grid two">
-      <div class="panel">
+    <div :class="['grid', showRuntimeStatus ? 'two' : 'single']">
+      <div v-if="showRuntimeStatus" class="panel">
         <div class="status-line">
-          <div class="panel-title">{{ t('settings.integrationStatus') }}</div>
+          <div class="panel-title">{{ t('settings.runtimeStatus') }}</div>
           <Database class="text-blue" :size="22" />
         </div>
         <el-descriptions :column="1" border size="small">
-          <el-descriptions-item :label="t('settings.frontendApiBase')">{{ apiBase }}</el-descriptions-item>
-          <el-descriptions-item :label="t('settings.backendProxyUrl')">{{ backendUrl }}</el-descriptions-item>
+          <el-descriptions-item :label="t('settings.currentApi')">{{ apiBase }}</el-descriptions-item>
           <el-descriptions-item :label="t('settings.loginStatus')">{{ tokenStatus }}</el-descriptions-item>
-          <el-descriptions-item :label="t('settings.authMethod')">Authorization: Bearer token</el-descriptions-item>
+          <el-descriptions-item :label="t('settings.authMethod')">JWT Bearer Token</el-descriptions-item>
+          <el-descriptions-item :label="t('settings.serviceStatus')">{{ t('settings.serviceNormal') }}</el-descriptions-item>
         </el-descriptions>
       </div>
 

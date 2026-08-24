@@ -52,14 +52,14 @@ npm run dev
 
 ## 环境变量
 
-复制 `.env.example` 为 `.env.local`，按需修改：
+本地开发时复制 `.env.example` 为 `.env.local`，按需修改：
 
 ```env
 VITE_API_BASE_URL=/api
 VITE_BACKEND_URL=http://localhost:8080
 ```
 
-开发环境下，浏览器请求 `/api/**`，Vite 会代理到 `VITE_BACKEND_URL`。如果 Java 后端端口改成 `8081`，只需要把 `.env.local` 中的 `VITE_BACKEND_URL` 改成 `http://localhost:8081`。
+`VITE_BACKEND_URL` 仅用于 Vite 本地开发代理。开发环境下，浏览器请求 `/api/**`，Vite 会代理到该地址。上线部署时前端仍使用 `/api`，由 Nginx、网关或平台反向代理到 Java 后端，不在页面展示真实后端地址。
 
 ## 登录与鉴权
 
@@ -80,7 +80,7 @@ Authorization: Bearer <token>
 - 商品对比：商品 A/B 选择、AI 对比报告、历史记录
 - AI 文案：商品标题、详情介绍、短视频、促销话术生成
 - 告警中心：负面占比、负面评论数量、重点问题类型告警
-- 系统设置：联调参数、告警阈值、AI 调用与缓存偏好
+- 系统设置：运行参数、告警阈值、AI 调用与缓存偏好；生产环境普通用户隐藏运行状态调试信息
 
 ## 联调检查点
 

@@ -144,6 +144,10 @@ textarea {
   grid-template-columns: minmax(0, 1.4fr) minmax(340px, 0.7fr);
 }
 
+.grid.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .grid.three {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }

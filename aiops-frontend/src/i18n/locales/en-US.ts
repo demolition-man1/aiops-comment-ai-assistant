@@ -252,17 +252,18 @@ export default {
   },
   settings: {
     title: 'Settings',
-    subtitle: 'Integration parameters, alert thresholds, AI usage, and cache preferences',
+    subtitle: 'Runtime parameters, alert thresholds, AI usage, and cache preferences',
     restoreDefaults: 'Restore Defaults',
     saveSettings: 'Save Settings',
     saved: 'Settings saved',
-    integrationStatus: 'Integration Status',
-    frontendApiBase: 'Frontend API Base',
-    backendProxyUrl: 'Backend Proxy URL',
+    runtimeStatus: 'System Runtime Status',
+    currentApi: 'Current API',
     loginStatus: 'Login Status',
     loggedIn: 'Logged in',
     notLoggedIn: 'Not logged in',
     authMethod: 'Auth Method',
+    serviceStatus: 'Service Status',
+    serviceNormal: 'Normal',
     taskCache: 'Tasks and Cache',
     taskPollingInterval: 'Task Polling Interval',
     seconds: 'seconds',
@@ -275,7 +276,7 @@ export default {
     negativeCountThreshold: 'Negative Review Count Threshold',
     aiControl: 'AI Usage Control',
     aiRateLimit: 'AI Calls per Minute Limit',
-    aiLimitTip: 'Production rate limiting is enforced by Java backend Redis config. This saves frontend integration preferences.'
+    aiLimitTip: 'AI rate limiting is enforced by the Java backend Redis config. This saves current workspace preferences.'
   },
   login: {
     title: 'Merchant Operations Console',

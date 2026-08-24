@@ -252,17 +252,18 @@ export default {
   },
   settings: {
     title: '系统设置',
-    subtitle: '联调参数、告警阈值、AI 调用与缓存偏好',
+    subtitle: '运行参数、告警阈值、AI 调用与缓存偏好',
     restoreDefaults: '恢复默认',
     saveSettings: '保存设置',
     saved: '设置已保存',
-    integrationStatus: '联调状态',
-    frontendApiBase: '前端 API Base',
-    backendProxyUrl: '后端代理地址',
+    runtimeStatus: '系统运行状态',
+    currentApi: '当前 API',
     loginStatus: '登录状态',
     loggedIn: '已登录',
     notLoggedIn: '未登录',
     authMethod: '鉴权方式',
+    serviceStatus: '服务状态',
+    serviceNormal: '正常',
     taskCache: '任务与缓存',
     taskPollingInterval: '任务轮询间隔',
     seconds: '秒',
@@ -275,7 +276,7 @@ export default {
     negativeCountThreshold: '负面评论数量阈值',
     aiControl: 'AI 调用控制',
     aiRateLimit: '每分钟 AI 调用上限',
-    aiLimitTip: '正式限流由 Java 后端 Redis 配置执行，这里保存前端联调偏好。'
+    aiLimitTip: 'AI 限流由 Java 后端 Redis 配置执行，这里保存当前工作台偏好。'
   },
   login: {
     title: '商家运营后台',

@@ -252,17 +252,18 @@ export default {
   },
   settings: {
     title: 'Configurações',
-    subtitle: 'Parâmetros de integração, limites de alerta, uso de IA e preferências de cache',
+    subtitle: 'Parâmetros de execução, limites de alerta, uso de IA e preferências de cache',
     restoreDefaults: 'Restaurar padrões',
     saveSettings: 'Salvar configurações',
     saved: 'Configurações salvas',
-    integrationStatus: 'Status da integração',
-    frontendApiBase: 'API Base do frontend',
-    backendProxyUrl: 'URL do proxy backend',
+    runtimeStatus: 'Status de execução do sistema',
+    currentApi: 'API atual',
     loginStatus: 'Status de login',
     loggedIn: 'Logado',
     notLoggedIn: 'Não logado',
     authMethod: 'Método de autenticação',
+    serviceStatus: 'Status do serviço',
+    serviceNormal: 'Normal',
     taskCache: 'Tarefas e cache',
     taskPollingInterval: 'Intervalo de consulta da tarefa',
     seconds: 'segundos',
@@ -275,7 +276,7 @@ export default {
     negativeCountThreshold: 'Limite de avaliações negativas',
     aiControl: 'Controle de uso da IA',
     aiRateLimit: 'Limite de chamadas de IA por minuto',
-    aiLimitTip: 'O limite real é aplicado pelo backend Java com Redis. Aqui são salvas preferências de integração do frontend.'
+    aiLimitTip: 'O limite de IA é aplicado pelo backend Java com Redis. Aqui são salvas as preferências atuais da área de trabalho.'
   },
   login: {
     title: 'Console de Operações do Lojista',

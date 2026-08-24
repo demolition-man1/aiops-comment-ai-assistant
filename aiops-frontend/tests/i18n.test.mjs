@@ -87,3 +87,16 @@ test('ai request pages no longer hard-code zh-CN language', () => {
     assert.match(source, /localeStore\.locale/)
   }
 })
+
+test('settings hides development connection details from production merchants', () => {
+  assert.match(settingsView, /showRuntimeStatus/)
+  assert.match(settingsView, /import\.meta\.env\.DEV/)
+  assert.match(settingsView, /auth\.user\?\.role === 'admin'/)
+  assert.match(settingsView, /v-if="showRuntimeStatus"/)
+  assert.ok(!settingsView.includes('VITE_BACKEND_URL'))
+  assert.ok(!settingsView.includes('backendUrl'))
+  assert.ok(!settingsView.includes('localhost:8080'))
+  assert.ok(!zh.includes('联调状态'))
+  assert.ok(!zh.includes('联调参数'))
+  assert.ok(!zh.includes('后端代理地址'))
+})
