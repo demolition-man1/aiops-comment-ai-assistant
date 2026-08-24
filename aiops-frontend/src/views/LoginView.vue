@@ -10,7 +10,7 @@ const auth = useAuthStore()
 const loading = ref(false)
 const form = reactive({
   username: 'admin',
-  password: '123456'
+  password: ''
 })
 
 const submit = async () => {
@@ -32,7 +32,7 @@ const submit = async () => {
         <span>AI智能运营助手</span>
       </div>
       <h1 class="login-title">商家运营后台</h1>
-      <p class="login-hint">默认账号：admin / 123456。登录后通过 Vite 代理连接 Java 后端。</p>
+      <p class="login-hint">默认账号：admin。密码以本地初始化脚本或部署环境配置为准。</p>
 
       <el-form label-position="top" @keyup.enter="submit">
         <el-form-item label="用户名">

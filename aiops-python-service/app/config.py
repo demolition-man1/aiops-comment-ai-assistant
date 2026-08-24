@@ -38,7 +38,7 @@ class Settings:
     mysql_port: int = _int_env("MYSQL_PORT", 3306)
     mysql_database: str = os.getenv("MYSQL_DATABASE", "aiops")
     mysql_user: str = os.getenv("MYSQL_USER", "root")
-    mysql_password: str = os.getenv("MYSQL_PASSWORD", "432")
+    mysql_password: str = os.getenv("MYSQL_PASSWORD", "")
 
     ai_provider: str = os.getenv("AI_PROVIDER", "deepseek")
     ai_base_url: str = os.getenv("AI_BASE_URL", "https://api.deepseek.com")

@@ -676,7 +676,7 @@ POST /api/auth/login
 ```json
 {
   "username": "admin",
-  "password": "123456"
+  "password": "your-password"
 }
 ```
 
@@ -706,7 +706,7 @@ POST /api/auth/register
 ```json
 {
   "username": "merchant01",
-  "password": "123456",
+  "password": "your-password",
   "nickname": "测试商家",
   "email": "merchant@example.com"
 }

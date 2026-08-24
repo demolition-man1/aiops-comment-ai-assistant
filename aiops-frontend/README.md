@@ -55,7 +55,7 @@ VITE_BACKEND_URL=http://localhost:8080
 ## 登录与鉴权
 
 - 默认账号：`admin`
-- 默认密码：`123456`
+- 默认密码：请以本地初始化脚本或部署环境配置为准，上线后立即修改
 
 登录成功后，前端会把 JWT 保存到浏览器 `localStorage` 的 `aiops_token`，后续请求自动携带：
 

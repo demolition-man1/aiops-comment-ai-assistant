@@ -41,7 +41,7 @@ aiops:
 | `MYSQL_PORT` | MySQL 端口 | `3306` |
 | `MYSQL_DATABASE` | 数据库名 | `aiops` |
 | `MYSQL_USER` | 数据库用户名 | `root` |
-| `MYSQL_PASSWORD` | 数据库密码 | `432` |
+| `MYSQL_PASSWORD` | 数据库密码 | 留空示例，按本机 MySQL 配置 |
 | `AI_PROVIDER` | AI 供应商标识 | `deepseek` |
 | `AI_BASE_URL` | OpenAI 兼容接口基础地址 | `https://api.deepseek.com` |
 | `AI_CHAT_PATH` | Chat Completion 路径 | `/v1/chat/completions` |

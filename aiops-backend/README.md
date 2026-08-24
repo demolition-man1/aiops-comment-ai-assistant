@@ -22,14 +22,14 @@
 
 - MySQL: `jdbc:mysql://localhost:3306/aiops`
 - 用户名: `root`
-- 密码: `432`
+- 密码: 通过 `AIOPS_MYSQL_PASSWORD` 或本地 `application-secret.yml` 配置
 - Redis: `localhost:6379`
 - Python 服务: `http://localhost:8000`
 
 首次启动时会通过 `sql/schema.sql` 自动建表，并通过 `sql/data.sql` 初始化默认管理员：
 
 - username: `admin`
-- password: `123456`
+- password: 首次运行后请立即修改，或在初始化脚本中替换为自己的 BCrypt 密码
 
 Redis 当前用于：
 
@@ -53,7 +53,7 @@ Redis 作为加速层处理，服务不可用时不会阻断 MySQL 主流程。
 如果数据库已经按旧版 `schema.sql` 初始化过，可执行升级脚本补字段：
 
 ```powershell
-mysql -uroot -p432 < aiops-server\src\main\resources\sql\upgrade-2026-08-20-operations-enhancement.sql
+mysql -uroot -p < aiops-server\src\main\resources\sql\upgrade-2026-08-20-operations-enhancement.sql
 ```
 
 ## 构建与运行

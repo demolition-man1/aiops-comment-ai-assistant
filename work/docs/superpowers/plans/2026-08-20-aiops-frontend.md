@@ -74,7 +74,7 @@
 - Consumes: API modules from Task 2.
 - Produces: usable first-screen app and core workflows.
 
-- [ ] Implement login page with default hint `admin / 123456`.
+- [ ] Implement login page with default username hint only.
 - [ ] Implement merchant cockpit dashboard with overview cards, charts, task area, and recent negative comments.
 - [ ] Implement comment workbench with filters, table, tag editing, analysis creation, AI report generation, and negative reply generation.
 - [ ] Implement CSV import page with OSS upload and task polling.
