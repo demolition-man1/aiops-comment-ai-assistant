@@ -6,6 +6,7 @@ import {
   ClipboardList,
   FileUp,
   GitCompareArrows,
+  Globe2,
   Home,
   LogOut,
   MessageSquareText,
@@ -15,25 +16,39 @@ import {
   UserRound
 } from 'lucide-vue-next'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
+import type { AppLocale } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useLocaleStore } from '@/stores/locale'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const localeStore = useLocaleStore()
+const { t } = useI18n()
 
 const navItems = [
-  { path: '/', label: '商家驾驶舱', icon: Home },
-  { path: '/comments', label: '评论分析', icon: MessageSquareText },
-  { path: '/import', label: '数据导入', icon: FileUp },
-  { path: '/compare', label: '商品对比', icon: GitCompareArrows },
-  { path: '/content', label: 'AI文案', icon: PenLine },
-  { path: '/alerts', label: '告警中心', icon: Bell },
-  { path: '/settings', label: '系统设置', icon: Settings }
+  { path: '/', labelKey: 'layout.nav.dashboard', icon: Home },
+  { path: '/comments', labelKey: 'layout.nav.comments', icon: MessageSquareText },
+  { path: '/import', labelKey: 'layout.nav.import', icon: FileUp },
+  { path: '/compare', labelKey: 'layout.nav.compare', icon: GitCompareArrows },
+  { path: '/content', labelKey: 'layout.nav.content', icon: PenLine },
+  { path: '/alerts', labelKey: 'layout.nav.alerts', icon: Bell },
+  { path: '/settings', labelKey: 'layout.nav.settings', icon: Settings }
 ]
 
-const pageName = computed(() => navItems.find((item) => item.path === route.path)?.label || 'AI智能运营助手')
+const pageName = computed(() => {
+  const item = navItems.find((navItem) => navItem.path === route.path)
+  return item ? t(item.labelKey) : t('common.appName')
+})
+
+const changeLocale = (value: string | number | boolean | object | undefined) => {
+  if (typeof value === 'string') {
+    localeStore.setLocale(value as AppLocale)
+  }
+}
 
 const logout = async () => {
   auth.logout()
@@ -46,13 +61,13 @@ const logout = async () => {
     <aside class="sidebar">
       <div class="brand">
         <span class="brand-mark">AI</span>
-        <span>AI智能运营助手</span>
+        <span>{{ t('common.appName') }}</span>
       </div>
 
       <nav class="nav-list">
         <router-link v-for="item in navItems" :key="item.path" class="nav-link" :to="item.path">
           <component :is="item.icon" :size="19" />
-          <span>{{ item.label }}</span>
+          <span>{{ t(item.labelKey) }}</span>
         </router-link>
 
         <div style="flex: 1" />
@@ -63,26 +78,42 @@ const logout = async () => {
       <header class="topbar">
         <div>
           <h1 class="page-title">{{ pageName }}</h1>
-          <p class="page-subtitle">评论驱动运营决策，让 AI 帮你看懂用户反馈</p>
+          <p class="page-subtitle">{{ t('layout.subtitle') }}</p>
         </div>
         <div class="toolbar-actions">
-          <el-button :icon="RefreshCw">定时同步</el-button>
-          <el-button :icon="ClipboardList">任务中心</el-button>
-          <el-button :icon="BarChart3">数据报表</el-button>
+          <el-select
+            :model-value="localeStore.locale"
+            class="language-select"
+            :aria-label="t('layout.language')"
+            @change="changeLocale"
+          >
+            <template #prefix>
+              <Globe2 :size="15" />
+            </template>
+            <el-option
+              v-for="language in localeStore.languages"
+              :key="language.code"
+              :label="language.label"
+              :value="language.code"
+            />
+          </el-select>
+          <el-button :icon="RefreshCw">{{ t('layout.actions.scheduledSync') }}</el-button>
+          <el-button :icon="ClipboardList">{{ t('layout.actions.taskCenter') }}</el-button>
+          <el-button :icon="BarChart3">{{ t('layout.actions.dataReports') }}</el-button>
           <el-dropdown>
             <el-button>
               <UserRound :size="16" />
-              {{ auth.user?.nickname || auth.user?.username || '商家用户' }}
+              {{ auth.user?.nickname || auth.user?.username || t('layout.user.merchantUser') }}
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item disabled>
                   <Bot :size="14" />
-                  运营助手在线
+                  {{ t('layout.user.assistantOnline') }}
                 </el-dropdown-item>
                 <el-dropdown-item divided @click="logout">
                   <LogOut :size="14" />
-                  退出登录
+                  {{ t('layout.user.logout') }}
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>

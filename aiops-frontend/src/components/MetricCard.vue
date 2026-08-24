@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 defineProps<{
   title: string
   value: string | number
   hint?: string
   tone?: 'blue' | 'green' | 'amber' | 'red'
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -14,6 +18,6 @@ defineProps<{
       <slot />
     </div>
     <strong>{{ value }}</strong>
-    <p>{{ hint || '较昨日暂无变化' }}</p>
+    <p>{{ hint || t('dashboard.noDailyChange') }}</p>
   </section>
 </template>

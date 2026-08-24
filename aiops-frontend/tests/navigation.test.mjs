@@ -17,3 +17,10 @@ test('alert center and settings routes are registered', () => {
   assert.match(router, /AlertCenterView\.vue/)
   assert.match(router, /SettingsView\.vue/)
 })
+
+test('layout uses i18n keys and exposes language selector', () => {
+  assert.match(layout, /useI18n/)
+  assert.match(layout, /useLocaleStore/)
+  assert.match(layout, /localeStore\.languages/)
+  assert.ok(!layout.includes("label: '商家驾驶舱'"))
+})
