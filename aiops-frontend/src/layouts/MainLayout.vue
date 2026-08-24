@@ -39,8 +39,15 @@ const navItems = [
   { path: '/settings', labelKey: 'layout.nav.settings', icon: Settings }
 ]
 
+const pageItems = [
+  ...navItems,
+  { path: '/sync', labelKey: 'layout.actions.scheduledSync' },
+  { path: '/tasks', labelKey: 'layout.actions.taskCenter' },
+  { path: '/reports', labelKey: 'layout.actions.dataReports' }
+]
+
 const pageName = computed(() => {
-  const item = navItems.find((navItem) => navItem.path === route.path)
+  const item = pageItems.find((pageItem) => pageItem.path === route.path)
   return item ? t(item.labelKey) : t('common.appName')
 })
 
@@ -51,15 +58,15 @@ const changeLocale = (value: string | number | boolean | object | undefined) => 
 }
 
 const goScheduledSync = async () => {
-  await router.push({ path: '/import', hash: '#scheduled-sync' })
+  await router.push({ path: '/sync' })
 }
 
 const goTaskCenter = async () => {
-  await router.push({ path: '/comments', hash: '#task-center' })
+  await router.push({ path: '/tasks' })
 }
 
 const goDataReports = async () => {
-  await router.push({ path: '/', hash: '#data-reports' })
+  await router.push({ path: '/reports' })
 }
 
 const logout = async () => {

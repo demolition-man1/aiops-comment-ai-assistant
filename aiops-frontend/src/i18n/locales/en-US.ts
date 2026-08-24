@@ -185,6 +185,91 @@ export default {
     crawlerFailed: 'Crawler import failed',
     researchRemark: 'Research and learning demo only; high-frequency large-scale crawling is forbidden'
   },
+  sync: {
+    title: 'Scheduled Sync',
+    subtitle: 'Configure periodic data imports and review every sync execution',
+    createConfig: 'New Sync',
+    editConfig: 'Edit Sync',
+    configCount: 'Sync Configs',
+    enabledCount: 'Enabled',
+    lastExecution: 'Latest Run',
+    configList: 'Sync Config List',
+    executionHistory: 'Sync Execution History',
+    syncName: 'Sync Name',
+    syncNamePlaceholder: 'Example: Daily Olist review sync',
+    sourceType: 'Source Type',
+    importMode: 'Import Mode',
+    cronExpression: 'Cron Expression',
+    nextRunTime: 'Next Run',
+    enabledState: 'Enabled',
+    triggerNow: 'Run Now',
+    triggerType: 'Trigger Type',
+    linkedTask: 'Linked Task',
+    errorMessage: 'Error Message',
+    startTime: 'Start Time',
+    dataPath: 'Local Data Directory',
+    fileUrl: 'CSV File URL',
+    fileUrlPlaceholder: 'Optional OSS file URL',
+    objectKey: 'OSS Object Key',
+    platform: 'Platform',
+    targetType: 'Target Type',
+    targetUrl: 'Target URL',
+    maxCount: 'Max Count',
+    delaySeconds: 'Request Delay',
+    autoAnalysis: 'Analyze After Import',
+    remark: 'Remark',
+    nameRequired: 'Enter a sync name',
+    created: 'Sync config created',
+    updated: 'Sync config updated',
+    enabled: 'Sync config enabled',
+    disabled: 'Sync config disabled',
+    triggered: 'Sync task triggered',
+    sourceTypes: {
+      olist_directory: 'Olist Local Directory',
+      csv_file: 'Single CSV File',
+      crawler: 'Public Sample Crawler'
+    },
+    importModes: {
+      full: 'Full Import',
+      incremental: 'Incremental Import'
+    }
+  },
+  tasks: {
+    title: 'Task Center',
+    subtitle: 'Track imports, crawlers, analysis jobs, and scheduled sync runs in one place',
+    taskList: 'Task List',
+    taskName: 'Task Name',
+    taskType: 'Task Type',
+    keyword: 'Keyword',
+    keywordPlaceholder: 'Search name, target, or error message',
+    target: 'Target',
+    errorMessage: 'Error Message',
+    retry: 'Retry',
+    detail: 'Task Details',
+    recordKey: 'Record Key',
+    sourceTable: 'Source Table',
+    startTime: 'Start Time',
+    endTime: 'End Time',
+    retryCreated: 'Retry task created'
+  },
+  reports: {
+    title: 'Data Reports',
+    subtitle: 'Aggregate review trends, sentiment distribution, and product rankings for operations reviews',
+    productHint: 'Full product pool',
+    commentHint: 'Review mining sample',
+    scoreHint: 'Overall satisfaction reference',
+    riskHint: 'Global negative risk',
+    trend: 'Review Trend',
+    sentiment: 'Sentiment Distribution',
+    problem: 'Negative Issue Distribution',
+    reportSummary: 'Report Summary',
+    hotProductCount: 'Hot Products',
+    highRiskCount: 'High-risk Products',
+    topRatedCount: 'Top-rated Products',
+    hotProducts: 'Hot Product Ranking',
+    highRiskProducts: 'High-risk Product Ranking',
+    topRatedProducts: 'Top-rated Product Ranking'
+  },
   compare: {
     title: 'Product A / B Comparison',
     subtitle: 'Compare review pain points, strengths, weaknesses, and operations suggestions',
@@ -312,6 +397,18 @@ export default {
       other: 'Other',
       unclassified: 'Unclassified',
       pending: 'Pending'
+    },
+    taskStatus: {
+      pending: 'Pending',
+      processing: 'Processing',
+      success: 'Success',
+      failed: 'Failed'
+    },
+    taskType: {
+      csv_import: 'CSV Import',
+      crawler_import: 'Crawler Import',
+      comment_analysis: 'Review Analysis',
+      scheduled_sync: 'Scheduled Sync'
     }
   }
 }

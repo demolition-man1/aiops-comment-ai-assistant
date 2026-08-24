@@ -12,6 +12,8 @@
 
 项目一期提供两种数据接入方式：一种是 CSV 文件导入，用于稳定接入 Olist 公开数据集或商家授权数据；另一种是爬虫采集，用于演示系统面向真实电商平台的扩展能力。两种方式最终都会转换为统一的商品、卖家、订单和评论业务数据，供后续评论分析、AI 报告和可视化看板复用。
 
+前端顶部快捷入口采用业务化设计：定时同步进入同步配置与执行记录页面，任务中心进入统一任务追踪页面，数据报表进入全局运营报表页面。普通商家使用时看到的是业务入口，不展示联调状态和本地调试地址。
+
 ### 1.3 核心价值
 
 - 降低中小商家数据分析门槛。
@@ -135,6 +137,8 @@ Java Spring Boot 后端作为系统业务中台，负责：
 - 用户认证与权限管理。
 - 商品、卖家、评论、分析结果和报告管理。
 - 分析任务创建、状态维护、结果落库。
+- 定时同步配置、Quartz 调度注册、同步执行记录和统一任务中心聚合。
+- 全局数据报表接口，提供趋势、分布和商品排行数据。
 - Redis 缓存、任务进度缓存、分析结果缓存和 AI 调用缓存。
 - Bucket4j 用户级 AI 限流，避免报告、文案、回复等接口被高频调用。
 - Redisson 分布式组件预留，用于后续分布式锁、任务互斥和多实例部署。
@@ -448,6 +452,30 @@ client
 5. 前端通过回复历史接口查看使用次数、收藏状态和效果统计。
 ```
 
+### 6.9 定时同步流程
+
+```text
+1. 用户进入定时同步页面，创建 Olist 目录、单 CSV 文件或公开样例爬虫同步配置。
+2. Spring Boot 校验来源参数和 Cron 表达式，写入 biz_sync_config。
+3. 若配置启用，Spring Boot 通过 Quartz 注册对应定时任务。
+4. 到达执行时间或用户点击立即执行时，系统写入 biz_sync_execution。
+5. Spring Boot 根据配置调用 CSV 导入或爬虫导入服务。
+6. 导入任务继续沿用原有异步任务和 Redis 进度缓存。
+7. 同步执行记录保存触发方式、关联任务、执行状态和错误信息。
+8. 前端展示同步配置、下次运行时间和历史执行记录。
+```
+
+### 6.10 任务中心与数据报表流程
+
+```text
+1. 用户点击任务中心，前端调用 /api/tasks。
+2. Spring Boot 聚合 biz_analysis_task、biz_crawl_task 和 biz_sync_execution，生成统一任务视图。
+3. 用户可按任务类型、状态和关键词筛选，也可查看详情或重试历史任务。
+4. 用户点击数据报表，前端调用 /api/reports。
+5. Spring Boot 聚合首页概览、评论趋势、情感分布、问题分布和商品排行。
+6. 前端通过 ECharts 和表格展示全局运营复盘数据。
+```
+
 ## 7. 功能模块
 
 ### 7.1 用户认证模块
@@ -560,6 +588,20 @@ client
 - 爬虫升级预留：当前低频样例爬虫保留，后续可切换 Scrapy / Crawlee 适配器增强采集能力。
 - 生产展示控制：系统设置页普通商家仅展示任务缓存、告警阈值和 AI 调用偏好；开发环境或管理员可查看脱敏后的系统运行状态，不展示真实后端代理地址和本地调试地址。
 
+### 7.13 定时同步中心模块
+
+- 支持 Olist 本地目录、单 CSV 文件和公开样例爬虫三类同步配置。
+- 支持 Cron 表达式配置、启用停用、立即触发和执行历史查询。
+- 启动时自动恢复已启用 Quartz 任务，避免服务重启后定时同步丢失。
+- 同步执行记录关联实际导入任务，便于从任务中心继续追踪进度。
+
+### 7.14 统一任务中心与数据报表模块
+
+- 统一任务中心聚合 CSV 导入、爬虫导入、评论分析和定时同步执行记录。
+- 支持按任务类型、状态和关键词筛选，支持任务详情查看和重试。
+- 数据报表中心展示全局概览、评论趋势、情感分布、差评问题分布和商品排行。
+- 顶部快捷按钮分别进入独立页面，而不是页面内锚点或占位按钮。
+
 ## 8. 数据库设计
 
 ### 8.1 数据库分层
@@ -593,6 +635,9 @@ client
 | biz_comment | 评论业务表 |
 | biz_analysis_task | 分析任务表 |
 | biz_crawl_task | 爬虫任务表，可选，也可并入 biz_analysis_task |
+| biz_sync_config | 定时同步配置表 |
+| biz_sync_execution | 定时同步执行记录表 |
+| biz_task_record | 统一任务记录扩展表 |
 | biz_comment_analysis_result | 评论分析结果表 |
 | biz_operation_report | AI 运营报告表 |
 | biz_ai_content_record | AI 文案生成记录表 |
@@ -611,6 +656,8 @@ biz_analysis_task 1 - 1 biz_operation_report
 biz_product 1 - n biz_ai_content_record
 biz_comment 1 - n biz_negative_reply
 biz_product n - n biz_product_compare_report
+biz_sync_config 1 - n biz_sync_execution
+biz_sync_execution n - 1 biz_analysis_task / biz_crawl_task
 ```
 
 ### 8.5 一期增强表与字段
@@ -629,6 +676,9 @@ biz_product n - n biz_product_compare_report
 | biz_negative_reply | use_count | 回复模板被使用次数 |
 | biz_negative_reply | favorite_flag | 是否收藏 |
 | biz_product_compare_report | 整表新增 | 保存商品 A/B 对比分析报告 |
+| biz_sync_config | 整表新增 | 保存定时同步来源、Cron、启用状态和下次运行时间 |
+| biz_sync_execution | 整表新增 | 保存每次同步触发方式、执行状态和关联任务 |
+| biz_task_record | 整表新增 | 预留统一任务中心扩展记录 |
 
 已有数据库可执行 `aiops-server/src/main/resources/sql/upgrade-2026-08-20-operations-enhancement.sql` 完成字段升级；新库直接执行 `schema.sql` 即可。
 
@@ -674,6 +724,49 @@ CSV 原文件不建议直接存入 MySQL，建议存入阿里云 OSS，MySQL 只
 | status | tinyint | 状态：1 有效，0 删除 |
 | create_time | datetime | 创建时间 |
 | update_time | datetime | 更新时间 |
+
+### 8.8 定时同步与任务中心表
+
+`biz_sync_config` 保存定时同步配置。
+
+| 字段名 | 类型 | 说明 |
+|---|---|---|
+| id | bigint | 主键 |
+| sync_name | varchar(128) | 同步名称 |
+| source_type | varchar(32) | olist_directory / csv_file / crawler |
+| data_source | varchar(32) | 数据来源 |
+| import_mode | varchar(32) | full / incremental |
+| data_path | varchar(1024) | 本地 Olist 数据目录 |
+| file_id | bigint | 上传文件 ID |
+| object_key | varchar(512) | OSS 对象 Key |
+| file_url | varchar(1024) | CSV 文件 URL |
+| platform | varchar(32) | 爬虫平台 |
+| target_url | varchar(1024) | 爬虫目标 URL |
+| cron_expression | varchar(128) | Quartz Cron 表达式 |
+| auto_analysis | tinyint | 导入后是否自动分析 |
+| enabled | tinyint | 是否启用 |
+| last_run_time | datetime | 最近运行时间 |
+| next_run_time | datetime | 下次运行时间 |
+| create_time | datetime | 创建时间 |
+| update_time | datetime | 更新时间 |
+
+`biz_sync_execution` 保存每次同步执行记录。
+
+| 字段名 | 类型 | 说明 |
+|---|---|---|
+| id | bigint | 主键 |
+| config_id | bigint | 同步配置 ID |
+| trigger_type | varchar(32) | manual / scheduled |
+| execution_status | varchar(32) | processing / success / failed |
+| linked_task_id | bigint | 关联导入任务 ID |
+| linked_task_type | varchar(64) | csv_import / crawler_import |
+| error_message | text | 错误信息 |
+| start_time | datetime | 开始时间 |
+| end_time | datetime | 结束时间 |
+| create_time | datetime | 创建时间 |
+| update_time | datetime | 更新时间 |
+
+`biz_task_record` 作为统一任务中心扩展表，当前主要用于同步任务记录，后续可逐步承接更多异步任务快照。
 
 ## 9. Redis 设计
 

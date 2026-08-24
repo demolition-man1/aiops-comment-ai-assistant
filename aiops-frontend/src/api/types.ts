@@ -102,6 +102,70 @@ export interface Task {
   errorMessage?: string
 }
 
+export interface SyncConfig {
+  id: number
+  syncName: string
+  sourceType: string
+  dataSource?: string
+  importMode?: string
+  dataPath?: string
+  fileId?: number
+  objectKey?: string
+  fileUrl?: string
+  platform?: string
+  targetUrl?: string
+  targetType?: string
+  maxCount?: number
+  delaySeconds?: number
+  cronExpression: string
+  autoAnalysis?: number
+  enabled: number
+  remark?: string
+  lastRunTime?: string
+  nextRunTime?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface SyncExecution {
+  id: number
+  configId: number
+  syncName?: string
+  triggerType?: string
+  executionStatus: string
+  linkedTaskId?: number
+  linkedTaskType?: string
+  errorMessage?: string
+  startTime?: string
+  endTime?: string
+  createTime?: string
+}
+
+export interface TaskRecord {
+  recordKey: string
+  sourceId: number
+  sourceTable: string
+  taskName: string
+  taskType: string
+  taskStatus: string
+  progress?: number
+  targetType?: string
+  targetId?: string
+  errorMessage?: string
+  startTime?: string
+  endTime?: string
+  createTime?: string
+}
+
+export interface ReportOverview extends Overview {
+  trendDistribution: TrendItem[]
+  sentimentDistribution: DistributionItem[]
+  problemDistribution: DistributionItem[]
+  highRiskProducts: Product[]
+  hotProducts: Product[]
+  topRatedProducts: Product[]
+}
+
 export interface AnalysisResult {
   targetType: string
   targetId: string

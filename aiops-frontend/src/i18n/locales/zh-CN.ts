@@ -185,6 +185,91 @@ export default {
     crawlerFailed: '爬虫导入失败',
     researchRemark: '仅科研学习演示，禁止高频大规模爬取'
   },
+  sync: {
+    title: '定时同步',
+    subtitle: '配置周期性数据导入，查看每次同步执行情况',
+    createConfig: '新建同步',
+    editConfig: '编辑同步',
+    configCount: '同步配置',
+    enabledCount: '启用中',
+    lastExecution: '最近执行',
+    configList: '同步配置列表',
+    executionHistory: '同步执行记录',
+    syncName: '同步名称',
+    syncNamePlaceholder: '如：每日 Olist 评论同步',
+    sourceType: '来源类型',
+    importMode: '导入模式',
+    cronExpression: 'Cron 表达式',
+    nextRunTime: '下次运行',
+    enabledState: '启用状态',
+    triggerNow: '立即执行',
+    triggerType: '触发方式',
+    linkedTask: '关联任务',
+    errorMessage: '错误信息',
+    startTime: '开始时间',
+    dataPath: '本地数据目录',
+    fileUrl: 'CSV 文件 URL',
+    fileUrlPlaceholder: '可填写 OSS 文件 URL',
+    objectKey: 'OSS Object Key',
+    platform: '平台',
+    targetType: '目标类型',
+    targetUrl: '目标 URL',
+    maxCount: '最大采集数',
+    delaySeconds: '请求延时',
+    autoAnalysis: '导入后分析',
+    remark: '备注',
+    nameRequired: '请填写同步名称',
+    created: '同步配置已创建',
+    updated: '同步配置已更新',
+    enabled: '同步配置已启用',
+    disabled: '同步配置已停用',
+    triggered: '已触发同步任务',
+    sourceTypes: {
+      olist_directory: 'Olist 本地目录',
+      csv_file: '单 CSV 文件',
+      crawler: '公开样例爬虫'
+    },
+    importModes: {
+      full: '全量导入',
+      incremental: '增量导入'
+    }
+  },
+  tasks: {
+    title: '任务中心',
+    subtitle: '统一查看导入、爬虫、分析和定时同步任务',
+    taskList: '任务列表',
+    taskName: '任务名称',
+    taskType: '任务类型',
+    keyword: '关键词',
+    keywordPlaceholder: '搜索名称、目标或错误信息',
+    target: '目标',
+    errorMessage: '错误信息',
+    retry: '重试',
+    detail: '任务详情',
+    recordKey: '任务标识',
+    sourceTable: '来源表',
+    startTime: '开始时间',
+    endTime: '结束时间',
+    retryCreated: '已创建重试任务'
+  },
+  reports: {
+    title: '数据报表',
+    subtitle: '聚合评论趋势、情感分布和商品排行，用于运营复盘',
+    productHint: '全量商品池',
+    commentHint: '评论挖掘样本',
+    scoreHint: '整体满意度参考',
+    riskHint: '全局负面风险',
+    trend: '评论趋势',
+    sentiment: '情感分布',
+    problem: '差评问题分布',
+    reportSummary: '报表摘要',
+    hotProductCount: '热门商品数',
+    highRiskCount: '高风险商品数',
+    topRatedCount: '高评分商品数',
+    hotProducts: '热门商品排行',
+    highRiskProducts: '高风险商品排行',
+    topRatedProducts: '高评分商品排行'
+  },
   compare: {
     title: '商品 A / B 对比',
     subtitle: '对比两款商品的评论痛点、优势短板和运营建议',
@@ -312,6 +397,18 @@ export default {
       other: '其他',
       unclassified: '未分类',
       pending: '待识别'
+    },
+    taskStatus: {
+      pending: '等待中',
+      processing: '处理中',
+      success: '成功',
+      failed: '失败'
+    },
+    taskType: {
+      csv_import: 'CSV 导入',
+      crawler_import: '爬虫导入',
+      comment_analysis: '评论分析',
+      scheduled_sync: '定时同步'
     }
   }
 }

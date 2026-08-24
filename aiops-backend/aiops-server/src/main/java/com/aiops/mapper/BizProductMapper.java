@@ -25,4 +25,51 @@ public interface BizProductMapper extends BaseMapper<BizProduct> {
             """)
     List<DistributionItemVO> selectCategoryDistribution(@Param("productId") String productId,
                                                         @Param("sellerId") String sellerId);
+
+    @Select("""
+            select product_id as product_id,
+                   seller_id as seller_id,
+                   category_name_en as category_name_en,
+                   avg_price as avg_price,
+                   review_count as review_count,
+                   avg_score as avg_score,
+                   negative_rate as negative_rate
+            from biz_product
+            where review_count is not null and review_count > 0
+            order by review_count desc
+            limit #{limit}
+            """)
+    List<com.aiops.vo.ProductVO> selectHotProducts(@Param("limit") Integer limit);
+
+    @Select("""
+            select product_id as product_id,
+                   seller_id as seller_id,
+                   category_name_en as category_name_en,
+                   avg_price as avg_price,
+                   review_count as review_count,
+                   avg_score as avg_score,
+                   negative_rate as negative_rate
+            from biz_product
+            where review_count is not null and review_count >= #{minReviewCount}
+            order by negative_rate desc, review_count desc
+            limit #{limit}
+            """)
+    List<com.aiops.vo.ProductVO> selectHighRiskProducts(@Param("minReviewCount") Integer minReviewCount,
+                                                        @Param("limit") Integer limit);
+
+    @Select("""
+            select product_id as product_id,
+                   seller_id as seller_id,
+                   category_name_en as category_name_en,
+                   avg_price as avg_price,
+                   review_count as review_count,
+                   avg_score as avg_score,
+                   negative_rate as negative_rate
+            from biz_product
+            where review_count is not null and review_count >= #{minReviewCount}
+            order by avg_score desc, review_count desc
+            limit #{limit}
+            """)
+    List<com.aiops.vo.ProductVO> selectTopRatedProducts(@Param("minReviewCount") Integer minReviewCount,
+                                                        @Param("limit") Integer limit);
 }

@@ -214,3 +214,69 @@ create table if not exists biz_product_compare_report (
     create_time datetime not null default current_timestamp,
     index idx_product_compare_pair (left_product_id, right_product_id)
 );
+
+create table if not exists biz_sync_config (
+    id bigint primary key auto_increment,
+    user_id bigint null,
+    sync_name varchar(128) not null,
+    source_type varchar(32) not null,
+    data_source varchar(64) null,
+    import_mode varchar(32) not null default 'incremental',
+    data_path varchar(1024) null,
+    file_id bigint null,
+    object_key varchar(512) null,
+    file_url varchar(1024) null,
+    platform varchar(32) null,
+    target_url varchar(1024) null,
+    target_type varchar(64) null,
+    max_count int null,
+    delay_seconds int null,
+    cron_expression varchar(128) not null,
+    auto_analysis tinyint not null default 0,
+    enabled tinyint not null default 1,
+    remark varchar(512) null,
+    last_run_time datetime null,
+    next_run_time datetime null,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    index idx_sync_config_enabled (enabled),
+    index idx_sync_config_source_type (source_type)
+);
+
+create table if not exists biz_sync_execution (
+    id bigint primary key auto_increment,
+    config_id bigint not null,
+    trigger_type varchar(32) not null,
+    execution_status varchar(32) not null,
+    linked_task_id bigint null,
+    linked_task_type varchar(64) null,
+    error_message text null,
+    start_time datetime null,
+    end_time datetime null,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    index idx_sync_execution_config (config_id),
+    index idx_sync_execution_status (execution_status),
+    index idx_sync_execution_create_time (create_time)
+);
+
+create table if not exists biz_task_record (
+    id bigint primary key auto_increment,
+    task_name varchar(128) not null,
+    task_type varchar(64) not null,
+    task_status varchar(32) not null,
+    progress int not null default 0,
+    source_table varchar(64) null,
+    source_id bigint null,
+    target_type varchar(32) null,
+    target_id varchar(64) null,
+    request_param json null,
+    error_message text null,
+    start_time datetime null,
+    end_time datetime null,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    index idx_task_record_type_status (task_type, task_status),
+    index idx_task_record_source (source_table, source_id),
+    index idx_task_record_create_time (create_time)
+);

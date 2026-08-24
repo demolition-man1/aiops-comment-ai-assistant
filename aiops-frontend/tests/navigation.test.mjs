@@ -5,6 +5,9 @@ import assert from 'node:assert/strict'
 const layout = await readFile(new URL('../src/layouts/MainLayout.vue', import.meta.url), 'utf8')
 const router = await readFile(new URL('../src/router/index.ts', import.meta.url), 'utf8')
 const dataImportView = await readFile(new URL('../src/views/DataImportView.vue', import.meta.url), 'utf8')
+const syncCenterView = await readFile(new URL('../src/views/SyncCenterView.vue', import.meta.url), 'utf8')
+const taskCenterView = await readFile(new URL('../src/views/TaskCenterView.vue', import.meta.url), 'utf8')
+const reportsView = await readFile(new URL('../src/views/ReportsView.vue', import.meta.url), 'utf8')
 
 test('sidebar actionable entries use router routes instead of placeholders', () => {
   assert.ok(!layout.includes('href="javascript:void(0)"'))
@@ -33,7 +36,15 @@ test('topbar action buttons are wired to visible destinations', () => {
   assert.match(layout, /@click="goScheduledSync"/)
   assert.match(layout, /@click="goTaskCenter"/)
   assert.match(layout, /@click="goDataReports"/)
-  assert.match(layout, /#task-center/)
+  assert.match(layout, /path:\s*'\/sync'/)
+  assert.match(layout, /path:\s*'\/tasks'/)
+  assert.match(layout, /path:\s*'\/reports'/)
+  assert.match(router, /SyncCenterView\.vue/)
+  assert.match(router, /TaskCenterView\.vue/)
+  assert.match(router, /ReportsView\.vue/)
+  assert.match(syncCenterView, /syncApi/)
+  assert.match(taskCenterView, /taskCenterApi/)
+  assert.match(reportsView, /reportApi/)
 })
 
 test('csv files are selected first and uploaded only when import starts', () => {

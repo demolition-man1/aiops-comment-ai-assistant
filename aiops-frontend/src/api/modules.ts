@@ -14,6 +14,10 @@ import type {
   PageResult,
   Product,
   ProductCompareReport,
+  ReportOverview,
+  SyncConfig,
+  SyncExecution,
+  TaskRecord,
   Task
 } from './types'
 
@@ -78,6 +82,33 @@ export const dataImportApi = {
     http.get<Task, Task>(`/data/import/tasks/${taskId}`, {
       params: importType ? { importType } : undefined
     })
+}
+
+export const syncApi = {
+  configs: (params: Record<string, unknown>) =>
+    http.get<PageResult<SyncConfig>, PageResult<SyncConfig>>('/sync/configs', { params }),
+  createConfig: (payload: Partial<SyncConfig>) => http.post<SyncConfig, SyncConfig>('/sync/configs', payload),
+  updateConfig: (configId: number, payload: Partial<SyncConfig>) =>
+    http.put<SyncConfig, SyncConfig>(`/sync/configs/${configId}`, payload),
+  enableConfig: (configId: number) => http.post<SyncConfig, SyncConfig>(`/sync/configs/${configId}/enable`),
+  disableConfig: (configId: number) => http.post<SyncConfig, SyncConfig>(`/sync/configs/${configId}/disable`),
+  trigger: (configId: number) => http.post<SyncExecution, SyncExecution>(`/sync/configs/${configId}/trigger`),
+  executions: (params: Record<string, unknown>) =>
+    http.get<PageResult<SyncExecution>, PageResult<SyncExecution>>('/sync/executions', { params })
+}
+
+export const taskCenterApi = {
+  page: (params: Record<string, unknown>) => http.get<PageResult<TaskRecord>, PageResult<TaskRecord>>('/tasks', { params }),
+  detail: (recordKey: string) => http.get<TaskRecord, TaskRecord>(`/tasks/${encodeURIComponent(recordKey)}`),
+  retry: (recordKey: string) => http.post<Task, Task>(`/tasks/${encodeURIComponent(recordKey)}/retry`)
+}
+
+export const reportApi = {
+  overview: () => http.get<ReportOverview, ReportOverview>('/reports/overview'),
+  trends: () => http.get<ReportOverview['trendDistribution'], ReportOverview['trendDistribution']>('/reports/trends'),
+  distributions: () => http.get<DashboardData, DashboardData>('/reports/distributions'),
+  productRank: (params: Record<string, unknown>) =>
+    http.get<Record<string, Product[]>, Record<string, Product[]>>('/reports/product-rank', { params })
 }
 
 export const aiApi = {

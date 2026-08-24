@@ -1309,6 +1309,273 @@ Redisson 属于后端工程治理能力，用于后续多实例部署、分布�
 
 同“生成差评回复”返回数据。
 
+# 定时同步相关接口
+
+## 分页查询同步配置
+
+### 基本信息
+
+**Path：** /api/sync/configs
+
+**Method：** GET
+
+**接口描述：** 查询周期性数据导入配置，支持 Olist 本地目录、单 CSV 文件和公开样例爬虫三类来源。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| pageNum | 否 | 1 | 页码 |
+| pageSize | 否 | 10 | 每页条数 |
+| sourceType | 否 | olist_directory | 来源类型：olist_directory / csv_file / crawler |
+| enabled | 否 | 1 | 启用状态：1 启用，0 停用 |
+
+### 返回数据
+
+| 名称 | 类型 | 备注 |
+|---|---|---|
+| records | array | 同步配置列表 |
+| ├─ id | integer | 配置 ID |
+| ├─ syncName | string | 同步名称 |
+| ├─ sourceType | string | 来源类型 |
+| ├─ importMode | string | full / incremental |
+| ├─ dataPath | string | 本地 Olist 数据目录 |
+| ├─ fileId | integer | 上传文件 ID |
+| ├─ objectKey | string | OSS 对象 Key |
+| ├─ fileUrl | string | CSV 文件 URL |
+| ├─ platform | string | 爬虫平台 |
+| ├─ targetUrl | string | 爬虫目标 URL |
+| ├─ cronExpression | string | Quartz Cron 表达式 |
+| ├─ autoAnalysis | integer | 导入后是否自动分析 |
+| ├─ enabled | integer | 是否启用 |
+| ├─ lastRunTime | string | 最近执行时间 |
+| ├─ nextRunTime | string | 下次执行时间 |
+| total | integer | 总数 |
+
+## 创建同步配置
+
+### 基本信息
+
+**Path：** /api/sync/configs
+
+**Method：** POST
+
+**接口描述：** 创建同步配置；启用状态下会注册 Quartz 定时任务。
+
+### 请求参数
+
+Body 字段同“分页查询同步配置”的配置字段，其中 `syncName`、`sourceType`、`cronExpression` 为核心字段。`olist_directory` 需要 `dataPath`，`csv_file` 需要 `fileId` 或 `fileUrl`，`crawler` 需要 `platform` 和 `targetUrl`。
+
+### 返回数据
+
+返回单条同步配置对象。
+
+## 修改同步配置
+
+### 基本信息
+
+**Path：** /api/sync/configs/{configId}
+
+**Method：** PUT
+
+**接口描述：** 修改同步来源、导入模式、Cron 表达式、启用状态等参数。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| configId | 是 | 1 | 同步配置 ID |
+
+Body 同“创建同步配置”。
+
+### 返回数据
+
+返回修改后的同步配置对象。
+
+## 启用同步配置
+
+**Path：** /api/sync/configs/{configId}/enable
+
+**Method：** POST
+
+**接口描述：** 启用配置并注册 Quartz 定时任务。
+
+## 停用同步配置
+
+**Path：** /api/sync/configs/{configId}/disable
+
+**Method：** POST
+
+**接口描述：** 停用配置并移除 Quartz 定时任务。
+
+## 立即触发同步
+
+**Path：** /api/sync/configs/{configId}/trigger
+
+**Method：** POST
+
+**接口描述：** 手动执行一次同步配置，用于演示、排查或临时补数据。
+
+### 返回数据
+
+| 名称 | 类型 | 备注 |
+|---|---|---|
+| id | integer | 同步执行记录 ID |
+| configId | integer | 同步配置 ID |
+| syncName | string | 同步名称 |
+| triggerType | string | manual / scheduled |
+| executionStatus | string | processing / success / failed |
+| linkedTaskId | integer | 关联导入任务 ID |
+| linkedTaskType | string | csv_import / crawler_import |
+| errorMessage | string | 错误信息 |
+| startTime | string | 开始时间 |
+| endTime | string | 结束时间 |
+
+## 分页查询同步执行记录
+
+**Path：** /api/sync/executions
+
+**Method：** GET
+
+**接口描述：** 查看每次手动或定时同步执行情况。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| pageNum | 否 | 1 | 页码 |
+| pageSize | 否 | 10 | 每页条数 |
+| configId | 否 | 1 | 同步配置 ID |
+| status | 否 | success | 执行状态 |
+
+### 返回数据
+
+分页返回同步执行记录，字段同“立即触发同步”返回数据。
+
+# 任务中心相关接口
+
+## 分页查询统一任务列表
+
+### 基本信息
+
+**Path：** /api/tasks
+
+**Method：** GET
+
+**接口描述：** 聚合 CSV 导入、爬虫导入、评论分析和定时同步执行记录，供前端任务中心统一展示。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| pageNum | 否 | 1 | 页码 |
+| pageSize | 否 | 10 | 每页条数 |
+| taskType | 否 | comment_analysis | csv_import / crawler_import / comment_analysis / scheduled_sync |
+| taskStatus | 否 | processing | pending / processing / success / failed |
+| keyword | 否 | 商品ID | 搜索任务名称、目标或错误信息 |
+
+### 返回数据
+
+| 名称 | 类型 | 备注 |
+|---|---|---|
+| records | array | 任务列表 |
+| ├─ recordKey | string | 统一任务标识，如 analysis:1 |
+| ├─ sourceId | integer | 原始任务 ID |
+| ├─ sourceTable | string | 来源表 |
+| ├─ taskName | string | 任务名称 |
+| ├─ taskType | string | 任务类型 |
+| ├─ taskStatus | string | 任务状态 |
+| ├─ progress | integer | 任务进度 |
+| ├─ targetType | string | 目标类型 |
+| ├─ targetId | string | 目标 ID |
+| ├─ errorMessage | string | 错误信息 |
+| ├─ startTime | string | 开始时间 |
+| ├─ endTime | string | 结束时间 |
+| ├─ createTime | string | 创建时间 |
+| total | integer | 总数 |
+
+## 查询统一任务详情
+
+**Path：** /api/tasks/{recordKey}
+
+**Method：** GET
+
+**接口描述：** 根据统一任务标识查询任务详情。`recordKey` 示例：`analysis:1`、`crawler:2`、`sync:3`。
+
+### 返回数据
+
+返回单条统一任务对象。
+
+## 重试任务
+
+**Path：** /api/tasks/{recordKey}/retry
+
+**Method：** POST
+
+**接口描述：** 基于历史任务参数重新创建对应任务。CSV 导入任务会复用原请求参数，爬虫任务会复用平台、URL 和采集数量，评论分析任务会复用目标类型和目标 ID。
+
+### 返回数据
+
+返回新创建任务的 `TaskVO`，字段同“查询导入任务详情”。
+
+# 数据报表相关接口
+
+## 查询报表总览
+
+### 基本信息
+
+**Path：** /api/reports/overview
+
+**Method：** GET
+
+**接口描述：** 返回全局运营指标、评论趋势、情感分布、差评问题分布和核心商品排行。
+
+### 返回数据
+
+| 名称 | 类型 | 备注 |
+|---|---|---|
+| productCount | integer | 商品数量 |
+| sellerCount | integer | 商家数量 |
+| commentCount | integer | 评论数量 |
+| avgScore | number | 平均评分 |
+| negativeRate | number | 负面占比 |
+| trendDistribution | array | 评论趋势 |
+| sentimentDistribution | array | 情感分布 |
+| problemDistribution | array | 差评问题分布 |
+| highRiskProducts | array | 高风险商品 |
+| hotProducts | array | 热门商品 |
+| topRatedProducts | array | 高评分商品 |
+
+## 查询评论趋势
+
+**Path：** /api/reports/trends
+
+**Method：** GET
+
+**接口描述：** 返回按月聚合的评论数、负面评论数、负面率和平均评分。
+
+## 查询统计分布
+
+**Path：** /api/reports/distributions
+
+**Method：** GET
+
+**接口描述：** 返回评分、情感、类目、差评问题和关键词分布。
+
+## 查询商品排行
+
+**Path：** /api/reports/product-rank
+
+**Method：** GET
+
+**接口描述：** 返回热门商品、高风险商品和高评分商品排行。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| limit | 否 | 10 | 每个榜单返回数量，最大 50 |
+
 # 数据看板相关接口
 
 ## 查询首页概览

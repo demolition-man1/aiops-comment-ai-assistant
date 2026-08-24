@@ -185,6 +185,91 @@ export default {
     crawlerFailed: 'Falha na importação por crawler',
     researchRemark: 'Demo apenas para pesquisa e estudo; crawling massivo em alta frequência é proibido'
   },
+  sync: {
+    title: 'Sincronização',
+    subtitle: 'Configure importações periódicas e acompanhe cada execução de sincronização',
+    createConfig: 'Nova sincronização',
+    editConfig: 'Editar sincronização',
+    configCount: 'Configurações',
+    enabledCount: 'Ativas',
+    lastExecution: 'Última execução',
+    configList: 'Lista de sincronizações',
+    executionHistory: 'Histórico de execuções',
+    syncName: 'Nome',
+    syncNamePlaceholder: 'Ex.: sincronização diária de avaliações Olist',
+    sourceType: 'Tipo de origem',
+    importMode: 'Modo de importação',
+    cronExpression: 'Expressão Cron',
+    nextRunTime: 'Próxima execução',
+    enabledState: 'Ativa',
+    triggerNow: 'Executar agora',
+    triggerType: 'Tipo de acionamento',
+    linkedTask: 'Tarefa vinculada',
+    errorMessage: 'Mensagem de erro',
+    startTime: 'Início',
+    dataPath: 'Diretório local',
+    fileUrl: 'URL do CSV',
+    fileUrlPlaceholder: 'URL opcional do arquivo OSS',
+    objectKey: 'Chave do objeto OSS',
+    platform: 'Plataforma',
+    targetType: 'Tipo de alvo',
+    targetUrl: 'URL alvo',
+    maxCount: 'Limite de coleta',
+    delaySeconds: 'Atraso da requisição',
+    autoAnalysis: 'Analisar após importar',
+    remark: 'Observação',
+    nameRequired: 'Informe um nome de sincronização',
+    created: 'Configuração criada',
+    updated: 'Configuração atualizada',
+    enabled: 'Configuração ativada',
+    disabled: 'Configuração desativada',
+    triggered: 'Tarefa de sincronização acionada',
+    sourceTypes: {
+      olist_directory: 'Diretório local Olist',
+      csv_file: 'Arquivo CSV único',
+      crawler: 'Crawler de amostra pública'
+    },
+    importModes: {
+      full: 'Importação completa',
+      incremental: 'Importação incremental'
+    }
+  },
+  tasks: {
+    title: 'Central de Tarefas',
+    subtitle: 'Acompanhe importações, crawlers, análises e sincronizações em um só lugar',
+    taskList: 'Lista de tarefas',
+    taskName: 'Nome da tarefa',
+    taskType: 'Tipo de tarefa',
+    keyword: 'Palavra-chave',
+    keywordPlaceholder: 'Pesquisar nome, alvo ou erro',
+    target: 'Alvo',
+    errorMessage: 'Mensagem de erro',
+    retry: 'Tentar novamente',
+    detail: 'Detalhes da tarefa',
+    recordKey: 'Identificador',
+    sourceTable: 'Tabela de origem',
+    startTime: 'Início',
+    endTime: 'Fim',
+    retryCreated: 'Tarefa de repetição criada'
+  },
+  reports: {
+    title: 'Relatórios',
+    subtitle: 'Agregue tendências, sentimentos e rankings de produtos para revisão operacional',
+    productHint: 'Base total de produtos',
+    commentHint: 'Amostra de mineração de avaliações',
+    scoreHint: 'Referência geral de satisfação',
+    riskHint: 'Risco negativo global',
+    trend: 'Tendência de avaliações',
+    sentiment: 'Distribuição de sentimento',
+    problem: 'Distribuição de problemas negativos',
+    reportSummary: 'Resumo do relatório',
+    hotProductCount: 'Produtos populares',
+    highRiskCount: 'Produtos de risco',
+    topRatedCount: 'Produtos bem avaliados',
+    hotProducts: 'Ranking de produtos populares',
+    highRiskProducts: 'Ranking de produtos de risco',
+    topRatedProducts: 'Ranking de produtos bem avaliados'
+  },
   compare: {
     title: 'Comparação de Produtos A / B',
     subtitle: 'Compare dores, vantagens, pontos fracos e sugestões operacionais nas avaliações',
@@ -312,6 +397,18 @@ export default {
       other: 'Outro',
       unclassified: 'Sem classificação',
       pending: 'Pendente'
+    },
+    taskStatus: {
+      pending: 'Pendente',
+      processing: 'Processando',
+      success: 'Sucesso',
+      failed: 'Falhou'
+    },
+    taskType: {
+      csv_import: 'Importação CSV',
+      crawler_import: 'Importação por crawler',
+      comment_analysis: 'Análise de avaliações',
+      scheduled_sync: 'Sincronização'
     }
   }
 }
