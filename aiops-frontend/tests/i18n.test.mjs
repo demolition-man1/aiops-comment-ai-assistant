@@ -14,6 +14,8 @@ const httpClient = await readFile(new URL('../src/api/http.ts', import.meta.url)
 const commentWorkbenchView = await readFile(new URL('../src/views/CommentWorkbenchView.vue', import.meta.url), 'utf8')
 const alertCenterView = await readFile(new URL('../src/views/AlertCenterView.vue', import.meta.url), 'utf8')
 const dataImportView = await readFile(new URL('../src/views/DataImportView.vue', import.meta.url), 'utf8')
+const aiContentView = await readFile(new URL('../src/views/AiContentView.vue', import.meta.url), 'utf8')
+const productCompareView = await readFile(new URL('../src/views/ProductCompareView.vue', import.meta.url), 'utf8')
 
 test('i18n supports chinese english and portuguese locales', () => {
   for (const locale of ['zh-CN', 'en-US', 'pt-BR']) {
@@ -77,4 +79,11 @@ test('review operations pages render labels through i18n', () => {
   assert.ok(!commentWorkbenchView.includes('评论智能工作台'))
   assert.ok(!alertCenterView.includes('告警中心'))
   assert.ok(!dataImportView.includes('数据导入中心'))
+})
+
+test('ai request pages no longer hard-code zh-CN language', () => {
+  for (const source of [aiContentView, commentWorkbenchView, productCompareView]) {
+    assert.ok(!source.includes("language: 'zh-CN'"))
+    assert.match(source, /localeStore\.locale/)
+  }
 })

@@ -8,8 +8,10 @@ import { aiApi, analysisApi, commentApi, pollTask } from '@/api/modules'
 import type { AnalysisResult, Comment, NegativeReply, OperationReport, Task } from '@/api/types'
 import { resolveAnalysisProductId } from '@/utils/analysisTarget'
 import { formatPercent } from '@/utils/metricFormat'
+import { useLocaleStore } from '@/stores/locale'
 
 const { t } = useI18n()
+const localeStore = useLocaleStore()
 const loading = ref(false)
 const taskLoading = ref(false)
 const comments = ref<Comment[]>([])
@@ -121,7 +123,7 @@ const generateReport = async () => {
     ElMessage.warning(t('comments.specifyProductWarning'))
     return
   }
-  report.value = await aiApi.productReport({ productId, language: 'zh-CN' })
+  report.value = await aiApi.productReport({ productId, language: localeStore.locale })
   ElMessage.success(t('comments.reportGenerated'))
 }
 
@@ -137,7 +139,7 @@ const generateReply = async () => {
     reply.value = await aiApi.negativeReply({
       commentId: target.id,
       toneType: 'professional',
-      language: 'zh-CN'
+      language: localeStore.locale
     })
     replyDialogVisible.value = true
     ElMessage.success(t('comments.replyGenerated'))
