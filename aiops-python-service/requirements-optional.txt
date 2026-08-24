@@ -1,0 +1,6 @@
+# Optional NLP and crawler upgrades.
+# Install these only when the machine can handle model downloads and browser/runtime dependencies.
+keybert==0.9.0
+bertopic==0.16.4
+scrapy==2.12.0
+crawlee==0.5.2

@@ -1,0 +1,57 @@
+spring:
+  config:
+    import:
+      - optional:file:./application-secret.yml
+      - optional:file:../application-secret.yml
+      - optional:file:./aiops-backend/application-secret.yml
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+      schema-locations: classpath:sql/schema.sql
+      data-locations: classpath:sql/data.sql
+
+aiops:
+  config:
+    datasource:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      host: localhost
+      port: 3306
+      database: aiops
+      username: root
+      password: ${AIOPS_MYSQL_PASSWORD:}
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      timeout: 3s
+      password:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 250MB
+    jwt:
+      secret: ${AIOPS_JWT_SECRET:change-me-dev-jwt-secret}
+      expire-seconds: 86400
+    python:
+      base-url: http://localhost:8001
+      connect-timeout-seconds: 5
+      read-timeout-seconds: 300
+    ai-rate-limit:
+      enabled: true
+      capacity: 20
+      refill-tokens: 20
+      refill-period-seconds: 60
+    task-maintenance:
+      enabled: true
+      interval-seconds: 300
+      stale-processing-minutes: 30
+      lock-wait-seconds: 1
+      lock-lease-seconds: 60
+    aliyun:
+      oss:
+        endpoint: https://oss-cn-beijing.aliyuncs.com
+        bucket-name: your-bucket-name
+        access-key-id: your-access-key-id
+        access-key-secret: your-access-key-secret
+        upload-dir: aiops/csv
+        signed-url-expire-seconds: 3600

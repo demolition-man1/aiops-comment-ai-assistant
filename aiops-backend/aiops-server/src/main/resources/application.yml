@@ -1,0 +1,65 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: aiops-server
+  profiles:
+    active: dev
+  datasource:
+    driver-class-name: ${aiops.config.datasource.driver-class-name}
+    url: jdbc:mysql://${aiops.config.datasource.host}:${aiops.config.datasource.port}/${aiops.config.datasource.database}?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${aiops.config.datasource.username}
+    password: ${aiops.config.datasource.password}
+  data:
+    redis:
+      host: ${aiops.config.redis.host}
+      port: ${aiops.config.redis.port}
+      database: ${aiops.config.redis.database}
+      timeout: ${aiops.config.redis.timeout}
+      password: ${aiops.config.redis.password:}
+  quartz:
+    job-store-type: memory
+    overwrite-existing-jobs: true
+  servlet:
+    multipart:
+      max-file-size: ${aiops.config.multipart.max-file-size:200MB}
+      max-request-size: ${aiops.config.multipart.max-request-size:250MB}
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+knife4j:
+  enable: true
+
+aiops:
+  jwt:
+    secret: ${aiops.config.jwt.secret}
+    expire-seconds: ${aiops.config.jwt.expire-seconds}
+  python:
+    base-url: ${aiops.config.python.base-url}
+    connect-timeout-seconds: ${aiops.config.python.connect-timeout-seconds}
+    read-timeout-seconds: ${aiops.config.python.read-timeout-seconds}
+  ai-rate-limit:
+    enabled: ${aiops.config.ai-rate-limit.enabled:true}
+    capacity: ${aiops.config.ai-rate-limit.capacity:20}
+    refill-tokens: ${aiops.config.ai-rate-limit.refill-tokens:20}
+    refill-period-seconds: ${aiops.config.ai-rate-limit.refill-period-seconds:60}
+  task-maintenance:
+    enabled: ${aiops.config.task-maintenance.enabled:true}
+    interval-seconds: ${aiops.config.task-maintenance.interval-seconds:300}
+    stale-processing-minutes: ${aiops.config.task-maintenance.stale-processing-minutes:30}
+    lock-wait-seconds: ${aiops.config.task-maintenance.lock-wait-seconds:1}
+    lock-lease-seconds: ${aiops.config.task-maintenance.lock-lease-seconds:60}
+  aliyun:
+    oss:
+      endpoint: ${aiops.config.aliyun.oss.endpoint}
+      bucket-name: ${aiops.config.aliyun.oss.bucket-name}
+      access-key-id: ${aiops.config.aliyun.oss.access-key-id}
+      access-key-secret: ${aiops.config.aliyun.oss.access-key-secret}
+      upload-dir: ${aiops.config.aliyun.oss.upload-dir}
+      signed-url-expire-seconds: ${aiops.config.aliyun.oss.signed-url-expire-seconds}

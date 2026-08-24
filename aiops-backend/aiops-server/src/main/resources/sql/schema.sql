@@ -1,0 +1,216 @@
+create table if not exists sys_user (
+    id bigint primary key auto_increment,
+    username varchar(64) not null unique,
+    password varchar(255) not null,
+    nickname varchar(64) null,
+    email varchar(128) null,
+    role varchar(32) not null default 'merchant',
+    status tinyint not null default 1,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp
+);
+
+create table if not exists sys_file_upload (
+    id bigint primary key auto_increment,
+    user_id bigint null,
+    original_name varchar(255) not null,
+    file_name varchar(255) not null,
+    object_key varchar(512) not null,
+    file_url varchar(1024) null,
+    file_type varchar(64) null,
+    file_size bigint null,
+    business_type varchar(64) null,
+    status tinyint not null default 1,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp
+);
+
+create table if not exists biz_product (
+    id bigint primary key auto_increment,
+    product_id varchar(64) not null unique,
+    seller_id varchar(64) null,
+    category_name varchar(128) null,
+    category_name_en varchar(128) null,
+    avg_price decimal(10,2) null,
+    avg_freight decimal(10,2) null,
+    order_count int null,
+    review_count int null,
+    avg_score decimal(4,2) null,
+    negative_rate decimal(6,4) null,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    index idx_product_seller_id (seller_id),
+    index idx_product_category (category_name_en)
+);
+
+create table if not exists biz_seller (
+    id bigint primary key auto_increment,
+    seller_id varchar(64) not null unique,
+    seller_city varchar(128) null,
+    seller_state varchar(32) null,
+    product_count int null,
+    order_count int null,
+    avg_score decimal(4,2) null,
+    negative_rate decimal(6,4) null,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp
+);
+
+create table if not exists biz_comment (
+    id bigint primary key auto_increment,
+    review_id varchar(64) null,
+    order_id varchar(64) null,
+    product_id varchar(64) null,
+    seller_id varchar(64) null,
+    review_score int null,
+    review_title text null,
+    review_content text null,
+    clean_content text null,
+    review_time datetime null,
+    sentiment varchar(32) null,
+    sentiment_score decimal(6,4) null,
+    keywords json null,
+    problem_type varchar(64) null,
+    manual_problem_type varchar(64) null,
+    custom_tags json null,
+    is_negative tinyint null,
+    tag_update_time datetime null,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    index idx_comment_product_id (product_id),
+    index idx_comment_seller_id (seller_id),
+    index idx_comment_sentiment (sentiment),
+    index idx_comment_score (review_score),
+    index idx_comment_problem_type (problem_type)
+);
+
+create table if not exists biz_analysis_task (
+    id bigint primary key auto_increment,
+    user_id bigint null,
+    target_type varchar(32) null,
+    target_id varchar(64) null,
+    task_type varchar(64) not null,
+    task_status varchar(32) not null,
+    progress int not null default 0,
+    request_param json null,
+    error_message text null,
+    start_time datetime null,
+    end_time datetime null,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    index idx_analysis_task_target (target_type, target_id),
+    index idx_analysis_task_status (task_status)
+);
+
+create table if not exists biz_crawl_task (
+    id bigint primary key auto_increment,
+    user_id bigint null,
+    platform varchar(32) not null,
+    target_url varchar(1024) not null,
+    target_type varchar(64) null,
+    task_status varchar(32) not null,
+    progress int not null default 0,
+    max_count int null,
+    success_count int null,
+    fail_count int null,
+    delay_seconds int null,
+    request_param json null,
+    error_message text null,
+    start_time datetime null,
+    end_time datetime null,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    index idx_crawl_task_status (task_status)
+);
+
+create table if not exists biz_comment_analysis_result (
+    id bigint primary key auto_increment,
+    task_id bigint null,
+    target_type varchar(32) not null,
+    target_id varchar(64) not null,
+    total_count int null,
+    positive_count int null,
+    neutral_count int null,
+    negative_count int null,
+    positive_rate decimal(6,4) null,
+    negative_rate decimal(6,4) null,
+    top_keywords json null,
+    negative_keywords json null,
+    problem_distribution json null,
+    score_distribution json null,
+    custom_tag_distribution json null,
+    trend_distribution json null,
+    summary text null,
+    create_time datetime not null default current_timestamp,
+    index idx_analysis_result_target (target_type, target_id),
+    index idx_analysis_result_task_id (task_id)
+);
+
+create table if not exists biz_operation_report (
+    id bigint primary key auto_increment,
+    task_id bigint null,
+    target_type varchar(32) not null,
+    target_id varchar(64) not null,
+    report_title varchar(255) null,
+    consumer_pain_points text null,
+    product_advantages text null,
+    product_disadvantages text null,
+    operation_suggestions text null,
+    copywriting_suggestions text null,
+    service_suggestions text null,
+    risk_tips text null,
+    full_report longtext null,
+    model_name varchar(64) null,
+    create_time datetime not null default current_timestamp,
+    index idx_operation_report_target (target_type, target_id)
+);
+
+create table if not exists biz_ai_content_record (
+    id bigint primary key auto_increment,
+    user_id bigint null,
+    target_type varchar(32) not null,
+    target_id varchar(64) not null,
+    content_type varchar(64) not null,
+    style_type varchar(64) null,
+    prompt text null,
+    generated_content longtext null,
+    model_name varchar(64) null,
+    token_usage int null,
+    create_time datetime not null default current_timestamp,
+    index idx_ai_content_target (target_type, target_id),
+    index idx_ai_content_type (content_type)
+);
+
+create table if not exists biz_negative_reply (
+    id bigint primary key auto_increment,
+    comment_id bigint not null,
+    product_id varchar(64) null,
+    seller_id varchar(64) null,
+    problem_type varchar(64) null,
+    comment_content text null,
+    tone_type varchar(64) null,
+    reply_content text null,
+    model_name varchar(64) null,
+    effect_tag varchar(64) null,
+    use_count int not null default 0,
+    favorite_flag tinyint not null default 0,
+    create_time datetime not null default current_timestamp,
+    update_time datetime null,
+    index idx_negative_reply_comment_id (comment_id),
+    index idx_negative_reply_product_id (product_id),
+    index idx_negative_reply_seller_id (seller_id)
+);
+
+create table if not exists biz_product_compare_report (
+    id bigint primary key auto_increment,
+    left_product_id varchar(64) not null,
+    right_product_id varchar(64) not null,
+    metric_snapshot json null,
+    compare_summary text null,
+    advantage_analysis text null,
+    risk_analysis text null,
+    operation_suggestions text null,
+    model_name varchar(64) null,
+    create_time datetime not null default current_timestamp,
+    index idx_product_compare_pair (left_product_id, right_product_id)
+);
