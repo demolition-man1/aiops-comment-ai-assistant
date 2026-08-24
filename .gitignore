@@ -27,3 +27,4 @@ node_modules/
 dist/
 .vite/
 aiops-frontend/.env.local
+runtime-logs/
