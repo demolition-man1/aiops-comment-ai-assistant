@@ -164,7 +164,7 @@ onMounted(loadData)
       </MetricCard>
     </div>
 
-    <div class="grid two section-gap">
+    <div id="data-reports" class="grid two section-gap">
       <ChartPanel :title="t('dashboard.trendTitle')" :option="trendOption" :height="320" />
       <ChartPanel :title="t('dashboard.sentimentTitle')" :option="sentimentOption" :height="320" />
     </div>

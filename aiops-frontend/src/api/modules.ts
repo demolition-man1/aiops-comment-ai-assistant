@@ -3,6 +3,7 @@ import type {
   AiContent,
   AnalysisResult,
   Comment,
+  CommentTranslation,
   DashboardData,
   FileUploadResult,
   LoginRequest,
@@ -37,7 +38,9 @@ export const commentApi = {
   negative: (params: Record<string, unknown>) =>
     http.get<PageResult<Comment>, PageResult<Comment>>('/comments/negative', { params }),
   updateTags: (commentId: number, payload: { manualProblemType?: string; customTags: string[] }) =>
-    http.put<Comment, Comment>(`/comments/${commentId}/tags`, payload)
+    http.put<Comment, Comment>(`/comments/${commentId}/tags`, payload),
+  translate: (commentId: number, payload: { language?: string; forceRefresh?: boolean }) =>
+    http.post<CommentTranslation, CommentTranslation>(`/comments/${commentId}/translate`, payload)
 }
 
 export const analysisApi = {

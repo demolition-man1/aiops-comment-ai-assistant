@@ -165,6 +165,17 @@ export interface NegativeReply {
   updateTime?: string
 }
 
+export interface CommentTranslation {
+  commentId: number
+  productId?: string
+  originalContent?: string
+  sourceLanguage?: string
+  targetLanguage: string
+  translatedContent: string
+  modelName?: string
+  cached?: boolean
+}
+
 export interface ProductCompareReport {
   reportId: number
   leftProductId: string

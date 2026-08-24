@@ -24,3 +24,13 @@ test('layout uses i18n keys and exposes language selector', () => {
   assert.match(layout, /localeStore\.languages/)
   assert.ok(!layout.includes("label: '商家驾驶舱'"))
 })
+
+test('topbar action buttons are wired to visible destinations', () => {
+  assert.match(layout, /goScheduledSync/)
+  assert.match(layout, /goTaskCenter/)
+  assert.match(layout, /goDataReports/)
+  assert.match(layout, /@click="goScheduledSync"/)
+  assert.match(layout, /@click="goTaskCenter"/)
+  assert.match(layout, /@click="goDataReports"/)
+  assert.match(layout, /#task-center/)
+})

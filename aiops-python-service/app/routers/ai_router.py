@@ -23,6 +23,11 @@ def generate_negative_reply(request: dict[str, Any]) -> dict[str, Any]:
     return _call_ai(lambda: AiService().generate_negative_reply(request))
 
 
+@router.post("/comment-translate")
+def translate_comment(request: dict[str, Any]) -> dict[str, Any]:
+    return _call_ai(lambda: AiService().translate_comment(request))
+
+
 @router.post("/product-compare")
 def generate_product_compare(request: dict[str, Any]) -> dict[str, Any]:
     return _call_ai(lambda: AiService().generate_product_compare(request))

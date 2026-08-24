@@ -134,7 +134,7 @@ const crawlerProgress = computed(() => Number(crawlerTask.value?.progress || 0))
     </div>
 
     <div class="grid two">
-      <div class="panel">
+      <div id="scheduled-sync" class="panel">
         <div class="status-line">
           <div class="panel-title">{{ t('importCenter.csvTitle') }}</div>
           <FileUp class="text-blue" :size="22" />

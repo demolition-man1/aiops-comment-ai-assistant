@@ -39,6 +39,7 @@ Redis 当前用于：
 - AI 报告缓存: `ai:report:{targetType}:{targetId}`
 - AI 文案缓存: `ai:content:{hash}`
 - 商品对比报告缓存: `ai:compare:product:{leftProductId}:{rightProductId}`
+- 评论翻译缓存: `ai:translation:comment:{commentId}:{language}`
 - AI 调用限流: `rate:ai:user:{userId}`, 默认每用户每分钟 20 次
 
 Redis 作为加速层处理，服务不可用时不会阻断 MySQL 主流程。

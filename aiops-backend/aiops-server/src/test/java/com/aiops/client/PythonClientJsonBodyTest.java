@@ -54,6 +54,26 @@ class PythonClientJsonBodyTest {
         server.verify();
     }
 
+    @Test
+    void aiClientSendsCommentTranslationJsonBody() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        PythonAiClient client = new PythonAiClient(builder.build(), properties(), new ObjectMapper());
+
+        server.expect(requestTo("http://python-service/internal/ai/comment-translate"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.CONTENT_TYPE, containsString(MediaType.APPLICATION_JSON_VALUE)))
+                .andExpect(content().json("{\"commentId\":22,\"targetLanguage\":\"en-US\"}"))
+                .andRespond(withSuccess(
+                        "{\"success\":true,\"data\":{\"translatedContent\":\"ok\",\"modelName\":\"test\"}}",
+                        MediaType.APPLICATION_JSON
+                ));
+
+        client.translateComment(Map.of("commentId", 22, "targetLanguage", "en-US"));
+
+        server.verify();
+    }
+
     private PythonServiceProperties properties() {
         PythonServiceProperties properties = new PythonServiceProperties();
         properties.setBaseUrl("http://python-service");

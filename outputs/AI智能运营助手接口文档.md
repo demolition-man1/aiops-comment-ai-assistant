@@ -50,7 +50,7 @@ AI 报告、AI 文案、差评回复、商品对比报告等高成本接口接�
 
 ### 多语言参数说明
 
-AI 生成类接口中的 `language` 支持 `zh-CN`、`en-US`、`pt-BR`，用于控制 AI 生成内容的输出语言。当前前端语言切换后，会在生成运营报告、营销文案、差评回复和商品 A/B 对比报告时自动传递当前语言。原始评论内容仍保持数据源原文展示。
+AI 生成类接口中的 `language` 支持 `zh-CN`、`en-US`、`pt-BR`，用于控制 AI 生成内容的输出语言。当前前端语言切换后，会在生成运营报告、营销文案、差评回复、评论按需翻译和商品 A/B 对比报告时自动传递当前语言。原始评论内容仍保持数据源原文展示，用户点击翻译时再生成当前语言版本。
 
 ### 异步任务维护说明
 
@@ -590,6 +590,47 @@ Redisson 属于后端工程治理能力，用于后续多实例部署、分布�
 | ├─ manualProblemType | string | 非必须 |  | 人工修正差评原因 |  |
 | ├─ effectiveProblemType | string | 非必须 |  | 最终生效差评原因，优先人工修正 |  |
 | ├─ customTags | array | 非必须 |  | 商家自定义标签 |  |
+| msg | string | 非必须 |  | 提示信息 |  |
+
+## 翻译单条评论
+
+### 基本信息
+
+**Path：** /api/comments/{commentId}/translate
+
+**Method：** POST
+
+**接口描述：** 根据当前界面语言按需翻译单条评论。Java 后端先读取 Redis 缓存，缓存不存在或 forceRefresh=true 时执行 Bucket4j AI 限流，并调用 Python AI 服务生成翻译结果。
+
+### 请求参数
+
+**路径参数**
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| commentId | 是 | 101 | 评论主键 ID |
+
+**Body**
+
+| 名称 | 类型 | 是否必须 | 默认值 | 备注 | 其他信息 |
+|---|---|---|---|---|---|
+| language | string | 非必须 | zh-CN | 目标语言 | zh-CN / en-US / pt-BR |
+| forceRefresh | boolean | 非必须 | false | 是否强制重新翻译 | true 时跳过 Redis 缓存 |
+
+### 返回数据
+
+| 名称 | 类型 | 是否必须 | 默认值 | 备注 | 其他信息 |
+|---|---|---|---|---|---|
+| code | integer | 必须 |  | 状态码 | format: int32 |
+| data | object | 非必须 |  | 翻译结果 |  |
+| ├─ commentId | integer | 非必须 |  | 评论主键 ID | format: int64 |
+| ├─ productId | string | 非必须 |  | 商品 ID |  |
+| ├─ originalContent | string | 非必须 |  | 原始评论内容 |  |
+| ├─ sourceLanguage | string | 非必须 | auto | 源语言 |  |
+| ├─ targetLanguage | string | 非必须 | zh-CN | 目标语言 |  |
+| ├─ translatedContent | string | 非必须 |  | 翻译后的评论内容 |  |
+| ├─ modelName | string | 非必须 |  | 使用的大模型名称 |  |
+| ├─ cached | boolean | 非必须 | false | 是否来自 Redis 缓存 |  |
 | msg | string | 非必须 |  | 提示信息 |  |
 
 ## 更新评论标签
@@ -1597,4 +1638,40 @@ Python 内部服务由 Java 后端调用，一般部署在内网或本机，不�
 | success | boolean | 必须 |  | 是否成功 |  |
 | replyContent | string | 非必须 |  | 回复内容 |  |
 | modelName | string | 非必须 |  | 模型名称 |  |
+| message | string | 非必须 |  | 提示信息 |  |
+
+## 评论翻译
+
+### 基本信息
+
+**Path：** /internal/ai/comment-translate
+
+**Method：** POST
+
+**接口描述：** Java 后端调用 Python 服务，根据单条评论内容生成目标语言翻译。该接口只供后端内部调用，前端不直接访问。
+
+### 请求参数
+
+**Body**
+
+| 名称 | 类型 | 是否必须 | 默认值 | 备注 | 其他信息 |
+|---|---|---|---|---|---|
+| commentId | integer | 必须 |  | 评论 ID | format: int64 |
+| reviewId | string | 非必须 |  | Olist 原始评论 ID |  |
+| productId | string | 非必须 |  | 商品 ID |  |
+| sellerId | string | 非必须 |  | 卖家 ID |  |
+| reviewScore | integer | 非必须 |  | 评论评分 | format: int32 |
+| commentTitle | string | 非必须 |  | 评论标题 |  |
+| commentContent | string | 必须 |  | 原始评论内容 |  |
+| targetLanguage | string | 非必须 | zh-CN | 目标语言 | zh-CN / en-US / pt-BR |
+
+### 返回数据
+
+| 名称 | 类型 | 是否必须 | 默认值 | 备注 | 其他信息 |
+|---|---|---|---|---|---|
+| success | boolean | 必须 |  | 是否成功 |  |
+| data | object | 非必须 |  | 翻译结果 |  |
+| ├─ translatedContent | string | 非必须 |  | 翻译后的评论内容 |  |
+| ├─ sourceLanguage | string | 非必须 | auto | 源语言 |  |
+| ├─ modelName | string | 非必须 |  | 模型名称 |  |
 | message | string | 非必须 |  | 提示信息 |  |

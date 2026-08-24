@@ -88,6 +88,17 @@ test('ai request pages no longer hard-code zh-CN language', () => {
   }
 })
 
+test('comment workspace exposes on-demand translation in the current locale', () => {
+  assert.match(commentWorkbenchView, /commentApi\.translate/)
+  assert.match(commentWorkbenchView, /translateCommentFor/)
+  assert.match(commentWorkbenchView, /localeStore\.locale/)
+  assert.match(commentWorkbenchView, /translationDialogVisible/)
+  assert.match(commentWorkbenchView, /comments\.translate/)
+  assert.ok(zh.includes('translate:'))
+  assert.ok(en.includes('translate:'))
+  assert.ok(pt.includes('translate:'))
+})
+
 test('settings hides development connection details from production merchants', () => {
   assert.match(settingsView, /showRuntimeStatus/)
   assert.match(settingsView, /import\.meta\.env\.DEV/)

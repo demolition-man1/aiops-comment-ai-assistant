@@ -2,6 +2,7 @@ package com.aiops.service.impl;
 
 import com.aiops.client.PythonAiClient;
 import com.aiops.dto.AiContentGenerateDTO;
+import com.aiops.dto.CommentTranslateDTO;
 import com.aiops.dto.NegativeReplyEffectDTO;
 import com.aiops.dto.NegativeReplyFavoriteDTO;
 import com.aiops.dto.NegativeReplyGenerateDTO;
@@ -19,6 +20,7 @@ import com.aiops.mapper.BizOperationReportMapper;
 import com.aiops.service.AiRateLimitService;
 import com.aiops.service.CacheService;
 import com.aiops.vo.NegativeReplyVO;
+import com.aiops.vo.CommentTranslationVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -231,6 +233,73 @@ class AiServiceImplTest {
 
         verify(aiRateLimitService, never()).tryConsume(anyString(), any());
         verify(pythonAiClient, never()).generateNegativeReply(any());
+    }
+
+    @Test
+    void translateCommentUsesTargetLanguageCacheAndSendsReviewTextToPython() {
+        BizComment comment = new BizComment();
+        comment.setId(22L);
+        comment.setReviewId("review-22");
+        comment.setProductId("product-a");
+        comment.setSellerId("seller-a");
+        comment.setReviewScore(2);
+        comment.setReviewTitle("Entrega atrasada");
+        comment.setReviewContent("Produto chegou quebrado");
+        comment.setCleanContent("produto chegou quebrado");
+        when(commentMapper.selectById(22L)).thenReturn(comment);
+        when(cacheService.get(eq("ai:translation:comment:22:en-US"), eq(CommentTranslationVO.class)))
+                .thenReturn(Optional.empty());
+        when(aiRateLimitService.tryConsume(anyString(), any())).thenReturn(true);
+        when(pythonAiClient.translateComment(any())).thenReturn(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "translatedContent", "The product arrived broken.",
+                        "sourceLanguage", "pt-BR",
+                        "modelName", "deepseek-chat"
+                )
+        ));
+
+        CommentTranslateDTO translateDTO = new CommentTranslateDTO();
+        translateDTO.setLanguage("en-US");
+
+        CommentTranslationVO result = aiService.translateComment(22L, translateDTO);
+
+        assertThat(result.getCommentId()).isEqualTo(22L);
+        assertThat(result.getTargetLanguage()).isEqualTo("en-US");
+        assertThat(result.getTranslatedContent()).isEqualTo("The product arrived broken.");
+        assertThat(result.getCached()).isFalse();
+        verify(cacheService).get(eq("ai:translation:comment:22:en-US"), eq(CommentTranslationVO.class));
+        verify(cacheService).set(eq("ai:translation:comment:22:en-US"), any(CommentTranslationVO.class), any());
+        ArgumentCaptor<Map<String, Object>> requestCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(pythonAiClient).translateComment(requestCaptor.capture());
+        assertThat(requestCaptor.getValue())
+                .containsEntry("commentId", 22L)
+                .containsEntry("reviewId", "review-22")
+                .containsEntry("targetLanguage", "en-US")
+                .containsEntry("commentContent", "produto chegou quebrado");
+    }
+
+    @Test
+    void translateCommentReturnsCachedResultWithoutAiRateLimit() {
+        CommentTranslationVO cached = new CommentTranslationVO(
+                22L,
+                "product-a",
+                "review text",
+                "pt-BR",
+                "zh-CN",
+                "评论文本",
+                "deepseek-chat",
+                false
+        );
+        when(commentMapper.selectById(22L)).thenReturn(new BizComment());
+        when(cacheService.get(eq("ai:translation:comment:22:zh-CN"), eq(CommentTranslationVO.class)))
+                .thenReturn(Optional.of(cached));
+
+        CommentTranslationVO result = aiService.translateComment(22L, new CommentTranslateDTO());
+
+        assertThat(result.getCached()).isTrue();
+        verify(aiRateLimitService, never()).tryConsume(anyString(), any());
+        verify(pythonAiClient, never()).translateComment(any());
     }
 
     @Test

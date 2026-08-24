@@ -76,6 +76,36 @@ class AiService:
         content = self._chat(prompt, temperature=0.75)
         return {"success": True, "replyContent": content, "modelName": settings.ai_model}
 
+    def translate_comment(self, request: dict[str, Any]) -> dict[str, Any]:
+        comment_id = request.get("commentId") or ""
+        review_id = request.get("reviewId") or ""
+        product_id = request.get("productId") or ""
+        review_score = request.get("reviewScore")
+        comment_title = request.get("commentTitle") or ""
+        comment_content = request.get("commentContent") or ""
+        target_language = request.get("targetLanguage") or request.get("language") or "zh-CN"
+        prompt = (
+            "You are a precise ecommerce review translator. Translate the customer review into the target language. "
+            "Preserve product facts, sentiment, complaint details, numbers, and named entities. "
+            "Do not add explanations or invented details. "
+            "Return only JSON with fields: translatedContent, sourceLanguage. "
+            f"target language: {target_language}. "
+            f"commentId: {comment_id}. reviewId: {review_id}. productId: {product_id}. "
+            f"reviewScore: {review_score}. title: {comment_title}. review: {comment_content}."
+        )
+        content = self._chat(prompt, temperature=0.2)
+        parsed = self._parse_json_object(content)
+        translated_content = self._to_plain_text(parsed.get("translatedContent")) or content
+        source_language = self._to_plain_text(parsed.get("sourceLanguage")) or "auto"
+        return {
+            "success": True,
+            "data": {
+                "translatedContent": translated_content,
+                "sourceLanguage": source_language,
+                "modelName": settings.ai_model,
+            },
+        }
+
     def generate_product_compare(self, request: dict[str, Any]) -> dict[str, Any]:
         left_product_id = request.get("leftProductId") or ""
         right_product_id = request.get("rightProductId") or ""

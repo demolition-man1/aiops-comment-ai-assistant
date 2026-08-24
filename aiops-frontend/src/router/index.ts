@@ -4,6 +4,12 @@ import { useAuthStore } from '@/stores/auth'
 
 export const router = createRouter({
   history: createWebHistory(),
+  scrollBehavior(to) {
+    if (to.hash) {
+      return { el: to.hash, top: 80, behavior: 'smooth' }
+    }
+    return { top: 0 }
+  },
   routes: [
     {
       path: '/login',

@@ -5,6 +5,7 @@ import com.aiops.constant.RedisKeyConstant;
 import com.aiops.context.BaseContext;
 import com.aiops.dto.AiContentGenerateDTO;
 import com.aiops.dto.AiReportGenerateDTO;
+import com.aiops.dto.CommentTranslateDTO;
 import com.aiops.dto.NegativeReplyEffectDTO;
 import com.aiops.dto.NegativeReplyFavoriteDTO;
 import com.aiops.dto.NegativeReplyGenerateDTO;
@@ -24,6 +25,7 @@ import com.aiops.service.CacheService;
 import com.aiops.result.PageResult;
 import com.aiops.service.AiService;
 import com.aiops.vo.AiContentVO;
+import com.aiops.vo.CommentTranslationVO;
 import com.aiops.vo.NegativeReplyVO;
 import com.aiops.vo.OperationReportVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -179,6 +181,53 @@ public class AiServiceImpl implements AiService {
         reply.setUpdateTime(LocalDateTime.now());
         negativeReplyMapper.insert(reply);
         return toNegativeReplyVO(reply);
+    }
+
+    @Override
+    public CommentTranslationVO translateComment(Long commentId, CommentTranslateDTO translateDTO) {
+        if (commentId == null) {
+            throw new BusinessException(400, "评论 ID 不能为空");
+        }
+        String targetLanguage = languageOrDefault(translateDTO == null ? null : translateDTO.getLanguage());
+        BizComment comment = commentMapper.selectById(commentId);
+        if (comment == null) {
+            throw new BusinessException(404, "评论不存在");
+        }
+        String cacheKey = String.format(RedisKeyConstant.AI_COMMENT_TRANSLATION, commentId, targetLanguage);
+        if (translateDTO == null || !Boolean.TRUE.equals(translateDTO.getForceRefresh())) {
+            Optional<CommentTranslationVO> cached = cacheService.get(cacheKey, CommentTranslationVO.class);
+            if (cached.isPresent()) {
+                CommentTranslationVO vo = cached.get();
+                vo.setCached(true);
+                return vo;
+            }
+        }
+
+        checkAiRateLimit("translation");
+        String originalContent = bestCommentContent(comment);
+        Map<String, Object> request = new HashMap<>();
+        request.put("commentId", comment.getId());
+        request.put("reviewId", comment.getReviewId());
+        request.put("productId", comment.getProductId());
+        request.put("sellerId", comment.getSellerId());
+        request.put("reviewScore", comment.getReviewScore());
+        request.put("commentTitle", meaningfulText(comment.getReviewTitle()));
+        request.put("commentContent", originalContent);
+        request.put("targetLanguage", targetLanguage);
+        Map<String, Object> response = callPython(() -> pythonAiClient.translateComment(request));
+        Map<String, Object> data = nestedData(response);
+        CommentTranslationVO vo = new CommentTranslationVO(
+                comment.getId(),
+                comment.getProductId(),
+                originalContent,
+                blankToDefault(stringValue(data, "sourceLanguage"), "auto"),
+                targetLanguage,
+                blankToDefault(stringValue(data, "translatedContent"), stringValue(response, "translatedContent")),
+                blankToDefault(stringValue(data, "modelName"), stringValue(response, "modelName")),
+                false
+        );
+        cacheService.set(cacheKey, vo, Duration.ofDays(7));
+        return vo;
     }
 
     @Override

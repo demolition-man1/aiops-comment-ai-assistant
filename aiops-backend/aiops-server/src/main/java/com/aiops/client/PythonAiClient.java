@@ -60,6 +60,17 @@ public class PythonAiClient {
     }
 
     @SuppressWarnings("unchecked")
+    public Map<String, Object> translateComment(Map<String, Object> request) {
+        return restClient.post()
+                .uri(properties.getBaseUrl() + "/internal/ai/comment-translate")
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .body(jsonBody(request))
+                .retrieve()
+                .body(Map.class);
+    }
+
+    @SuppressWarnings("unchecked")
     public Map<String, Object> generateProductCompare(Map<String, Object> request) {
         return restClient.post()
                 .uri(properties.getBaseUrl() + "/internal/ai/product-compare")

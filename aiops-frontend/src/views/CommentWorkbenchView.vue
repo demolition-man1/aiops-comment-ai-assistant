@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Bot, ClipboardCheck, Copy, MessageCircleReply, RefreshCw, Tags } from 'lucide-vue-next'
+import { Bot, ClipboardCheck, Copy, Languages, MessageCircleReply, RefreshCw, Tags } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { aiApi, analysisApi, commentApi, pollTask } from '@/api/modules'
-import type { AnalysisResult, Comment, NegativeReply, OperationReport, Task } from '@/api/types'
+import type { AnalysisResult, Comment, CommentTranslation, NegativeReply, OperationReport, Task } from '@/api/types'
 import { resolveAnalysisProductId } from '@/utils/analysisTarget'
 import { formatPercent } from '@/utils/metricFormat'
 import { useLocaleStore } from '@/stores/locale'
@@ -24,6 +24,10 @@ const reply = ref<NegativeReply>()
 const replySource = ref<Comment>()
 const replyDialogVisible = ref(false)
 const replyLoadingId = ref<number>()
+const translation = ref<CommentTranslation>()
+const translationSource = ref<Comment>()
+const translationDialogVisible = ref(false)
+const translationLoadingId = ref<number>()
 const stopPolling = ref<(() => void) | null>(null)
 const sentimentTypes = new Set(['positive', 'neutral', 'negative'])
 const problemTypes = new Set(['quality', 'logistics', 'price', 'service', 'size', 'other', 'unclassified', 'pending'])
@@ -153,6 +157,23 @@ const generateReplyFor = async (row: Comment) => {
   await generateReply()
 }
 
+const translateCommentFor = async (row: Comment) => {
+  if (!row.id) {
+    ElMessage.warning(t('comments.selectCommentWarning'))
+    return
+  }
+  selectComment(row)
+  translationLoadingId.value = row.id
+  try {
+    translationSource.value = row
+    translation.value = await commentApi.translate(row.id, { language: localeStore.locale })
+    translationDialogVisible.value = true
+    ElMessage.success(t('comments.translationGenerated'))
+  } finally {
+    translationLoadingId.value = undefined
+  }
+}
+
 const isMeaningfulText = (value?: string) => {
   const compact = (value || '').replace(/\s+/g, '').toLowerCase()
   return Boolean(compact && !['nan', 'nannan', 'null', 'none'].includes(compact))
@@ -183,6 +204,14 @@ const copyReply = async () => {
   }
   await navigator.clipboard.writeText(reply.value.replyContent)
   ElMessage.success(t('comments.replyCopied'))
+}
+
+const copyTranslation = async () => {
+  if (!translation.value?.translatedContent) {
+    return
+  }
+  await navigator.clipboard.writeText(translation.value.translatedContent)
+  ElMessage.success(t('comments.translationCopied'))
 }
 
 const openTagDialog = (row: Comment) => {
@@ -283,12 +312,21 @@ onMounted(loadComments)
             <span class="comment-cell">{{ displayCommentContent(row) }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.action')" width="250" fixed="right">
+        <el-table-column :label="t('common.action')" width="340" fixed="right">
           <template #default="{ row }">
             <div class="table-actions">
               <el-button size="small" @click="openTagDialog(row)">
                 <Tags :size="14" />
                 {{ t('comments.tag') }}
+              </el-button>
+              <el-button
+                size="small"
+                plain
+                :loading="translationLoadingId === row.id"
+                @click="translateCommentFor(row)"
+              >
+                <Languages :size="14" />
+                {{ t('comments.translate') }}
               </el-button>
               <el-button
                 size="small"
@@ -322,7 +360,7 @@ onMounted(loadComments)
     </div>
 
     <div class="grid two section-gap">
-      <div class="panel">
+      <div id="task-center" class="panel">
         <div class="panel-title">{{ t('comments.taskMetrics') }}</div>
         <el-descriptions :column="2" border size="small">
           <el-descriptions-item :label="t('common.taskStatus')">{{ task?.taskStatus || t('comments.taskNotCreated') }}</el-descriptions-item>
@@ -362,6 +400,44 @@ onMounted(loadComments)
       <template #footer>
         <el-button @click="tagDialog.visible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="saveTags">{{ t('common.save') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="translationDialogVisible" :title="t('comments.translationDialogTitle')" width="720px">
+      <div class="reply-dialog-body">
+        <div class="reply-context">
+          <div class="reply-meta">
+            <el-tag type="info" effect="plain">
+              {{ t('comments.sourceLanguage', { language: translation?.sourceLanguage || 'auto' }) }}
+            </el-tag>
+            <el-tag type="success" effect="plain">
+              {{ t('comments.targetLanguage', { language: translation?.targetLanguage || localeStore.locale }) }}
+            </el-tag>
+            <span class="muted">{{ t('comments.replyProductId', { id: translationSource?.productId || t('common.dash') }) }}</span>
+          </div>
+          <p>
+            <strong>{{ t('comments.originalReview') }}</strong>
+          </p>
+          <p>{{ translation?.originalContent || displayCommentContent(translationSource) }}</p>
+        </div>
+        <div class="reply-context">
+          <p>
+            <strong>{{ t('comments.translatedReview') }}</strong>
+          </p>
+          <el-input
+            :model-value="translation?.translatedContent || ''"
+            type="textarea"
+            readonly
+            :autosize="{ minRows: 6, maxRows: 12 }"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="translationDialogVisible = false">{{ t('common.close') }}</el-button>
+        <el-button type="primary" :disabled="!translation?.translatedContent" @click="copyTranslation">
+          <Copy :size="14" />
+          {{ t('comments.copyTranslation') }}
+        </el-button>
       </template>
     </el-dialog>
 

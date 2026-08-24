@@ -50,6 +50,18 @@ const changeLocale = (value: string | number | boolean | object | undefined) => 
   }
 }
 
+const goScheduledSync = async () => {
+  await router.push({ path: '/import', hash: '#scheduled-sync' })
+}
+
+const goTaskCenter = async () => {
+  await router.push({ path: '/comments', hash: '#task-center' })
+}
+
+const goDataReports = async () => {
+  await router.push({ path: '/', hash: '#data-reports' })
+}
+
 const logout = async () => {
   auth.logout()
   await router.push('/login')
@@ -97,9 +109,9 @@ const logout = async () => {
               :value="language.code"
             />
           </el-select>
-          <el-button :icon="RefreshCw">{{ t('layout.actions.scheduledSync') }}</el-button>
-          <el-button :icon="ClipboardList">{{ t('layout.actions.taskCenter') }}</el-button>
-          <el-button :icon="BarChart3">{{ t('layout.actions.dataReports') }}</el-button>
+          <el-button :icon="RefreshCw" @click="goScheduledSync">{{ t('layout.actions.scheduledSync') }}</el-button>
+          <el-button :icon="ClipboardList" @click="goTaskCenter">{{ t('layout.actions.taskCenter') }}</el-button>
+          <el-button :icon="BarChart3" @click="goDataReports">{{ t('layout.actions.dataReports') }}</el-button>
           <el-dropdown>
             <el-button>
               <UserRound :size="16" />

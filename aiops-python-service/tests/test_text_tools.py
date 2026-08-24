@@ -187,6 +187,36 @@ class TextToolTests(unittest.TestCase):
         self.assertIn("每条回复都必须针对这条评论单独生成", captured["prompt"])
         self.assertGreaterEqual(captured["temperature"], 0.7)
 
+    def test_translate_comment_uses_target_language_and_parses_json(self) -> None:
+        service = AiService()
+        captured = {}
+
+        def fake_chat(prompt: str, temperature: float) -> str:
+            captured["prompt"] = prompt
+            captured["temperature"] = temperature
+            return (
+                '{"translatedContent":"The product arrived broken.",'
+                '"sourceLanguage":"pt-BR"}'
+            )
+
+        service._chat = fake_chat
+
+        result = service.translate_comment(
+            {
+                "commentId": 22,
+                "reviewId": "review-22",
+                "commentContent": "Produto chegou quebrado",
+                "targetLanguage": "en-US",
+            }
+        )
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["data"]["translatedContent"], "The product arrived broken.")
+        self.assertEqual(result["data"]["sourceLanguage"], "pt-BR")
+        self.assertIn("target language: en-US", captured["prompt"])
+        self.assertIn("Produto chegou quebrado", captured["prompt"])
+        self.assertLessEqual(captured["temperature"], 0.3)
+
     def test_single_csv_comment_rows_require_product_id_and_review_score(self) -> None:
         service = OlistImportService()
         df = pd.DataFrame(
