@@ -1,5 +1,7 @@
 # AIOps Comment AI Assistant
 
+[![English README](https://img.shields.io/badge/README-English-blue)](README_EN.md)
+
 面向中小电商商家的评论驱动型 AI 智能运营助手。系统以 Olist 公开电商评论数据为样例，串联 CSV / 爬虫数据导入、评论清洗、情感分析、关键词提取、主题聚类、AI 运营报告、差评回复、商品对比、告警和数据报表，帮助商家把分散评论转化为可执行的运营决策。
 
 > 本项目适合作为大创项目、挑战杯创业计划赛道、课程设计和求职作品集展示。公开数据仅用于学习研究和原型验证，真实落地应接入商家授权数据或平台合规开放接口。
