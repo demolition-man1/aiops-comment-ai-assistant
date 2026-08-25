@@ -4,7 +4,7 @@
 
 A review-driven AI operations assistant for small and medium-sized e-commerce merchants. The system uses the public Olist e-commerce review dataset as a demo source and connects CSV / crawler import, review cleaning, sentiment analysis, keyword extraction, topic clustering, AI operation reports, negative review replies, product comparison, alerts, and data reports. It helps merchants turn scattered customer reviews into actionable operation decisions.
 
-> This project is suitable for innovation training programs, entrepreneurship competitions, course projects, and portfolio demonstrations. Public data is used only for learning, research, and prototype validation. Real deployment should use merchant-authorized data or compliant platform APIs.
+> This project is suitable for AI + e-commerce operation course projects, entrepreneurship prototypes, and portfolio demonstrations. Public data is used only for learning, research, and prototype validation. Real deployment should use merchant-authorized data or compliant platform APIs.
 
 ## Table of Contents
 
