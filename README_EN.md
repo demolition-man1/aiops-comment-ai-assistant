@@ -18,6 +18,7 @@ A review-driven AI operations assistant for small and medium-sized e-commerce me
 - [Common Tests](#common-tests)
 - [Dataset](#dataset)
 - [Documentation](#documentation)
+- [Phase 2 Roadmap](#phase-2-roadmap)
 - [Security Notes](#security-notes)
 
 ## Highlights
@@ -34,7 +35,7 @@ A review-driven AI operations assistant for small and medium-sized e-commerce me
 | Module | Features |
 | --- | --- |
 | Merchant Dashboard | Product count, seller count, review count, average score, negative rate, trend charts, and risk overview |
-| Data Import | Local Olist directory import, single CSV upload through Alibaba Cloud OSS, and low-frequency public sample crawler import |
+| Data Import | Local Olist directory import, single CSV preview / field mapping / OSS import, one-click sample data import, and low-frequency public sample crawler import |
 | Review Analysis | Review pagination and filtering, sentiment detection, negative review detection, manual tag editing, and on-demand review translation |
 | AI Generation | Operation reports, product titles, detail copy, short video scripts, promotion copy, and negative review replies |
 | Product Comparison | Product A / B review pain points, strengths, weaknesses, risks, and operation suggestions |
@@ -105,6 +106,7 @@ Alibaba Cloud OSS
 |-- aiops-python-service/       # FastAPI review analysis and AI service
 |   |-- app/routers/            # Internal APIs
 |   |-- app/services/           # Import, crawler, analysis, and AI generation services
+|   |-- app/sample_data/         # Built-in small Olist review sample
 |   `-- tests/                  # Python service tests
 `-- outputs/                    # Project document and API document
 ```
@@ -212,6 +214,8 @@ Default frontend URL:
 
 If the port is occupied, Vite automatically switches to the next available port, such as `5174`.
 
+After logging in, open the Data Import page and click "Import Sample Data" to quickly create demo data. For single CSV upload, the page previews field mapping, estimated rows, and the first 20 rows before upload. OSS upload and task creation happen only after clicking "Start Import".
+
 ## Configuration
 
 ### Java Backend Key Configuration
@@ -283,15 +287,21 @@ For full Olist import, the local directory should contain at least:
 - `olist_customers_dataset.csv`
 - `product_category_name_translation.csv`
 
-Browser upload is suitable for an already merged single CSV review file. Required columns:
+Browser upload is suitable for an already merged single CSV review file. The page can map merchant-exported column names to standard fields. At minimum, map:
 
 - `product_id`
 - `review_score`
+
+Optional mapped fields include `review_content`, `review_title`, `review_id`, `order_id`, `seller_id`, and `review_time`.
 
 ## Documentation
 
 - [Project Document](outputs/AI智能运营助手项目文档.md)
 - [API Document](outputs/AI智能运营助手接口文档.md)
+
+## Phase 2 Roadmap
+
+- [Phase 2 Todo List](docs/PHASE2_TODO.md)
 
 ## Security Notes
 

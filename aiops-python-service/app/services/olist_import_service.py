@@ -119,16 +119,12 @@ class OlistImportService:
 
     def _import_single_comment_csv(self, request: dict[str, Any]) -> dict[str, Any]:
         task_id = int(request.get("taskId") or 0)
-        file_url = request.get("fileUrl")
-        if not file_url:
-            raise ValueError("dataPath is required for Olist import, or fileUrl is required for single CSV import")
 
         with get_conn() as conn:
             task_repository.update_analysis_task(conn, task_id, "processing", 20)
 
-        response = requests.get(str(file_url), timeout=60)
-        response.raise_for_status()
-        comment_df = pd.read_csv(io.BytesIO(response.content))
+        comment_df = self._load_single_comment_frame(request)
+        comment_df = self._apply_column_mapping(comment_df, request.get("columnMapping"))
         comment_df = self._ensure_comment_columns(comment_df)
         comment_rows = self._build_comment_rows(comment_df)
 
@@ -156,6 +152,35 @@ class OlistImportService:
             "sellerCount": seller_count,
             "message": "Single comment CSV import completed",
         }
+
+    def _load_single_comment_frame(self, request: dict[str, Any]) -> pd.DataFrame:
+        if request.get("sampleData"):
+            sample_path = Path(__file__).resolve().parents[1] / "sample_data" / "sample_reviews.csv"
+            return pd.read_csv(sample_path)
+
+        file_url = request.get("fileUrl")
+        if not file_url:
+            raise ValueError("dataPath is required for Olist import, or fileUrl is required for single CSV import")
+        response = requests.get(str(file_url), timeout=60)
+        response.raise_for_status()
+        return pd.read_csv(io.BytesIO(response.content))
+
+    def _apply_column_mapping(self, comment_df: pd.DataFrame, column_mapping: Any) -> pd.DataFrame:
+        if not isinstance(column_mapping, dict) or not column_mapping:
+            return comment_df
+
+        mapped_df = comment_df.copy()
+        for target_column, source_column in column_mapping.items():
+            if not target_column or not source_column:
+                continue
+            target = str(target_column).strip()
+            source = str(source_column).strip()
+            if not target or not source or source not in mapped_df.columns:
+                continue
+            if source == target:
+                continue
+            mapped_df[target] = mapped_df[source]
+        return mapped_df
 
     def _build_comment_rows(self, comment_df: pd.DataFrame) -> list[dict[str, Any]]:
         self._validate_comment_columns(comment_df)

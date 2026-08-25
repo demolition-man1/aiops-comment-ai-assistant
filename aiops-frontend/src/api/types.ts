@@ -199,6 +199,15 @@ export interface FileUploadResult {
   fileSize: number
 }
 
+export interface CsvImportPreflight {
+  ready: boolean
+  requiredFields: string[]
+  estimatedRows: number
+  duplicateLikely: boolean
+  duplicateMessage?: string
+  lastTaskId?: number
+}
+
 export interface OperationReport {
   reportId: number
   reportTitle: string

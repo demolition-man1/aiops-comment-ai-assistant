@@ -4,6 +4,7 @@ import com.aiops.client.PythonAnalysisClient;
 import com.aiops.constant.RedisKeyConstant;
 import com.aiops.dto.CrawlerImportDTO;
 import com.aiops.dto.CsvImportDTO;
+import com.aiops.dto.CsvImportPreflightDTO;
 import com.aiops.entity.BizAnalysisTask;
 import com.aiops.entity.BizCrawlTask;
 import com.aiops.exception.BusinessException;
@@ -12,9 +13,12 @@ import com.aiops.mapper.BizCrawlTaskMapper;
 import com.aiops.service.CacheService;
 import com.aiops.service.DataImportService;
 import com.aiops.service.FileService;
+import com.aiops.vo.CsvImportPreflightVO;
 import com.aiops.vo.FileSignedUrlVO;
 import com.aiops.vo.TaskVO;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.task.TaskExecutor;
@@ -23,11 +27,13 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class DataImportServiceImpl implements DataImportService {
+    private static final List<String> REQUIRED_SINGLE_CSV_FIELDS = List.of("product_id", "review_score");
 
     private final BizAnalysisTaskMapper analysisTaskMapper;
     private final BizCrawlTaskMapper crawlTaskMapper;
@@ -38,8 +44,28 @@ public class DataImportServiceImpl implements DataImportService {
     private final TaskExecutor taskExecutor;
 
     @Override
+    public CsvImportPreflightVO preflightCsv(CsvImportPreflightDTO preflightDTO) {
+        if (preflightDTO == null) {
+            throw new BusinessException(400, "CSV 预检参数不能为空");
+        }
+        DuplicateImport duplicate = findDuplicateImport(preflightDTO.getFileHash(), preflightDTO.getDataPath());
+        return new CsvImportPreflightVO(
+                true,
+                REQUIRED_SINGLE_CSV_FIELDS,
+                preflightDTO.getEstimatedRows() == null ? 0L : preflightDTO.getEstimatedRows(),
+                duplicate.matched(),
+                duplicate.message(),
+                duplicate.taskId()
+        );
+    }
+
+    @Override
     public TaskVO importCsv(CsvImportDTO csvImportDTO) {
         validateCsvImport(csvImportDTO);
+        DuplicateImport duplicate = findDuplicateImport(csvImportDTO.getFileHash(), null);
+        if (duplicate.matched() && !Boolean.TRUE.equals(csvImportDTO.getAllowDuplicate())) {
+            throw new BusinessException(409, duplicate.message());
+        }
         BizAnalysisTask task = new BizAnalysisTask();
         task.setTaskType("csv_import");
         task.setTaskStatus("processing");
@@ -67,6 +93,9 @@ public class DataImportServiceImpl implements DataImportService {
         request.put("dataPath", csvImportDTO.getDataPath());
         request.put("dataSource", csvImportDTO.getDataSource());
         request.put("importMode", csvImportDTO.getImportMode());
+        request.put("fileHash", csvImportDTO.getFileHash());
+        request.put("columnMapping", csvImportDTO.getColumnMapping());
+        request.put("sampleData", Boolean.TRUE.equals(csvImportDTO.getSampleData()));
         try {
             taskExecutor.execute(() -> callPythonImport(task, request));
         } catch (RuntimeException exception) {
@@ -78,6 +107,16 @@ public class DataImportServiceImpl implements DataImportService {
             cacheTask(task.getId(), "csv", task.getTaskStatus(), task.getProgress());
         }
         return new TaskVO(task.getId(), task.getTaskStatus(), "csv", task.getProgress(), null, null, null, task.getErrorMessage());
+    }
+
+    @Override
+    public TaskVO importSample() {
+        CsvImportDTO csvImportDTO = new CsvImportDTO();
+        csvImportDTO.setSampleData(true);
+        csvImportDTO.setDataSource("sample");
+        csvImportDTO.setImportMode("incremental");
+        csvImportDTO.setAllowDuplicate(true);
+        return importCsv(csvImportDTO);
     }
 
     @Override
@@ -198,6 +237,9 @@ public class DataImportServiceImpl implements DataImportService {
         String dataSource = blankToDefault(csvImportDTO.getDataSource(), "olist");
         csvImportDTO.setDataSource(dataSource);
         csvImportDTO.setImportMode(blankToDefault(csvImportDTO.getImportMode(), "full"));
+        if (Boolean.TRUE.equals(csvImportDTO.getSampleData())) {
+            return;
+        }
         boolean hasDataPath = hasText(csvImportDTO.getDataPath());
         boolean hasFile = csvImportDTO.getFileId() != null || hasText(csvImportDTO.getFileUrl());
         if (!hasDataPath && !hasFile) {
@@ -227,6 +269,50 @@ public class DataImportServiceImpl implements DataImportService {
         cacheService.set(String.format(RedisKeyConstant.TASK_TYPE, taskId), type, Duration.ofHours(2));
         cacheService.set(String.format(RedisKeyConstant.TASK_STATUS, taskId), status, Duration.ofHours(2));
         cacheService.set(String.format(RedisKeyConstant.TASK_PROGRESS, taskId), progress, Duration.ofHours(2));
+    }
+
+    private DuplicateImport findDuplicateImport(String fileHash, String dataPath) {
+        boolean hasFileHash = hasText(fileHash);
+        boolean hasDataPath = hasText(dataPath);
+        if (!hasFileHash && !hasDataPath) {
+            return DuplicateImport.none();
+        }
+        LambdaQueryWrapper<BizAnalysisTask> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BizAnalysisTask::getTaskType, "csv_import")
+                .in(BizAnalysisTask::getTaskStatus, List.of("processing", "success"))
+                .orderByDesc(BizAnalysisTask::getCreateTime)
+                .last("limit 50");
+        List<BizAnalysisTask> recentTasks = analysisTaskMapper.selectList(wrapper);
+        if (recentTasks == null || recentTasks.isEmpty()) {
+            return DuplicateImport.none();
+        }
+        for (BizAnalysisTask task : recentTasks) {
+            JsonNode requestParam = parseJson(task.getRequestParam());
+            if (requestParam == null) {
+                continue;
+            }
+            boolean sameHash = hasFileHash && fileHash.equals(requestParam.path("fileHash").asText(null));
+            boolean samePath = hasDataPath && dataPath.equals(requestParam.path("dataPath").asText(null));
+            if (sameHash || samePath) {
+                return new DuplicateImport(
+                        true,
+                        task.getId(),
+                        "检测到相同数据源已导入或正在导入，确认后可继续重复导入"
+                );
+            }
+        }
+        return DuplicateImport.none();
+    }
+
+    private JsonNode parseJson(String value) {
+        if (!hasText(value)) {
+            return null;
+        }
+        try {
+            return objectMapper.readTree(value);
+        } catch (JsonProcessingException ignored) {
+            return null;
+        }
     }
 
     private java.util.Optional<String> normalizeImportType(String importType) {
@@ -282,6 +368,12 @@ public class DataImportServiceImpl implements DataImportService {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException exception) {
             throw new BusinessException(500, "导入任务参数序列化失败");
+        }
+    }
+
+    private record DuplicateImport(boolean matched, Long taskId, String message) {
+        static DuplicateImport none() {
+            return new DuplicateImport(false, null, null);
         }
     }
 }

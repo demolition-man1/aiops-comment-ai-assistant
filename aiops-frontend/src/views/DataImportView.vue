@@ -1,24 +1,55 @@
 <script setup lang="ts">
 import { Database, FileUp, Globe2, Play, ShieldCheck } from 'lucide-vue-next'
-import { ElMessage, type UploadFile, type UploadInstance } from 'element-plus'
+import { ElMessage, ElMessageBox, type UploadFile, type UploadInstance } from 'element-plus'
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { dataImportApi, fileApi, pollTask } from '@/api/modules'
-import type { FileUploadResult, Task } from '@/api/types'
+import type { CsvImportPreflight, FileUploadResult, Task } from '@/api/types'
+import {
+  getMissingMappedFields,
+  parseCsvPreview,
+  suggestColumnMapping,
+  type CsvColumnMapping,
+  type CsvPreviewResult
+} from '@/utils/csvPreview'
 
 const { t } = useI18n()
 const uploadLoading = ref(false)
 const importLoading = ref(false)
+const sampleLoading = ref(false)
 const crawlerLoading = ref(false)
 const uploaded = ref<FileUploadResult>()
 const selectedFile = ref<File>()
+const csvPreview = ref<CsvPreviewResult>()
+const csvPreflight = ref<CsvImportPreflight>()
+const csvFileHash = ref('')
+const csvAllowDuplicate = ref(false)
 const uploadRef = ref<UploadInstance>()
 const csvTask = ref<Task>()
 const crawlerTask = ref<Task>()
 const stopCsvPolling = ref<(() => void) | null>(null)
 const stopCrawlerPolling = ref<(() => void) | null>(null)
-const singleCsvRequiredColumns = ['product_id', 'review_score']
+const csvMapping = reactive<Record<keyof CsvColumnMapping, string | undefined>>({
+  product_id: undefined,
+  review_score: undefined,
+  review_content: undefined,
+  review_title: undefined,
+  review_id: undefined,
+  order_id: undefined,
+  seller_id: undefined,
+  review_time: undefined
+})
+const mappingFields: Array<{ key: keyof CsvColumnMapping; label: string; required?: boolean }> = [
+  { key: 'product_id', label: 'product_id', required: true },
+  { key: 'review_score', label: 'review_score', required: true },
+  { key: 'review_content', label: 'review_content' },
+  { key: 'review_title', label: 'review_title' },
+  { key: 'review_id', label: 'review_id' },
+  { key: 'order_id', label: 'order_id' },
+  { key: 'seller_id', label: 'seller_id' },
+  { key: 'review_time', label: 'review_time' }
+]
 
 const csvForm = reactive({
   dataSource: 'olist',
@@ -35,45 +66,86 @@ const crawlerForm = reactive({
   remark: ''
 })
 
-const normalizeCsvColumn = (column: string) => column.trim().replace(/^\uFEFF/, '').replace(/^"|"$/g, '')
-
-const readSingleCsvHeader = async (file: File) => {
-  const text = await file.slice(0, 64 * 1024).text()
-  return text.split(/\r?\n/)[0] || ''
-}
-
-const missingSingleCsvColumns = (headerLine: string) => {
-  const columns = headerLine.split(',').map(normalizeCsvColumn)
-  return singleCsvRequiredColumns.filter((column) => !columns.includes(column))
-}
-
 const clearSelectedCsv = () => {
   selectedFile.value = undefined
   uploaded.value = undefined
+  csvPreview.value = undefined
+  csvPreflight.value = undefined
+  csvFileHash.value = ''
+  csvAllowDuplicate.value = false
+  resetCsvMapping()
 }
 
-const validateSingleCsvFile = async (file: UploadFile) => {
+const resetCsvMapping = () => {
+  mappingFields.forEach((field) => {
+    csvMapping[field.key] = undefined
+  })
+}
+
+const applyCsvMapping = (mapping: CsvColumnMapping) => {
+  resetCsvMapping()
+  Object.entries(mapping).forEach(([field, column]) => {
+    csvMapping[field as keyof CsvColumnMapping] = column
+  })
+}
+
+const compactColumnMapping = () => {
+  return Object.fromEntries(
+    Object.entries(csvMapping).filter(([, column]) => Boolean(column))
+  ) as Record<string, string>
+}
+
+const hashFile = async (file: File) => {
+  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer())
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+const inspectSingleCsvFile = async (file: UploadFile) => {
   const rawFile = file.raw
   if (!rawFile) {
     clearSelectedCsv()
     return false
   }
 
-  const missing = missingSingleCsvColumns(await readSingleCsvHeader(rawFile))
-  if (missing.length > 0) {
+  try {
+    const text = await rawFile.text()
+    const preview = parseCsvPreview(text, 20)
+    if (preview.columns.length === 0) {
+      throw new Error('empty csv')
+    }
+    selectedFile.value = rawFile
+    uploaded.value = undefined
+    csvPreview.value = preview
+    csvFileHash.value = await hashFile(rawFile)
+    csvAllowDuplicate.value = false
+    applyCsvMapping(suggestColumnMapping(preview.columns))
+    try {
+      csvPreflight.value = await dataImportApi.preflightCsv({
+        fileName: rawFile.name,
+        fileSize: rawFile.size,
+        fileHash: csvFileHash.value,
+        dataSource: csvForm.dataSource,
+        importMode: csvForm.importMode,
+        estimatedRows: preview.estimatedRows,
+        columnMapping: compactColumnMapping()
+      })
+    } catch {
+      csvPreflight.value = undefined
+      ElMessage.warning(t('importCenter.preflightFailed'))
+    }
+  } catch {
     clearSelectedCsv()
     uploadRef.value?.clearFiles()
-    ElMessage.error(t('importCenter.singleCsvSchemaError', { columns: missing.join(', ') }))
+    ElMessage.error(t('importCenter.csvPreviewFailed'))
     return false
   }
-
-  selectedFile.value = rawFile
-  uploaded.value = undefined
   return true
 }
 
 const selectCsvFile = async (file: UploadFile) => {
-  await validateSingleCsvFile(file)
+  await inspectSingleCsvFile(file)
 }
 
 const removeCsvFile = () => {
@@ -100,6 +172,25 @@ const startCsvImport = async () => {
     ElMessage.warning(t('importCenter.uploadRequired'))
     return
   }
+  if (selectedFile.value) {
+    const missing = getMissingMappedFields(csvMapping)
+    if (missing.length > 0) {
+      ElMessage.warning(t('importCenter.mappingRequired', { columns: missing.join(', ') }))
+      return
+    }
+    if (csvPreflight.value?.duplicateLikely && !csvAllowDuplicate.value) {
+      try {
+        await ElMessageBox.confirm(
+          csvPreflight.value.duplicateMessage || t('importCenter.duplicateConfirm'),
+          t('importCenter.duplicateTitle'),
+          { type: 'warning', confirmButtonText: t('importCenter.continueImport'), cancelButtonText: t('common.cancel') }
+        )
+        csvAllowDuplicate.value = true
+      } catch {
+        return
+      }
+    }
+  }
 
   importLoading.value = true
   try {
@@ -113,31 +204,50 @@ const startCsvImport = async () => {
       fileUrl: uploadResult?.fileUrl,
       dataPath,
       dataSource: csvForm.dataSource,
-      importMode: csvForm.importMode
+      importMode: csvForm.importMode,
+      fileHash: csvFileHash.value || undefined,
+      columnMapping: selectedFile.value ? compactColumnMapping() : undefined,
+      allowDuplicate: csvAllowDuplicate.value
     })
-
-    stopCsvPolling.value?.()
-    stopCsvPolling.value = pollTask(
-      () => dataImportApi.task(csvTask.value!.taskId, csvTask.value!.importType || 'csv'),
-      (latestTask) => {
-        csvTask.value = latestTask
-        if (latestTask.taskStatus === 'success') {
-          importLoading.value = false
-          ElMessage.success(t('importCenter.csvImportDone'))
-        }
-        if (latestTask.taskStatus === 'failed') {
-          importLoading.value = false
-          ElMessage.error(latestTask.errorMessage || t('importCenter.csvImportFailed'))
-        }
-      },
-      3000,
-      () => {
-        importLoading.value = false
-      }
-    )
+    monitorCsvTask()
   } catch {
     importLoading.value = false
   }
+}
+
+const startSampleImport = async () => {
+  sampleLoading.value = true
+  try {
+    csvTask.value = await dataImportApi.importSample()
+    monitorCsvTask()
+  } catch {
+    sampleLoading.value = false
+  }
+}
+
+const monitorCsvTask = () => {
+  stopCsvPolling.value?.()
+  stopCsvPolling.value = pollTask(
+    () => dataImportApi.task(csvTask.value!.taskId, csvTask.value!.importType || 'csv'),
+    (latestTask) => {
+      csvTask.value = latestTask
+      if (latestTask.taskStatus === 'success') {
+        importLoading.value = false
+        sampleLoading.value = false
+        ElMessage.success(t('importCenter.csvImportDone'))
+      }
+      if (latestTask.taskStatus === 'failed') {
+        importLoading.value = false
+        sampleLoading.value = false
+        ElMessage.error(latestTask.errorMessage || t('importCenter.csvImportFailed'))
+      }
+    },
+    3000,
+    () => {
+      importLoading.value = false
+      sampleLoading.value = false
+    }
+  )
 }
 
 const startCrawlerImport = async () => {
@@ -214,6 +324,17 @@ const crawlerProgress = computed(() => Number(crawlerTask.value?.progress || 0))
           </template>
         </el-upload>
 
+        <div class="status-line section-gap">
+          <div>
+            <strong>{{ t('importCenter.sampleTitle') }}</strong>
+            <p class="muted">{{ t('importCenter.sampleDesc') }}</p>
+          </div>
+          <el-button type="warning" plain :loading="sampleLoading" @click="startSampleImport">
+            <Play :size="16" />
+            {{ t('importCenter.importSample') }}
+          </el-button>
+        </div>
+
         <el-form class="section-gap" label-position="top">
           <el-form-item :label="t('importCenter.dataSource')">
             <el-select v-model="csvForm.dataSource" style="width: 100%">
@@ -236,6 +357,47 @@ const crawlerProgress = computed(() => Number(crawlerTask.value?.progress || 0))
         <div v-if="uploaded || selectedFile" class="insight-block">
           <strong>{{ uploaded?.originalName || selectedFile?.name }}</strong>
           <p v-if="uploaded" class="muted">{{ t('importCenter.ossKey', { key: uploaded.objectKey }) }}</p>
+          <div v-if="csvPreview" class="preview-summary">
+            <span>{{ t('importCenter.estimatedRows', { count: csvPreview.estimatedRows }) }}</span>
+            <span>{{ t('importCenter.previewRows', { count: csvPreview.rows.length }) }}</span>
+          </div>
+          <el-alert
+            v-if="csvPreflight?.duplicateLikely"
+            class="section-gap"
+            type="warning"
+            show-icon
+            :closable="false"
+            :title="csvPreflight.duplicateMessage || t('importCenter.duplicateConfirm')"
+          />
+          <div v-if="csvPreview" class="mapping-grid section-gap">
+            <el-form-item
+              v-for="field in mappingFields"
+              :key="field.key"
+              :label="`${field.label}${field.required ? ' *' : ''}`"
+            >
+              <el-select v-model="csvMapping[field.key]" clearable :placeholder="t('importCenter.selectColumn')">
+                <el-option
+                  v-for="column in csvPreview.columns"
+                  :key="column"
+                  :label="column"
+                  :value="column"
+                />
+              </el-select>
+            </el-form-item>
+          </div>
+          <el-table v-if="csvPreview" class="preview-table" :data="csvPreview.rows" size="small" max-height="260">
+            <el-table-column
+              v-for="column in csvPreview.columns.slice(0, 8)"
+              :key="column"
+              :prop="column"
+              :label="column"
+              min-width="140"
+              show-overflow-tooltip
+            />
+          </el-table>
+          <p v-if="csvPreview && csvPreview.columns.length > 8" class="muted">
+            {{ t('importCenter.previewColumnTip', { count: csvPreview.columns.length }) }}
+          </p>
         </div>
 
         <div class="status-line section-gap">
@@ -313,3 +475,27 @@ const crawlerProgress = computed(() => Number(crawlerTask.value?.progress || 0))
     </div>
   </section>
 </template>
+
+<style scoped>
+.preview-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+  color: #475569;
+}
+
+.mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.mapping-grid :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+.preview-table {
+  margin-top: 12px;
+}
+</style>

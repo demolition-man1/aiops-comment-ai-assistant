@@ -3,6 +3,7 @@ package com.aiops.service.impl;
 import com.aiops.client.PythonAnalysisClient;
 import com.aiops.dto.CrawlerImportDTO;
 import com.aiops.dto.CsvImportDTO;
+import com.aiops.dto.CsvImportPreflightDTO;
 import com.aiops.entity.BizAnalysisTask;
 import com.aiops.entity.BizCrawlTask;
 import com.aiops.exception.BusinessException;
@@ -11,6 +12,7 @@ import com.aiops.mapper.BizCrawlTaskMapper;
 import com.aiops.service.CacheService;
 import com.aiops.service.FileService;
 import com.aiops.vo.FileSignedUrlVO;
+import com.aiops.vo.CsvImportPreflightVO;
 import com.aiops.vo.TaskVO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.task.TaskExecutor;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.Map;
 import java.util.Optional;
@@ -106,6 +109,56 @@ class DataImportServiceImplTest {
         assertThat(requestParam.get("dataPath").asText()).isEqualTo("D:\\666\\olist-brazilian-ecommerce");
         assertThat(requestParam.get("dataSource").asText()).isEqualTo("olist");
         assertThat(requestParam.get("importMode").asText()).isEqualTo("full");
+    }
+
+    @Test
+    void preflightCsvReportsDuplicateByFileHashBeforeImport() {
+        BizAnalysisTask existingTask = new BizAnalysisTask();
+        existingTask.setId(77L);
+        existingTask.setTaskStatus("success");
+        existingTask.setRequestParam("{\"fileHash\":\"abc123\",\"dataSource\":\"platform_csv\"}");
+        when(analysisTaskMapper.selectList(any())).thenReturn(List.of(existingTask));
+
+        CsvImportPreflightDTO preflightDTO = new CsvImportPreflightDTO();
+        preflightDTO.setFileName("reviews.csv");
+        preflightDTO.setFileHash("abc123");
+        preflightDTO.setEstimatedRows(12L);
+
+        CsvImportPreflightVO result = dataImportService.preflightCsv(preflightDTO);
+
+        assertThat(result.getReady()).isTrue();
+        assertThat(result.getEstimatedRows()).isEqualTo(12L);
+        assertThat(result.getDuplicateLikely()).isTrue();
+        assertThat(result.getLastTaskId()).isEqualTo(77L);
+        assertThat(result.getRequiredFields()).containsExactly("product_id", "review_score");
+    }
+
+    @Test
+    void importSampleCreatesCsvTaskWithSampleDataFlag() throws Exception {
+        when(analysisTaskMapper.insert(any(BizAnalysisTask.class))).thenAnswer(invocation -> {
+            BizAnalysisTask task = invocation.getArgument(0);
+            task.setId(91L);
+            return 1;
+        });
+
+        TaskVO result = dataImportService.importSample();
+
+        assertThat(result.getTaskId()).isEqualTo(91L);
+        assertThat(result.getTaskStatus()).isEqualTo("processing");
+        assertThat(backgroundTask.get()).isNotNull();
+
+        ArgumentCaptor<BizAnalysisTask> taskCaptor = ArgumentCaptor.forClass(BizAnalysisTask.class);
+        verify(analysisTaskMapper).insert(taskCaptor.capture());
+        JsonNode requestParam = objectMapper.readTree(taskCaptor.getValue().getRequestParam());
+        assertThat(requestParam.get("sampleData").asBoolean()).isTrue();
+        assertThat(requestParam.get("dataSource").asText()).isEqualTo("sample");
+        assertThat(requestParam.get("importMode").asText()).isEqualTo("incremental");
+
+        when(pythonAnalysisClient.importCsv(any())).thenReturn(Map.of("success", true));
+        backgroundTask.get().run();
+        ArgumentCaptor<Map<String, Object>> requestCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(pythonAnalysisClient).importCsv(requestCaptor.capture());
+        assertThat(requestCaptor.getValue()).containsEntry("sampleData", true);
     }
 
     @Test

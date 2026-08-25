@@ -68,10 +68,14 @@ test('csv files are selected first and uploaded only when import starts', () => 
   assert.match(dataImportView, /await uploadSelectedCsv\(\)/)
 })
 
-test('single csv upload validates required review columns before OSS upload', () => {
-  assert.match(dataImportView, /validateSingleCsvFile/)
-  assert.match(dataImportView, /readSingleCsvHeader/)
-  assert.match(dataImportView, /missingSingleCsvColumns/)
-  assert.match(dataImportView, /singleCsvSchemaError/)
-  assert.match(dataImportView, /uploadRef\.value\?\.clearFiles\(\)/)
+test('single csv upload previews maps and preflights before OSS upload', () => {
+  assert.match(dataImportView, /inspectSingleCsvFile/)
+  assert.match(dataImportView, /parseCsvPreview/)
+  assert.match(dataImportView, /suggestColumnMapping/)
+  assert.match(dataImportView, /dataImportApi\.preflightCsv/)
+  assert.match(dataImportView, /compactColumnMapping/)
+  assert.match(dataImportView, /csvPreflight/)
+  assert.match(dataImportView, /startSampleImport/)
+  assert.match(apiModules, /preflightCsv/)
+  assert.match(apiModules, /importSample/)
 })

@@ -2,8 +2,10 @@ package com.aiops.controller;
 
 import com.aiops.dto.CrawlerImportDTO;
 import com.aiops.dto.CsvImportDTO;
+import com.aiops.dto.CsvImportPreflightDTO;
 import com.aiops.result.Result;
 import com.aiops.service.DataImportService;
+import com.aiops.vo.CsvImportPreflightVO;
 import com.aiops.vo.TaskVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -25,10 +27,22 @@ public class DataImportController {
 
     private final DataImportService dataImportService;
 
+    @PostMapping("/csv/preflight")
+    @Operation(summary = "CSV 导入预检", description = "导入前检查预计行数、字段映射和重复导入风险")
+    public Result<CsvImportPreflightVO> preflightCsv(@RequestBody CsvImportPreflightDTO preflightDTO) {
+        return Result.success(dataImportService.preflightCsv(preflightDTO));
+    }
+
     @PostMapping("/csv")
     @Operation(summary = "CSV 数据导入", description = "根据 OSS 文件或本地 Olist 数据目录创建导入任务")
     public Result<TaskVO> importCsv(@RequestBody CsvImportDTO csvImportDTO) {
         return Result.success(dataImportService.importCsv(csvImportDTO));
+    }
+
+    @PostMapping("/sample")
+    @Operation(summary = "一键导入示例数据", description = "导入系统内置小型 Olist 评论样例，便于新用户快速体验")
+    public Result<TaskVO> importSample() {
+        return Result.success(dataImportService.importSample());
     }
 
     @PostMapping("/crawler")

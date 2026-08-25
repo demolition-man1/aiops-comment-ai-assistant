@@ -4,6 +4,7 @@ import type {
   AnalysisResult,
   Comment,
   CommentTranslation,
+  CsvImportPreflight,
   DashboardData,
   FileUploadResult,
   LoginRequest,
@@ -70,6 +71,16 @@ export const fileApi = {
 }
 
 export const dataImportApi = {
+  preflightCsv: (payload: {
+    fileName?: string
+    fileSize?: number
+    fileHash?: string
+    dataPath?: string
+    dataSource?: string
+    importMode?: string
+    estimatedRows?: number
+    columnMapping?: Record<string, string | undefined>
+  }) => http.post<CsvImportPreflight, CsvImportPreflight>('/data/import/csv/preflight', payload),
   importCsv: (payload: {
     fileId?: number
     objectKey?: string
@@ -77,7 +88,11 @@ export const dataImportApi = {
     dataPath?: string
     dataSource?: string
     importMode?: string
+    fileHash?: string
+    columnMapping?: Record<string, string | undefined>
+    allowDuplicate?: boolean
   }) => http.post<Task, Task>('/data/import/csv', payload),
+  importSample: () => http.post<Task, Task>('/data/import/sample'),
   importCrawler: (payload: Record<string, unknown>) => http.post<Task, Task>('/data/import/crawler', payload),
   task: (taskId: number, importType?: string) =>
     http.get<Task, Task>(`/data/import/tasks/${taskId}`, {

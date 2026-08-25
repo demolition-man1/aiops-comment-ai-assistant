@@ -1,0 +1,13 @@
+review_id,order_id,product_id,seller_id,review_score,review_title,review_content,review_time,product_category_name,product_category_name_english,price,freight_value
+sample-review-001,sample-order-001,sample-product-a,sample-seller-01,5,Fast delivery,The package arrived early and the towel quality feels soft,2026-08-01 10:00:00,cama_mesa_banho,bed_bath_table,39.90,8.90
+sample-review-002,sample-order-002,sample-product-a,sample-seller-01,2,Thin fabric,The towel is thinner than expected and packaging was weak,2026-08-02 11:20:00,cama_mesa_banho,bed_bath_table,39.90,8.90
+sample-review-003,sample-order-003,sample-product-a,sample-seller-01,4,Good value,Good price and color matches the product page,2026-08-03 09:10:00,cama_mesa_banho,bed_bath_table,39.90,8.90
+sample-review-004,sample-order-004,sample-product-b,sample-seller-02,1,Broken part,One accessory was missing and the box was damaged,2026-08-04 14:30:00,moveis_decoracao,furniture_decor,89.00,12.50
+sample-review-005,sample-order-005,sample-product-b,sample-seller-02,5,Easy to assemble,Easy to assemble and looks stable after installation,2026-08-05 16:45:00,moveis_decoracao,furniture_decor,89.00,12.50
+sample-review-006,sample-order-006,sample-product-b,sample-seller-02,3,Average,Product is usable but delivery took longer than promised,2026-08-06 18:15:00,moveis_decoracao,furniture_decor,89.00,12.50
+sample-review-007,sample-order-007,sample-product-c,sample-seller-03,5,Excellent taste,The coffee flavor is rich and the seal keeps it fresh,2026-08-07 08:45:00,alimentos,food,29.90,6.20
+sample-review-008,sample-order-008,sample-product-c,sample-seller-03,2,Leaking bag,The bag leaked powder during shipping,2026-08-08 13:25:00,alimentos,food,29.90,6.20
+sample-review-009,sample-order-009,sample-product-c,sample-seller-03,4,Will buy again,Good taste and fair price for daily use,2026-08-09 20:05:00,alimentos,food,29.90,6.20
+sample-review-010,sample-order-010,sample-product-d,sample-seller-04,1,Wrong size,The size is much smaller than the description,2026-08-10 12:10:00,moda_feminina,fashion_female_clothing,59.90,9.80
+sample-review-011,sample-order-011,sample-product-d,sample-seller-04,5,Comfortable,Comfortable fabric and the stitching is neat,2026-08-11 10:40:00,moda_feminina,fashion_female_clothing,59.90,9.80
+sample-review-012,sample-order-012,sample-product-d,sample-seller-04,3,Color difference,The color is slightly different from the picture,2026-08-12 15:35:00,moda_feminina,fashion_female_clothing,59.90,9.80
