@@ -21,6 +21,7 @@
 - 辅助商家发现商品、物流、包装、客服等问题。
 - 基于评论结果生成运营报告和营销内容。
 - 支持自定义评论标签、时间趋势分析和商品对比分析。
+- 支持自定义标签库和问题解决方案库，把人工校正沉淀为可复用运营资产。
 - 跟踪差评回复模板使用次数、收藏状态和处理效果。
 - 通过 Redis 缓存和限流降低系统响应时间与 AI 调用成本。
 
@@ -520,6 +521,8 @@ client
 - 评论智能标签手动编辑。
 - 自定义评论标签保存与展示。
 - 单条评论按当前界面语言翻译，并弹窗展示原文与译文。
+- 自定义标签库维护，支持分组、颜色、说明、排序和启停。
+- 问题解决方案库维护，支持按问题类型、类目和关键词推荐处理方案。
 
 ### 7.6 评论分析模块
 
@@ -638,6 +641,8 @@ client
 | biz_seller | 卖家业务表 |
 | biz_product | 商品业务表 |
 | biz_comment | 评论业务表 |
+| biz_custom_tag | 自定义标签库表 |
+| biz_problem_solution | 问题解决方案库表 |
 | biz_analysis_task | 分析任务表 |
 | biz_crawl_task | 爬虫任务表，可选，也可并入 biz_analysis_task |
 | biz_sync_config | 定时同步配置表 |
@@ -656,6 +661,8 @@ sys_user 1 - n biz_analysis_task
 biz_seller 1 - n biz_product
 biz_seller 1 - n biz_comment
 biz_product 1 - n biz_comment
+biz_comment n - n biz_custom_tag
+biz_problem_solution n - 1 biz_comment.problem_type
 biz_analysis_task 1 - 1 biz_comment_analysis_result
 biz_analysis_task 1 - 1 biz_operation_report
 biz_product 1 - n biz_ai_content_record
@@ -672,6 +679,8 @@ biz_sync_execution n - 1 biz_analysis_task / biz_crawl_task
 | biz_comment | manual_problem_type | 商家手动修正后的差评原因 |
 | biz_comment | custom_tags | 商家自定义标签数组 |
 | biz_comment | tag_update_time | 标签最后更新时间 |
+| biz_custom_tag | 整表新增 | 保存商家可复用的标签名称、分组、颜色、说明、排序和启用状态 |
+| biz_problem_solution | 整表新增 | 保存问题类型、类目、方案内容、关键词、优先级和启用状态 |
 | biz_comment_analysis_result | negative_keywords | 负面评论关键词排行 |
 | biz_comment_analysis_result | score_distribution | 评分分布 |
 | biz_comment_analysis_result | custom_tag_distribution | 自定义标签统计结果 |

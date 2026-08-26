@@ -364,6 +364,38 @@ textarea {
   align-items: center;
 }
 
+.solution-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.solution-item {
+  padding: 10px;
+  border: 1px solid #e5eaf3;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.solution-item p {
+  margin: 6px 0;
+  color: #334155;
+  line-height: 1.6;
+}
+
+.solution-title-cell {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.solution-title-cell span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .el-button > svg,
 .el-tag > svg {
   margin-right: 6px;

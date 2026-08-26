@@ -12,6 +12,8 @@ import {
   MessageSquareText,
   PenLine,
   RefreshCw,
+  Tags,
+  Lightbulb,
   Settings,
   UserRound
 } from 'lucide-vue-next'
@@ -32,6 +34,8 @@ const { t } = useI18n()
 const navItems = [
   { path: '/', labelKey: 'layout.nav.dashboard', icon: Home },
   { path: '/comments', labelKey: 'layout.nav.comments', icon: MessageSquareText },
+  { path: '/tags', labelKey: 'layout.nav.tags', icon: Tags },
+  { path: '/solutions', labelKey: 'layout.nav.solutions', icon: Lightbulb },
   { path: '/import', labelKey: 'layout.nav.import', icon: FileUp },
   { path: '/compare', labelKey: 'layout.nav.compare', icon: GitCompareArrows },
   { path: '/content', labelKey: 'layout.nav.content', icon: PenLine },

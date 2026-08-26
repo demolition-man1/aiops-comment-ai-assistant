@@ -4,8 +4,17 @@ import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { aiApi, analysisApi, commentApi, pollTask } from '@/api/modules'
-import type { AnalysisResult, Comment, CommentTranslation, NegativeReply, OperationReport, Task } from '@/api/types'
+import { aiApi, analysisApi, commentApi, pollTask, problemSolutionApi, tagApi } from '@/api/modules'
+import type {
+  AnalysisResult,
+  Comment,
+  CommentTranslation,
+  CustomTag,
+  NegativeReply,
+  OperationReport,
+  ProblemSolution,
+  Task
+} from '@/api/types'
 import { resolveAnalysisProductId } from '@/utils/analysisTarget'
 import { formatPercent } from '@/utils/metricFormat'
 import { useLocaleStore } from '@/stores/locale'
@@ -28,6 +37,9 @@ const translation = ref<CommentTranslation>()
 const translationSource = ref<Comment>()
 const translationDialogVisible = ref(false)
 const translationLoadingId = ref<number>()
+const activeTags = ref<CustomTag[]>([])
+const recommendedSolutions = ref<ProblemSolution[]>([])
+const solutionLoading = ref(false)
 const stopPolling = ref<(() => void) | null>(null)
 const sentimentTypes = new Set(['positive', 'neutral', 'negative'])
 const problemTypes = new Set(['quality', 'logistics', 'price', 'service', 'size', 'other', 'unclassified', 'pending'])
@@ -44,7 +56,7 @@ const tagDialog = reactive({
   visible: false,
   commentId: 0,
   manualProblemType: '',
-  customTagsText: ''
+  customTags: [] as string[]
 })
 
 const displaySentiment = (value?: string) => {
@@ -71,8 +83,38 @@ const loadComments = async () => {
   }
 }
 
-const selectComment = (row: Comment) => {
+const loadActiveTags = async () => {
+  activeTags.value = await tagApi.active()
+}
+
+const loadRecommendations = async (row?: Comment) => {
+  if (!row) {
+    recommendedSolutions.value = []
+    return
+  }
+  const problemType = row.effectiveProblemType || row.manualProblemType || row.systemProblemType
+  const keyword = displayCommentContent(row)
+  if (!problemType && !keyword) {
+    recommendedSolutions.value = []
+    return
+  }
+  solutionLoading.value = true
+  try {
+    recommendedSolutions.value = await problemSolutionApi.recommend({
+      problemType,
+      keyword: problemType ? undefined : keyword
+    })
+  } finally {
+    solutionLoading.value = false
+  }
+}
+
+const selectComment = (row?: Comment) => {
+  if (!row) {
+    return
+  }
   selected.value = row
+  void loadRecommendations(row)
 }
 
 const createAnalysisTask = async () => {
@@ -218,23 +260,22 @@ const openTagDialog = (row: Comment) => {
   tagDialog.visible = true
   tagDialog.commentId = row.id
   tagDialog.manualProblemType = row.manualProblemType || row.effectiveProblemType || row.systemProblemType || ''
-  tagDialog.customTagsText = (row.customTags || []).join(',')
+  tagDialog.customTags = [...(row.customTags || [])]
 }
 
 const saveTags = async () => {
   await commentApi.updateTags(tagDialog.commentId, {
     manualProblemType: tagDialog.manualProblemType,
-    customTags: tagDialog.customTagsText
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean)
+    customTags: tagDialog.customTags.map((item) => item.trim()).filter(Boolean)
   })
   tagDialog.visible = false
   ElMessage.success(t('comments.tagsSaved'))
   await loadComments()
 }
 
-onMounted(loadComments)
+onMounted(async () => {
+  await Promise.all([loadComments(), loadActiveTags()])
+})
 </script>
 
 <template>
@@ -385,6 +426,21 @@ onMounted(loadComments)
           <strong>{{ t('comments.negativeReply') }}</strong>
           <p>{{ reply?.replyContent || t('comments.replyMissing') }}</p>
         </div>
+        <div class="insight-block" v-loading="solutionLoading">
+          <strong>{{ t('comments.solutionRecommendations') }}</strong>
+          <div v-if="recommendedSolutions.length" class="solution-list">
+            <div v-for="solution in recommendedSolutions" :key="solution.id" class="solution-item">
+              <div>
+                <strong>{{ solution.solutionTitle }}</strong>
+                <p>{{ solution.solutionContent }}</p>
+                <span v-if="solution.keywords" class="muted">
+                  {{ t('comments.solutionKeyword', { keywords: solution.keywords }) }}
+                </span>
+              </div>
+            </div>
+          </div>
+          <p v-else>{{ t('comments.solutionMissing') }}</p>
+        </div>
       </div>
     </div>
 
@@ -394,7 +450,22 @@ onMounted(loadComments)
           <el-input v-model="tagDialog.manualProblemType" :placeholder="t('comments.manualProblemPlaceholder')" />
         </el-form-item>
         <el-form-item :label="t('comments.customTags')">
-          <el-input v-model="tagDialog.customTagsText" :placeholder="t('comments.customTagsPlaceholder')" />
+          <el-select
+            v-model="tagDialog.customTags"
+            multiple
+            filterable
+            allow-create
+            default-first-option
+            style="width: 100%"
+            :placeholder="t('comments.customTagsPlaceholder')"
+          >
+            <el-option
+              v-for="tag in activeTags"
+              :key="tag.id"
+              :label="tag.tagName"
+              :value="tag.tagName"
+            />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>

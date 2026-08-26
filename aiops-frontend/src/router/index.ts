@@ -23,6 +23,8 @@ export const router = createRouter({
       children: [
         { path: '', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },
         { path: 'comments', name: 'comments', component: () => import('@/views/CommentWorkbenchView.vue') },
+        { path: 'tags', name: 'tags', component: () => import('@/views/TagLibraryView.vue') },
+        { path: 'solutions', name: 'solutions', component: () => import('@/views/ProblemSolutionView.vue') },
         { path: 'import', name: 'import', component: () => import('@/views/DataImportView.vue') },
         { path: 'sync', name: 'sync', component: () => import('@/views/SyncCenterView.vue') },
         { path: 'tasks', name: 'tasks', component: () => import('@/views/TaskCenterView.vue') },

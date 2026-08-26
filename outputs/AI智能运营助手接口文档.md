@@ -697,6 +697,270 @@ Redisson 属于后端工程治理能力，用于后续多实例部署、分布�
 | ├─ total | integer | 非必须 |  | 总数 | format: int64 |
 | msg | string | 非必须 |  | 提示信息 |  |
 
+# 自定义标签库相关接口
+
+## 分页查询自定义标签
+
+### 基本信息
+
+**Path：** /api/tags
+
+**Method：** GET
+
+**接口描述：** 分页查询商家自定义标签，支持按关键词、标签分组和启用状态筛选。评论标签弹窗会复用启用标签列表。
+
+### 请求参数
+
+**Query**
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| pageNum | 否 | 1 | 页码 |
+| pageSize | 否 | 10 | 每页条数 |
+| keyword | 否 | 包装 | 匹配标签名称或说明 |
+| tagGroup | 否 | 物流体验 | 标签分组 |
+| enabled | 否 | 1 | 1 启用，0 停用 |
+
+### 返回数据
+
+| 名称 | 类型 | 备注 |
+|---|---|---|
+| records | array | 标签列表 |
+| ├─ id | integer | 标签 ID |
+| ├─ tagName | string | 标签名称 |
+| ├─ tagGroup | string | 标签分组 |
+| ├─ color | string | 标签颜色 |
+| ├─ description | string | 标签说明 |
+| ├─ sortOrder | integer | 排序值 |
+| ├─ enabled | integer | 启用状态 |
+| ├─ createTime | string | 创建时间 |
+| ├─ updateTime | string | 更新时间 |
+| total | integer | 总数 |
+
+## 查询启用标签
+
+### 基本信息
+
+**Path：** /api/tags/active
+
+**Method：** GET
+
+**接口描述：** 查询所有启用状态的自定义标签，用于评论人工标签选择。
+
+### 返回数据
+
+返回 `CustomTagVO` 数组，字段同“分页查询自定义标签”的 `records`。
+
+## 创建自定义标签
+
+### 基本信息
+
+**Path：** /api/tags
+
+**Method：** POST
+
+**接口描述：** 新增一个商家自定义标签。
+
+### 请求参数
+
+**Body**
+
+| 名称 | 类型 | 是否必须 | 默认值 | 备注 |
+|---|---|---|---|---|
+| tagName | string | 是 |  | 标签名称 |
+| tagGroup | string | 否 |  | 标签分组 |
+| color | string | 否 | #409EFF | 标签颜色 |
+| description | string | 否 |  | 标签说明 |
+| sortOrder | integer | 否 | 0 | 排序值，越大越靠前 |
+| enabled | integer | 否 | 1 | 1 启用，0 停用 |
+
+### 返回数据
+
+返回单个 `CustomTagVO`。
+
+## 修改自定义标签
+
+### 基本信息
+
+**Path：** /api/tags/{tagId}
+
+**Method：** PUT
+
+**接口描述：** 修改标签名称、分组、颜色、说明、排序和启用状态。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| tagId | 是 | 1 | 标签 ID |
+
+Body 字段同“创建自定义标签”。
+
+### 返回数据
+
+返回单个 `CustomTagVO`。
+
+## 修改自定义标签状态
+
+### 基本信息
+
+**Path：** /api/tags/{tagId}/status
+
+**Method：** PUT
+
+**接口描述：** 启用或停用一个自定义标签。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| tagId | 是 | 1 | 标签 ID |
+| enabled | 是 | 1 | 1 启用，0 停用 |
+
+### 返回数据
+
+返回单个 `CustomTagVO`。
+
+# 问题解决方案库相关接口
+
+## 分页查询解决方案
+
+### 基本信息
+
+**Path：** /api/problem-solutions
+
+**Method：** GET
+
+**接口描述：** 分页查询问题解决方案，支持按问题类型、英文类目、关键词和启用状态筛选。
+
+### 请求参数
+
+**Query**
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| pageNum | 否 | 1 | 页码 |
+| pageSize | 否 | 10 | 每页条数 |
+| problemType | 否 | logistics | 问题类型 |
+| categoryNameEn | 否 | bed_bath_table | 英文类目 |
+| keyword | 否 | package | 匹配标题、内容或关键词字段 |
+| enabled | 否 | 1 | 1 启用，0 停用 |
+
+### 返回数据
+
+| 名称 | 类型 | 备注 |
+|---|---|---|
+| records | array | 解决方案列表 |
+| ├─ id | integer | 方案 ID |
+| ├─ problemType | string | 问题类型 |
+| ├─ categoryNameEn | string | 英文类目 |
+| ├─ solutionTitle | string | 方案标题 |
+| ├─ solutionContent | string | 方案内容 |
+| ├─ keywords | string | 匹配关键词 |
+| ├─ sourceType | string | 来源类型 |
+| ├─ priority | integer | 优先级 |
+| ├─ useCount | integer | 使用次数 |
+| ├─ enabled | integer | 启用状态 |
+| ├─ createTime | string | 创建时间 |
+| ├─ updateTime | string | 更新时间 |
+| total | integer | 总数 |
+
+## 推荐解决方案
+
+### 基本信息
+
+**Path：** /api/problem-solutions/recommend
+
+**Method：** GET
+
+**接口描述：** 根据评论问题类型、商品类目和关键词推荐可复用处理方案。评论工作台选择评论后会调用该接口。
+
+### 请求参数
+
+**Query**
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| problemType | 否 | logistics | 问题类型 |
+| categoryNameEn | 否 | bed_bath_table | 英文类目 |
+| keyword | 否 | package damaged | 关键词或评论内容 |
+
+### 返回数据
+
+返回 `ProblemSolutionVO` 数组，默认最多 5 条，字段同“分页查询解决方案”的 `records`。
+
+## 创建解决方案
+
+### 基本信息
+
+**Path：** /api/problem-solutions
+
+**Method：** POST
+
+**接口描述：** 新增一条问题处理方案。
+
+### 请求参数
+
+**Body**
+
+| 名称 | 类型 | 是否必须 | 默认值 | 备注 |
+|---|---|---|---|---|
+| problemType | string | 是 |  | 问题类型 |
+| categoryNameEn | string | 否 |  | 英文类目 |
+| solutionTitle | string | 是 |  | 方案标题 |
+| solutionContent | string | 是 |  | 方案内容 |
+| keywords | string | 否 |  | 关键词，逗号分隔 |
+| sourceType | string | 否 | manual | 来源类型 |
+| priority | integer | 否 | 0 | 优先级，越大越靠前 |
+| enabled | integer | 否 | 1 | 1 启用，0 停用 |
+
+### 返回数据
+
+返回单个 `ProblemSolutionVO`。
+
+## 修改解决方案
+
+### 基本信息
+
+**Path：** /api/problem-solutions/{solutionId}
+
+**Method：** PUT
+
+**接口描述：** 修改问题类型、类目、标题、内容、关键词、来源、优先级和启用状态。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| solutionId | 是 | 1 | 方案 ID |
+
+Body 字段同“创建解决方案”。
+
+### 返回数据
+
+返回单个 `ProblemSolutionVO`。
+
+## 修改解决方案状态
+
+### 基本信息
+
+**Path：** /api/problem-solutions/{solutionId}/status
+
+**Method：** PUT
+
+**接口描述：** 启用或停用一条问题处理方案。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| solutionId | 是 | 1 | 方案 ID |
+| enabled | 是 | 1 | 1 启用，0 停用 |
+
+### 返回数据
+
+返回单个 `ProblemSolutionVO`。
+
 # 评论分析相关接口
 
 ## 创建评论分析任务

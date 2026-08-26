@@ -1,10 +1,11 @@
-import { readFile } from 'node:fs/promises'
+import { access, readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 const layout = await readFile(new URL('../src/layouts/MainLayout.vue', import.meta.url), 'utf8')
 const router = await readFile(new URL('../src/router/index.ts', import.meta.url), 'utf8')
 const dataImportView = await readFile(new URL('../src/views/DataImportView.vue', import.meta.url), 'utf8')
+const commentWorkbenchView = await readFile(new URL('../src/views/CommentWorkbenchView.vue', import.meta.url), 'utf8')
 const syncCenterView = await readFile(new URL('../src/views/SyncCenterView.vue', import.meta.url), 'utf8')
 const taskCenterView = await readFile(new URL('../src/views/TaskCenterView.vue', import.meta.url), 'utf8')
 const reportsView = await readFile(new URL('../src/views/ReportsView.vue', import.meta.url), 'utf8')
@@ -78,4 +79,26 @@ test('single csv upload previews maps and preflights before OSS upload', () => {
   assert.match(dataImportView, /startSampleImport/)
   assert.match(apiModules, /preflightCsv/)
   assert.match(apiModules, /importSample/)
+})
+
+test('tag and solution library pages are routed and backed by api modules', async () => {
+  assert.match(router, /path:\s*'tags'/)
+  assert.match(router, /TagLibraryView\.vue/)
+  assert.match(router, /path:\s*'solutions'/)
+  assert.match(router, /ProblemSolutionView\.vue/)
+  assert.match(layout, /layout\.nav\.tags/)
+  assert.match(layout, /layout\.nav\.solutions/)
+  assert.match(apiModules, /export const tagApi/)
+  assert.match(apiModules, /active:\s*\(\)/)
+  assert.match(apiModules, /export const problemSolutionApi/)
+  assert.match(apiModules, /recommend:/)
+  await access(new URL('../src/views/TagLibraryView.vue', import.meta.url))
+  await access(new URL('../src/views/ProblemSolutionView.vue', import.meta.url))
+})
+
+test('comment workspace consumes active tags and solution recommendations', () => {
+  assert.match(commentWorkbenchView, /tagApi\.active/)
+  assert.match(commentWorkbenchView, /problemSolutionApi\.recommend/)
+  assert.match(commentWorkbenchView, /activeTags/)
+  assert.match(commentWorkbenchView, /recommendedSolutions/)
 })

@@ -147,6 +147,33 @@ export interface SyncExecution {
   createTime?: string
 }
 
+export interface CustomTag {
+  id: number
+  tagName: string
+  tagGroup?: string
+  color?: string
+  description?: string
+  sortOrder?: number
+  enabled: number
+  createTime?: string
+  updateTime?: string
+}
+
+export interface ProblemSolution {
+  id: number
+  problemType: string
+  categoryNameEn?: string
+  solutionTitle: string
+  solutionContent: string
+  keywords?: string
+  sourceType?: string
+  priority?: number
+  useCount?: number
+  enabled: number
+  createTime?: string
+  updateTime?: string
+}
+
 export interface TaskRecord {
   recordKey: string
   sourceId: number

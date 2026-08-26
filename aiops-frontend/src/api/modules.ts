@@ -4,6 +4,7 @@ import type {
   AnalysisResult,
   Comment,
   CommentTranslation,
+  CustomTag,
   CsvImportPreflight,
   DashboardData,
   FileUploadResult,
@@ -16,6 +17,7 @@ import type {
   Product,
   ProductCompareReport,
   ProductRank,
+  ProblemSolution,
   ReportOverview,
   SyncConfig,
   SyncExecution,
@@ -47,6 +49,28 @@ export const commentApi = {
     http.put<Comment, Comment>(`/comments/${commentId}/tags`, payload),
   translate: (commentId: number, payload: { language?: string; forceRefresh?: boolean }) =>
     http.post<CommentTranslation, CommentTranslation>(`/comments/${commentId}/translate`, payload)
+}
+
+export const tagApi = {
+  page: (params: Record<string, unknown>) => http.get<PageResult<CustomTag>, PageResult<CustomTag>>('/tags', { params }),
+  active: () => http.get<CustomTag[], CustomTag[]>('/tags/active'),
+  create: (payload: Partial<CustomTag>) => http.post<CustomTag, CustomTag>('/tags', payload),
+  update: (tagId: number, payload: Partial<CustomTag>) => http.put<CustomTag, CustomTag>(`/tags/${tagId}`, payload),
+  updateStatus: (tagId: number, enabled: number) =>
+    http.put<CustomTag, CustomTag>(`/tags/${tagId}/status`, undefined, { params: { enabled } })
+}
+
+export const problemSolutionApi = {
+  page: (params: Record<string, unknown>) =>
+    http.get<PageResult<ProblemSolution>, PageResult<ProblemSolution>>('/problem-solutions', { params }),
+  recommend: (params: Record<string, unknown>) =>
+    http.get<ProblemSolution[], ProblemSolution[]>('/problem-solutions/recommend', { params }),
+  create: (payload: Partial<ProblemSolution>) =>
+    http.post<ProblemSolution, ProblemSolution>('/problem-solutions', payload),
+  update: (solutionId: number, payload: Partial<ProblemSolution>) =>
+    http.put<ProblemSolution, ProblemSolution>(`/problem-solutions/${solutionId}`, payload),
+  updateStatus: (solutionId: number, enabled: number) =>
+    http.put<ProblemSolution, ProblemSolution>(`/problem-solutions/${solutionId}/status`, undefined, { params: { enabled } })
 }
 
 export const analysisApi = {

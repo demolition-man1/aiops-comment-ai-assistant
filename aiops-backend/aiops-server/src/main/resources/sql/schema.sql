@@ -84,6 +84,40 @@ create table if not exists biz_comment (
     index idx_comment_problem_type (problem_type)
 );
 
+create table if not exists biz_custom_tag (
+    id bigint primary key auto_increment,
+    tag_name varchar(64) not null,
+    tag_group varchar(64) null,
+    color varchar(32) null,
+    description varchar(255) null,
+    sort_order int not null default 0,
+    enabled tinyint not null default 1,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    unique key uk_custom_tag_name (tag_name),
+    index idx_custom_tag_group (tag_group),
+    index idx_custom_tag_enabled (enabled)
+);
+
+create table if not exists biz_problem_solution (
+    id bigint primary key auto_increment,
+    problem_type varchar(64) not null,
+    category_name_en varchar(128) null,
+    solution_title varchar(128) not null,
+    solution_content text not null,
+    keywords varchar(255) null,
+    source_type varchar(64) null,
+    priority int not null default 0,
+    use_count int not null default 0,
+    enabled tinyint not null default 1,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    unique key uk_problem_solution_title (problem_type, solution_title),
+    index idx_problem_solution_type (problem_type),
+    index idx_problem_solution_category (category_name_en),
+    index idx_problem_solution_enabled (enabled)
+);
+
 create table if not exists biz_analysis_task (
     id bigint primary key auto_increment,
     user_id bigint null,
