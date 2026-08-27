@@ -400,7 +400,31 @@ export default {
     hotProducts: '热门商品排行',
     highRiskProducts: '高风险商品排行',
     topRatedProducts: '高评分商品排行',
-    exported: '报表 CSV 已导出'
+    exported: '报表 CSV 已导出',
+    archiveTitle: '报告归档',
+    archiveSubtitle: '查看已生成的 AI 运营报告，支持按目标类型和目标 ID 筛选',
+    archiveStatus: '已接入归档',
+    archived: '已归档',
+    filterTargetType: '目标类型',
+    allTargets: '全部目标',
+    targetIdPlaceholder: '输入目标 ID',
+    archiveReportTitle: '报告标题',
+    untitledReport: '未命名报告',
+    target: '目标',
+    createTime: '生成时间',
+    viewDetail: '查看',
+    detailTitle: '报告详情',
+    painPoints: '用户痛点',
+    advantages: '商品优势',
+    disadvantages: '商品短板',
+    operationSuggestions: '运营建议',
+    copywritingSuggestions: '文案建议',
+    serviceSuggestions: '客服建议',
+    fullReport: '完整报告',
+    targetTypes: {
+      product: '商品',
+      seller: '商家'
+    }
   },
   categories: {
     title: '类目聚合分析',

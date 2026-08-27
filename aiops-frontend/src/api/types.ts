@@ -289,6 +289,8 @@ export interface CsvImportPreflight {
 
 export interface OperationReport {
   reportId: number
+  targetType?: string
+  targetId?: string
   reportTitle: string
   consumerPainPoints: string
   productAdvantages: string
@@ -298,6 +300,7 @@ export interface OperationReport {
   serviceSuggestions: string
   fullReport: string
   modelName: string
+  createTime?: string
 }
 
 export interface AiContent {

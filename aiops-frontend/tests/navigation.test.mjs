@@ -64,6 +64,15 @@ test('task center and report pages expose csv export downloads', () => {
   assert.match(reportsView, /reports\.exportCsv/)
 })
 
+test('report archive list and detail are backed by ai report apis', () => {
+  assert.match(apiModules, /reports:\s*\(params/)
+  assert.match(apiModules, /report:\s*\(reportId/)
+  assert.match(reportsView, /aiApi\.reports/)
+  assert.match(reportsView, /aiApi\.report/)
+  assert.match(reportsView, /archiveDialogVisible/)
+  assert.match(reportsView, /reports\.archiveTitle/)
+})
+
 test('csv files are selected first and uploaded only when import starts', () => {
   assert.match(dataImportView, /:auto-upload="false"/)
   assert.doesNotMatch(dataImportView, /:http-request="uploadCsv"/)

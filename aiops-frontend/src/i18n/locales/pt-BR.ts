@@ -400,7 +400,31 @@ export default {
     hotProducts: 'Ranking de produtos populares',
     highRiskProducts: 'Ranking de produtos de risco',
     topRatedProducts: 'Ranking de produtos bem avaliados',
-    exported: 'CSV de relatório exportado'
+    exported: 'CSV de relatório exportado',
+    archiveTitle: 'Arquivo de Relatórios',
+    archiveSubtitle: 'Consulte relatórios de operações gerados por IA e filtre por tipo ou ID do alvo',
+    archiveStatus: 'Arquivo ativo',
+    archived: 'Arquivado',
+    filterTargetType: 'Tipo de alvo',
+    allTargets: 'Todos os alvos',
+    targetIdPlaceholder: 'Digite o ID do alvo',
+    archiveReportTitle: 'Título do relatório',
+    untitledReport: 'Relatório sem título',
+    target: 'Alvo',
+    createTime: 'Gerado em',
+    viewDetail: 'Ver',
+    detailTitle: 'Detalhes do relatório',
+    painPoints: 'Dores do cliente',
+    advantages: 'Pontos fortes do produto',
+    disadvantages: 'Pontos fracos do produto',
+    operationSuggestions: 'Sugestões operacionais',
+    copywritingSuggestions: 'Sugestões de texto',
+    serviceSuggestions: 'Sugestões de atendimento',
+    fullReport: 'Relatório completo',
+    targetTypes: {
+      product: 'Produto',
+      seller: 'Vendedor'
+    }
   },
   categories: {
     title: 'Análise por Categoria',

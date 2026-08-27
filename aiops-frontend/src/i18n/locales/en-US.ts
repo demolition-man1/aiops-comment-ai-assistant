@@ -400,7 +400,31 @@ export default {
     hotProducts: 'Hot Product Ranking',
     highRiskProducts: 'High-risk Product Ranking',
     topRatedProducts: 'Top-rated Product Ranking',
-    exported: 'Report CSV exported'
+    exported: 'Report CSV exported',
+    archiveTitle: 'Report Archive',
+    archiveSubtitle: 'Review generated AI operations reports and filter by target type or target ID',
+    archiveStatus: 'Archive Enabled',
+    archived: 'Archived',
+    filterTargetType: 'Target Type',
+    allTargets: 'All Targets',
+    targetIdPlaceholder: 'Enter target ID',
+    archiveReportTitle: 'Report Title',
+    untitledReport: 'Untitled Report',
+    target: 'Target',
+    createTime: 'Generated At',
+    viewDetail: 'View',
+    detailTitle: 'Report Details',
+    painPoints: 'Customer Pain Points',
+    advantages: 'Product Strengths',
+    disadvantages: 'Product Weaknesses',
+    operationSuggestions: 'Operations Suggestions',
+    copywritingSuggestions: 'Copywriting Suggestions',
+    serviceSuggestions: 'Service Suggestions',
+    fullReport: 'Full Report',
+    targetTypes: {
+      product: 'Product',
+      seller: 'Seller'
+    }
   },
   categories: {
     title: 'Category Analytics',

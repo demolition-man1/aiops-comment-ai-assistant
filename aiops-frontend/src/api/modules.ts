@@ -187,6 +187,7 @@ export const aiApi = {
   sellerReport: (payload: { sellerId: string; language?: string }) =>
     http.post<OperationReport, OperationReport>('/ai/reports/seller', payload),
   reports: (params: Record<string, unknown>) => http.get<PageResult<OperationReport>, PageResult<OperationReport>>('/ai/reports', { params }),
+  report: (reportId: number) => http.get<OperationReport, OperationReport>(`/ai/reports/${reportId}`),
   content: (payload: Record<string, unknown>) => http.post<AiContent, AiContent>('/ai/contents', payload),
   contents: (params: Record<string, unknown>) => http.get<PageResult<AiContent>, PageResult<AiContent>>('/ai/contents', { params }),
   negativeReply: (payload: { commentId: number; toneType?: string; language?: string }) =>

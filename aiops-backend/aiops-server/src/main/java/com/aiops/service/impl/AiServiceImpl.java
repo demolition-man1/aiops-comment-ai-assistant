@@ -333,9 +333,11 @@ public class AiServiceImpl implements AiService {
     }
 
     private OperationReportVO toReportVO(BizOperationReport report) {
-        return new OperationReportVO(report.getId(), report.getReportTitle(), report.getConsumerPainPoints(),
+        return new OperationReportVO(report.getId(), report.getTargetType(), report.getTargetId(),
+                report.getReportTitle(), report.getConsumerPainPoints(),
                 report.getProductAdvantages(), report.getProductDisadvantages(), report.getOperationSuggestions(),
-                report.getCopywritingSuggestions(), report.getServiceSuggestions(), report.getFullReport(), report.getModelName());
+                report.getCopywritingSuggestions(), report.getServiceSuggestions(), report.getFullReport(),
+                report.getModelName(), report.getCreateTime());
     }
 
     private BizNegativeReply getNegativeReply(Long replyId) {
