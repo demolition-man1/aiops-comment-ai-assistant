@@ -39,3 +39,29 @@ source_type = values(source_type),
 priority = values(priority),
 enabled = values(enabled),
 update_time = now();
+
+insert into sys_prompt_template
+(template_name, business_type, language, template_content, variable_schema, default_flag, enabled, remark, create_time, update_time)
+values
+('默认运营报告模板', 'report', 'zh-CN',
+'你是中小电商商家的AI运营顾问。请基于评论分析结果生成一份运营报告。必须只输出JSON，不要输出Markdown。JSON字段必须包含：reportTitle, consumerPainPoints, productAdvantages, productDisadvantages, operationSuggestions, copywritingSuggestions, serviceSuggestions, fullReport。目标类型：{targetType}，目标ID：{targetId}，输出语言：{language}。评论分析结果：{analysisResult}',
+'["targetType","targetId","language","analysisResult"]', 1, 1, '商品/商家运营报告默认模板', now(), now()),
+('默认营销文案模板', 'content', 'zh-CN',
+'你是电商运营文案专家。请生成可直接给商家使用的营销文案。文案类型：{contentType}。风格：{styleType}。语言：{language}。目标类型：{targetType}，目标ID：{targetId}。补充要求：{extraRequirement}。输出正文即可，不要解释生成过程。',
+'["contentType","styleType","language","targetType","targetId","extraRequirement"]', 1, 1, 'AI 文案默认模板', now(), now()),
+('默认差评回复模板', 'negative_reply', 'zh-CN',
+'你是电商客服主管。请为差评生成一段商家回复模板。回复要真诚、承担责任、给出解决路径，避免争辩和过度承诺。每条回复都必须针对这条评论单独生成，不要复用通用模板；需要自然提到客户反馈中的具体问题，不能编造评论中没有的信息。语气：{toneType}。语言：{language}。评论ID：{commentId}。平台评论ID：{reviewId}。商品ID：{productId}。评分：{reviewScore}。问题类型：{problemType}。评论标题：{commentTitle}。客户评论：{commentContent}。如果评论原文缺失，只能基于评分和问题类型表达歉意并引导客服核实。只输出回复内容。',
+'["toneType","language","commentId","reviewId","productId","reviewScore","problemType","commentTitle","commentContent"]', 1, 1, '差评回复默认模板', now(), now()),
+('默认评论翻译模板', 'translation', 'zh-CN',
+'You are a precise ecommerce review translator. Translate the customer review into the target language. Preserve product facts, sentiment, complaint details, numbers, and named entities. Do not add explanations or invented details. Return only JSON with fields: translatedContent, sourceLanguage. target language: {targetLanguage}. commentId: {commentId}. reviewId: {reviewId}. productId: {productId}. reviewScore: {reviewScore}. title: {commentTitle}. review: {commentContent}.',
+'["targetLanguage","commentId","reviewId","productId","reviewScore","commentTitle","commentContent"]', 1, 1, '评论翻译默认模板', now(), now()),
+('默认商品对比模板', 'product_compare', 'zh-CN',
+'你是中小电商商家的竞品评论分析顾问。请基于两个商品的评论分析结果生成对比报告。必须只输出JSON，不要输出Markdown。JSON字段必须包含：compareSummary, advantageAnalysis, riskAnalysis, operationSuggestions。所有字段值必须是字符串，不能返回嵌套对象或数组。左侧商品ID：{leftProductId}。右侧商品ID：{rightProductId}。输出语言：{language}。左侧商品分析结果：{leftAnalysis}。右侧商品分析结果：{rightAnalysis}',
+'["leftProductId","rightProductId","language","leftAnalysis","rightAnalysis"]', 1, 1, '商品对比默认模板', now(), now())
+on duplicate key update
+template_content = values(template_content),
+variable_schema = values(variable_schema),
+default_flag = values(default_flag),
+enabled = values(enabled),
+remark = values(remark),
+update_time = now();

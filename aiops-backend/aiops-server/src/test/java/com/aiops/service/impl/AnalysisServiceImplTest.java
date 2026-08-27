@@ -12,8 +12,10 @@ import com.aiops.exception.BusinessException;
 import com.aiops.mapper.BizAnalysisTaskMapper;
 import com.aiops.mapper.BizCommentAnalysisResultMapper;
 import com.aiops.mapper.BizProductCompareReportMapper;
+import com.aiops.service.AiCallLogService;
 import com.aiops.service.AiRateLimitService;
 import com.aiops.service.CacheService;
+import com.aiops.service.PromptTemplateService;
 import com.aiops.vo.ProductCompareReportVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +63,12 @@ class AnalysisServiceImplTest {
     @Mock
     private AiRateLimitService aiRateLimitService;
 
+    @Mock
+    private PromptTemplateService promptTemplateService;
+
+    @Mock
+    private AiCallLogService aiCallLogService;
+
     private AnalysisServiceImpl analysisService;
 
     @BeforeEach
@@ -74,7 +82,9 @@ class AnalysisServiceImplTest {
                 pythonAiClient,
                 compareReportMapper,
                 new ObjectMapper(),
-                aiRateLimitService
+                aiRateLimitService,
+                promptTemplateService,
+                aiCallLogService
         );
     }
 
@@ -163,6 +173,8 @@ class AnalysisServiceImplTest {
         assertThat(captor.getValue().getLeftProductId()).isEqualTo("product-a");
         assertThat(captor.getValue().getRightProductId()).isEqualTo("product-b");
         verify(cacheService).set(anyString(), any(ProductCompareReportVO.class), any(Duration.class));
+        verify(aiCallLogService).record(any(), eq("product_compare"), eq("product_pair"),
+                eq("product-a:product-b"), any(), eq("deepseek-chat"), eq("success"), any(), any(), any());
     }
 
     @Test

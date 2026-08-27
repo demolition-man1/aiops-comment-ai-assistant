@@ -27,6 +27,7 @@ A review-driven AI operations assistant for small and medium-sized e-commerce me
 - **Java + Python dual-service architecture**: Java handles business logic, authentication, tasks, cache, and API orchestration; Python handles data cleaning, NLP, and AI generation.
 - **Production-oriented runnable version**: supports MySQL, Redis, Alibaba Cloud OSS, DeepSeek / OpenAI-compatible model APIs, and a public sample-data workflow.
 - **Reusable operations knowledge base**: merchants can maintain a custom tag library and a problem solution library, turning manual review corrections into reusable assets.
+- **Controllable prompts and AI cost visibility**: supports business-type prompt templates and records AI calls, token estimates, latency, estimated cost, and failure reasons.
 - **Chinese, English, and Portuguese UI**: designed for international merchants, with switchable frontend language and AI request language.
 - **Practical engineering stack**: MyBatis-Plus, Quartz, Redis cache, Bucket4j rate limiting, Redisson-ready design, and Knife4j API documentation.
 - **Low-cost demo flow**: uses the Kaggle Olist dataset to complete import, analysis, reporting, and AI generation.
@@ -40,6 +41,8 @@ A review-driven AI operations assistant for small and medium-sized e-commerce me
 | Review Analysis | Review pagination and filtering, sentiment detection, negative review detection, manual tag editing, and on-demand review translation |
 | Tag Library | Custom tag management, grouping, color, enabled status, and direct selection in the review tag dialog |
 | Solution Library | Solutions by issue type and category, with reusable suggestions in the review workspace |
+| Prompt Templates | Default prompts by business type, including reports, copywriting, negative replies, translation, and product comparison |
+| AI Call Logs | AI call volume, success rate, token estimates, cost estimates, latency, and errors |
 | AI Generation | Operation reports, product titles, detail copy, short video scripts, promotion copy, and negative review replies |
 | Product Comparison | Product A / B review pain points, strengths, weaknesses, risks, and operation suggestions |
 | Alert Center | Alerts for negative review ratio, recent negative review count, and key issue types |
@@ -69,6 +72,7 @@ Vue 3 Frontend
 Spring Boot Backend
   |-- Auth / User / Product / Seller / Comment
   |-- Custom Tag Library / Problem Solution Library
+  |-- Prompt Template / AI Call Log
   |-- Import Task / Analysis Task / Sync Task
   |-- AI Report / Copywriting / Negative Reply / Product Compare
   |-- Redis Cache / Bucket4j Rate Limit / Quartz Schedule
@@ -218,7 +222,7 @@ Default frontend URL:
 
 If the port is occupied, Vite automatically switches to the next available port, such as `5174`.
 
-After logging in, open the Data Import page and click "Import Sample Data" to quickly create demo data. For single CSV upload, the page previews field mapping, estimated rows, and the first 20 rows before upload. OSS upload and task creation happen only after clicking "Start Import". After import, maintain business tags in "Tag Library", maintain handling playbooks in "Solution Library", and return to "Review Analytics" to view recommended solutions.
+After logging in, open the Data Import page and click "Import Sample Data" to quickly create demo data. For single CSV upload, the page previews field mapping, estimated rows, and the first 20 rows before upload. OSS upload and task creation happen only after clicking "Start Import". After import, maintain business tags in "Tag Library", maintain handling playbooks in "Solution Library", customize AI instructions in "Prompt Templates", and return to "Review Analytics" to view recommended solutions and trigger AI generation. After AI calls, use "AI Call Logs" to review call volume, success rate, tokens, and estimated cost.
 
 ## Configuration
 

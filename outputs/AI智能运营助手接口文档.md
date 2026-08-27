@@ -161,7 +161,7 @@ Redisson 属于后端工程治理能力，用于后续多实例部署、分布�
 ```json
 {
   "username": "admin",
-  "password": "123456"
+  "password": "your-password"
 }
 ```
 
@@ -960,6 +960,242 @@ Body 字段同“创建解决方案”。
 ### 返回数据
 
 返回单个 `ProblemSolutionVO`。
+
+# Prompt 模板相关接口
+
+## 分页查询 Prompt 模板
+
+### 基本信息
+
+**Path：** /api/prompt-templates
+
+**Method：** GET
+
+**接口描述：** 分页查询 AI Prompt 模板，支持按业务类型、语言、关键词和启用状态筛选。运营报告、AI 文案、差评回复、评论翻译和商品对比会优先使用对应业务类型与语言的默认模板。
+
+### 请求参数
+
+**Query**
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| pageNum | 否 | 1 | 页码 |
+| pageSize | 否 | 10 | 每页条数 |
+| keyword | 否 | 差评回复 | 匹配模板名称或备注 |
+| businessType | 否 | negative_reply | 业务类型：report / content / negative_reply / translation / product_compare |
+| language | 否 | zh-CN | 语言：zh-CN / en-US / pt-BR |
+| enabled | 否 | 1 | 1 启用，0 停用 |
+
+### 返回数据
+
+| 名称 | 类型 | 备注 |
+|---|---|---|
+| records | array | 模板列表 |
+| ├─ id | integer | 模板 ID |
+| ├─ templateName | string | 模板名称 |
+| ├─ businessType | string | 业务类型 |
+| ├─ language | string | 语言 |
+| ├─ templateContent | string | 模板内容 |
+| ├─ variableSchema | string | 变量说明 JSON |
+| ├─ defaultFlag | integer | 是否默认模板 |
+| ├─ enabled | integer | 启用状态 |
+| ├─ remark | string | 备注 |
+| ├─ createTime | string | 创建时间 |
+| ├─ updateTime | string | 更新时间 |
+| total | integer | 总数 |
+
+## 查询启用 Prompt 模板
+
+### 基本信息
+
+**Path：** /api/prompt-templates/active
+
+**Method：** GET
+
+**接口描述：** 查询指定业务类型和语言下启用的 Prompt 模板，前端可用于模板选择器。
+
+### 请求参数
+
+**Query**
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| businessType | 否 | report | 业务类型 |
+| language | 否 | zh-CN | 语言 |
+
+### 返回数据
+
+返回 `PromptTemplateVO` 数组，字段同“分页查询 Prompt 模板”的 `records`。
+
+## 创建 Prompt 模板
+
+### 基本信息
+
+**Path：** /api/prompt-templates
+
+**Method：** POST
+
+**接口描述：** 新增一个 AI Prompt 模板。模板内容支持 `{variableName}` 占位符，Python 服务会按 Java 传入变量渲染；未知变量会保留原文，便于排查模板错误。
+
+### 请求参数
+
+**Body**
+
+| 名称 | 类型 | 是否必须 | 默认值 | 备注 |
+|---|---|---|---|---|
+| templateName | string | 是 |  | 模板名称 |
+| businessType | string | 是 |  | 业务类型：report / content / negative_reply / translation / product_compare |
+| language | string | 否 | zh-CN | 语言 |
+| templateContent | string | 是 |  | 模板正文 |
+| variableSchema | string | 否 |  | 变量说明 JSON |
+| defaultFlag | integer | 否 | 0 | 1 默认，0 非默认 |
+| enabled | integer | 否 | 1 | 1 启用，0 停用 |
+| remark | string | 否 |  | 备注 |
+
+### 返回数据
+
+返回单个 `PromptTemplateVO`。
+
+## 修改 Prompt 模板
+
+### 基本信息
+
+**Path：** /api/prompt-templates/{templateId}
+
+**Method：** PUT
+
+**接口描述：** 修改 Prompt 模板名称、业务类型、语言、内容、变量说明、默认状态和启用状态。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| templateId | 是 | 1 | 模板 ID |
+
+Body 字段同“创建 Prompt 模板”。
+
+### 返回数据
+
+返回单个 `PromptTemplateVO`。
+
+## 修改 Prompt 模板状态
+
+### 基本信息
+
+**Path：** /api/prompt-templates/{templateId}/status
+
+**Method：** PUT
+
+**接口描述：** 启用或停用一个 Prompt 模板。停用默认模板后，AI 调用会回退到同业务类型和语言下的其他启用默认模板；没有可用模板时由 Python 内置 Prompt 兜底。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| templateId | 是 | 1 | 模板 ID |
+| enabled | 是 | 1 | 1 启用，0 停用 |
+
+### 返回数据
+
+返回单个 `PromptTemplateVO`。
+
+## 设为默认 Prompt 模板
+
+### 基本信息
+
+**Path：** /api/prompt-templates/{templateId}/default
+
+**Method：** POST
+
+**接口描述：** 将模板设为同一业务类型和语言下的默认模板；后端会自动取消其他模板的默认状态。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| templateId | 是 | 1 | 模板 ID |
+
+### 返回数据
+
+返回单个 `PromptTemplateVO`。
+
+# AI 调用日志相关接口
+
+## 分页查询 AI 调用日志
+
+### 基本信息
+
+**Path：** /api/ai/call-logs
+
+**Method：** GET
+
+**接口描述：** 分页查询 AI 调用日志，支持按业务类型、调用状态、目标类型和目标 ID 筛选。当前会记录运营报告、营销文案、差评回复、评论翻译和商品 A/B 对比的真实大模型调用；读取 Redis 缓存命中的请求不重复计入调用日志。
+
+### 请求参数
+
+**Query**
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| pageNum | 否 | 1 | 页码 |
+| pageSize | 否 | 10 | 每页条数 |
+| businessType | 否 | report | 业务类型 |
+| callStatus | 否 | success | 调用状态：success / failed |
+| targetType | 否 | product | 目标类型：product / seller / comment / product_pair |
+| targetId | 否 | 99a4788cb... | 目标 ID |
+
+### 返回数据
+
+| 名称 | 类型 | 备注 |
+|---|---|---|
+| records | array | 日志列表 |
+| ├─ id | integer | 日志 ID |
+| ├─ userId | integer | 用户 ID |
+| ├─ businessType | string | 业务类型 |
+| ├─ targetType | string | 目标类型 |
+| ├─ targetId | string | 目标 ID |
+| ├─ promptTemplateId | integer | 使用的 Prompt 模板 ID |
+| ├─ modelName | string | 模型名称 |
+| ├─ callStatus | string | 调用状态 |
+| ├─ tokenUsage | integer | token 用量估算 |
+| ├─ estimatedCost | number | 成本估算 |
+| ├─ latencyMs | integer | 调用耗时，单位毫秒 |
+| ├─ errorMessage | string | 失败原因摘要 |
+| ├─ createTime | string | 创建时间 |
+| total | integer | 总数 |
+
+## AI 调用统计概览
+
+### 基本信息
+
+**Path：** /api/ai/call-logs/overview
+
+**Method：** GET
+
+**接口描述：** 统计 AI 调用总量、成功数、失败数、成功率、token 总量、成本估算和平均耗时。筛选参数与“分页查询 AI 调用日志”一致。
+
+### 请求参数
+
+**Query**
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| businessType | 否 | content | 业务类型 |
+| callStatus | 否 | failed | 调用状态 |
+| targetType | 否 | comment | 目标类型 |
+| targetId | 否 | 205652 | 目标 ID |
+
+### 返回数据
+
+| 名称 | 类型 | 备注 |
+|---|---|---|
+| totalCalls | integer | 调用总数 |
+| successCalls | integer | 成功次数 |
+| failedCalls | integer | 失败次数 |
+| successRate | number | 成功率，百分比 |
+| totalTokens | integer | token 总量 |
+| totalCost | number | 估算总成本 |
+| avgLatencyMs | integer | 平均耗时，单位毫秒 |
 
 # 评论分析相关接口
 
@@ -1992,7 +2228,7 @@ CSV 分区：`[Overview]`、`[Trend]`、`[Sentiment]`、`[Problem]`、`[Hot Prod
 
 # Python 内部服务接口
 
-Python 内部服务由 Java 后端调用，一般部署在内网或本机，不建议直接暴露公网。关键词提取默认使用规则模式，可通过 `AIOPS_KEYWORD_EXTRACTOR=keybert` 切换 KeyBERT；主题聚类默认使用规则模式，可通过 `AIOPS_TOPIC_CLUSTERER=bertopic` 切换 BERTopic。Scrapy / Crawlee 属于后续爬虫升级适配器，默认不作为一期必装依赖。
+Python 内部服务由 Java 后端调用，一般部署在内网或本机，不建议直接暴露公网。关键词提取默认使用规则模式，可通过 `AIOPS_KEYWORD_EXTRACTOR=keybert` 切换 KeyBERT；主题聚类默认使用规则模式，可通过 `AIOPS_TOPIC_CLUSTERER=bertopic` 切换 BERTopic。Scrapy / Crawlee 属于后续爬虫升级适配器，默认不作为一期必装依赖。AI 生成类内部接口支持 Java 传入 `promptTemplateId`、`promptTemplate` 和 `promptVariables`，Python 优先渲染传入模板；未传入模板时使用内置兜底 Prompt。
 
 ## CSV 数据导入
 
@@ -2113,6 +2349,9 @@ Python 内部服务由 Java 后端调用，一般部署在内网或本机，不�
 | targetId | string | 必须 |  | 对象 ID |  |
 | analysisResult | object | 必须 |  | 评论分析结果 |  |
 | language | string | 非必须 | zh-CN | 生成语言 |  |
+| promptTemplateId | integer | 非必须 |  | Java 选中的 Prompt 模板 ID | format: int64 |
+| promptTemplate | string | 非必须 |  | Prompt 模板正文 |  |
+| promptVariables | object | 非必须 |  | 模板变量快照 |  |
 
 ### 返回数据
 
@@ -2120,6 +2359,7 @@ Python 内部服务由 Java 后端调用，一般部署在内网或本机，不�
 |---|---|---|---|---|---|
 | success | boolean | 必须 |  | 是否成功 |  |
 | data | object | 非必须 |  | AI 报告结果 |  |
+| tokenUsage | integer | 非必须 |  | token 用量估算 | format: int32 |
 | message | string | 非必须 |  | 提示信息 |  |
 
 ## AI 文案生成
@@ -2145,6 +2385,9 @@ Python 内部服务由 Java 后端调用，一般部署在内网或本机，不�
 | analysisSummary | string | 非必须 |  | 分析摘要 |  |
 | language | string | 非必须 | zh-CN | 生成语言，支持 zh-CN / en-US / pt-BR |  |
 | extraRequirement | string | 非必须 |  | 额外要求 |  |
+| promptTemplateId | integer | 非必须 |  | Java 选中的 Prompt 模板 ID | format: int64 |
+| promptTemplate | string | 非必须 |  | Prompt 模板正文 |  |
+| promptVariables | object | 非必须 |  | 模板变量快照 |  |
 
 ### 返回数据
 
@@ -2153,6 +2396,7 @@ Python 内部服务由 Java 后端调用，一般部署在内网或本机，不�
 | success | boolean | 必须 |  | 是否成功 |  |
 | generatedContent | string | 非必须 |  | 生成内容 |  |
 | modelName | string | 非必须 |  | 模型名称 |  |
+| tokenUsage | integer | 非必须 |  | token 用量估算 | format: int32 |
 | message | string | 非必须 |  | 提示信息 |  |
 
 ## AI 商品对比报告生成
@@ -2176,6 +2420,9 @@ Python 内部服务由 Java 后端调用，一般部署在内网或本机，不�
 | leftAnalysis | object | 必须 |  | 左侧商品分析结果 |  |
 | rightAnalysis | object | 必须 |  | 右侧商品分析结果 |  |
 | language | string | 非必须 | zh-CN | 报告语言 |  |
+| promptTemplateId | integer | 非必须 |  | Java 选中的 Prompt 模板 ID | format: int64 |
+| promptTemplate | string | 非必须 |  | Prompt 模板正文 |  |
+| promptVariables | object | 非必须 |  | 模板变量快照 |  |
 
 ### 返回数据
 
@@ -2188,6 +2435,7 @@ Python 内部服务由 Java 后端调用，一般部署在内网或本机，不�
 | ├─ riskAnalysis | string | 非必须 |  | 风险分析 |  |
 | ├─ operationSuggestions | string | 非必须 |  | 运营建议 |  |
 | ├─ modelName | string | 非必须 |  | 模型名称 |  |
+| tokenUsage | integer | 非必须 |  | token 用量估算 | format: int32 |
 | message | string | 非必须 |  | 提示信息 |  |
 
 ## 差评回复生成
@@ -2211,6 +2459,9 @@ Python 内部服务由 Java 后端调用，一般部署在内网或本机，不�
 | problemType | string | 非必须 |  | 差评原因类型 |  |
 | toneType | string | 非必须 | sincere | 回复语气 | polite / sincere / professional |
 | language | string | 非必须 | zh-CN | 生成语言 |  |
+| promptTemplateId | integer | 非必须 |  | Java 选中的 Prompt 模板 ID | format: int64 |
+| promptTemplate | string | 非必须 |  | Prompt 模板正文 |  |
+| promptVariables | object | 非必须 |  | 模板变量快照 |  |
 
 ### 返回数据
 
@@ -2219,6 +2470,7 @@ Python 内部服务由 Java 后端调用，一般部署在内网或本机，不�
 | success | boolean | 必须 |  | 是否成功 |  |
 | replyContent | string | 非必须 |  | 回复内容 |  |
 | modelName | string | 非必须 |  | 模型名称 |  |
+| tokenUsage | integer | 非必须 |  | token 用量估算 | format: int32 |
 | message | string | 非必须 |  | 提示信息 |  |
 
 ## 评论翻译
@@ -2245,6 +2497,9 @@ Python 内部服务由 Java 后端调用，一般部署在内网或本机，不�
 | commentTitle | string | 非必须 |  | 评论标题 |  |
 | commentContent | string | 必须 |  | 原始评论内容 |  |
 | targetLanguage | string | 非必须 | zh-CN | 目标语言 | zh-CN / en-US / pt-BR |
+| promptTemplateId | integer | 非必须 |  | Java 选中的 Prompt 模板 ID | format: int64 |
+| promptTemplate | string | 非必须 |  | Prompt 模板正文 |  |
+| promptVariables | object | 非必须 |  | 模板变量快照 |  |
 
 ### 返回数据
 
@@ -2255,4 +2510,5 @@ Python 内部服务由 Java 后端调用，一般部署在内网或本机，不�
 | ├─ translatedContent | string | 非必须 |  | 翻译后的评论内容 |  |
 | ├─ sourceLanguage | string | 非必须 | auto | 源语言 |  |
 | ├─ modelName | string | 非必须 |  | 模型名称 |  |
+| tokenUsage | integer | 非必须 |  | token 用量估算 | format: int32 |
 | message | string | 非必须 |  | 提示信息 |  |

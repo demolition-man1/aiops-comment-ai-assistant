@@ -14,16 +14,19 @@ import com.aiops.entity.BizComment;
 import com.aiops.entity.BizCommentAnalysisResult;
 import com.aiops.entity.BizNegativeReply;
 import com.aiops.entity.BizOperationReport;
+import com.aiops.entity.SysPromptTemplate;
 import com.aiops.exception.BusinessException;
 import com.aiops.mapper.BizAiContentRecordMapper;
 import com.aiops.mapper.BizCommentAnalysisResultMapper;
 import com.aiops.mapper.BizCommentMapper;
 import com.aiops.mapper.BizNegativeReplyMapper;
 import com.aiops.mapper.BizOperationReportMapper;
+import com.aiops.service.AiCallLogService;
 import com.aiops.service.AiRateLimitService;
 import com.aiops.service.CacheService;
 import com.aiops.result.PageResult;
 import com.aiops.service.AiService;
+import com.aiops.service.PromptTemplateService;
 import com.aiops.vo.AiContentVO;
 import com.aiops.vo.CommentTranslationVO;
 import com.aiops.vo.NegativeReplyVO;
@@ -52,6 +55,8 @@ public class AiServiceImpl implements AiService {
     private final BizNegativeReplyMapper negativeReplyMapper;
     private final CacheService cacheService;
     private final AiRateLimitService aiRateLimitService;
+    private final PromptTemplateService promptTemplateService;
+    private final AiCallLogService aiCallLogService;
 
     @Override
     public OperationReportVO generateProductReport(AiReportGenerateDTO generateDTO) {
@@ -108,7 +113,10 @@ public class AiServiceImpl implements AiService {
         request.put("styleType", generateDTO.getStyleType());
         request.put("language", languageOrDefault(generateDTO.getLanguage()));
         request.put("extraRequirement", generateDTO.getExtraRequirement());
-        Map<String, Object> response = callPython(() -> pythonAiClient.generateContent(request));
+        SysPromptTemplate template = attachPromptTemplate(request, "content",
+                languageOrDefault(generateDTO.getLanguage()), new HashMap<>(request));
+        Map<String, Object> response = callPython("content", generateDTO.getTargetType(), generateDTO.getTargetId(),
+                templateId(template), () -> pythonAiClient.generateContent(request));
         String generatedContent = stringValue(response, "generatedContent");
         String modelName = stringValue(response, "modelName");
 
@@ -117,8 +125,10 @@ public class AiServiceImpl implements AiService {
         record.setTargetId(generateDTO.getTargetId());
         record.setContentType(generateDTO.getContentType());
         record.setStyleType(generateDTO.getStyleType());
+        record.setPrompt(template == null ? null : template.getTemplateContent());
         record.setGeneratedContent(generatedContent);
         record.setModelName(modelName);
+        record.setTokenUsage(intValue(response, "tokenUsage"));
         record.setCreateTime(LocalDateTime.now());
         aiContentRecordMapper.insert(record);
         AiContentVO vo = new AiContentVO(record.getId(), generatedContent, modelName);
@@ -162,7 +172,10 @@ public class AiServiceImpl implements AiService {
         request.put("problemType", problemType);
         request.put("toneType", blankToDefault(generateDTO.getToneType(), "sincere"));
         request.put("language", languageOrDefault(generateDTO.getLanguage()));
-        Map<String, Object> response = callPython(() -> pythonAiClient.generateNegativeReply(request));
+        SysPromptTemplate template = attachPromptTemplate(request, "negative_reply",
+                languageOrDefault(generateDTO.getLanguage()), new HashMap<>(request));
+        Map<String, Object> response = callPython("negative_reply", "comment", String.valueOf(comment.getId()),
+                templateId(template), () -> pythonAiClient.generateNegativeReply(request));
         String replyContent = stringValue(response, "replyContent");
         String modelName = stringValue(response, "modelName");
 
@@ -214,7 +227,9 @@ public class AiServiceImpl implements AiService {
         request.put("commentTitle", meaningfulText(comment.getReviewTitle()));
         request.put("commentContent", originalContent);
         request.put("targetLanguage", targetLanguage);
-        Map<String, Object> response = callPython(() -> pythonAiClient.translateComment(request));
+        SysPromptTemplate template = attachPromptTemplate(request, "translation", targetLanguage, new HashMap<>(request));
+        Map<String, Object> response = callPython("translation", "comment", String.valueOf(comment.getId()),
+                templateId(template), () -> pythonAiClient.translateComment(request));
         Map<String, Object> data = nestedData(response);
         CommentTranslationVO vo = new CommentTranslationVO(
                 comment.getId(),
@@ -293,7 +308,9 @@ public class AiServiceImpl implements AiService {
         request.put("targetId", targetId);
         request.put("analysisResult", analysisResult);
         request.put("language", language);
-        Map<String, Object> response = callPython(() -> pythonAiClient.generateReport(request));
+        SysPromptTemplate template = attachPromptTemplate(request, "report", language, new HashMap<>(request));
+        Map<String, Object> response = callPython("report", targetType, targetId, templateId(template),
+                () -> pythonAiClient.generateReport(request));
         Map<String, Object> data = nestedData(response);
 
         BizOperationReport report = new BizOperationReport();
@@ -359,18 +376,75 @@ public class AiServiceImpl implements AiService {
         return normalized;
     }
 
-    private Map<String, Object> callPython(PythonCall call) {
+    private Map<String, Object> callPython(String businessType, String targetType, String targetId,
+                                           Long promptTemplateId, PythonCall call) {
+        long startedAt = System.nanoTime();
         try {
             Map<String, Object> response = call.execute();
             if (response == null || Boolean.FALSE.equals(response.get("success"))) {
                 throw new BusinessException(503, "Python AI 服务返回失败");
             }
+            recordAiCall(businessType, targetType, targetId, promptTemplateId,
+                    modelName(response), tokenUsage(response), latencyMs(startedAt), null);
             return response;
         } catch (BusinessException exception) {
+            recordAiCallFailure(businessType, targetType, targetId, promptTemplateId, latencyMs(startedAt), exception);
             throw exception;
         } catch (Exception exception) {
+            recordAiCallFailure(businessType, targetType, targetId, promptTemplateId, latencyMs(startedAt), exception);
             throw new BusinessException(503, "Python AI 服务不可用：" + exception.getMessage());
         }
+    }
+
+    private SysPromptTemplate attachPromptTemplate(Map<String, Object> request, String businessType,
+                                                   String language, Map<String, Object> variables) {
+        Optional<SysPromptTemplate> template = Optional.ofNullable(promptTemplateService.findDefaultTemplate(businessType, language))
+                .orElse(Optional.empty());
+        template.ifPresent(value -> {
+            request.put("promptTemplateId", value.getId());
+            request.put("promptTemplate", value.getTemplateContent());
+            request.put("promptVariables", variables);
+        });
+        return template.orElse(null);
+    }
+
+    private void recordAiCall(String businessType, String targetType, String targetId, Long promptTemplateId,
+                              String modelName, Integer tokenUsage, Long latencyMs, String errorMessage) {
+        try {
+            aiCallLogService.record(BaseContext.getCurrentId(), businessType, targetType, targetId, promptTemplateId,
+                    modelName, errorMessage == null ? "success" : "failed", tokenUsage, latencyMs, errorMessage);
+        } catch (Exception ignored) {
+            // AI logging must not break the merchant-facing generation workflow.
+        }
+    }
+
+    private void recordAiCallFailure(String businessType, String targetType, String targetId, Long promptTemplateId,
+                                     Long latencyMs, Exception exception) {
+        recordAiCall(businessType, targetType, targetId, promptTemplateId, null, 0, latencyMs, exception.getMessage());
+    }
+
+    private Long latencyMs(long startedAt) {
+        return Math.max(0, (System.nanoTime() - startedAt) / 1_000_000);
+    }
+
+    private Long templateId(SysPromptTemplate template) {
+        return template == null ? null : template.getId();
+    }
+
+    private String modelName(Map<String, Object> response) {
+        String topLevel = stringValue(response, "modelName");
+        if (topLevel != null) {
+            return topLevel;
+        }
+        return stringValue(nestedData(response), "modelName");
+    }
+
+    private Integer tokenUsage(Map<String, Object> response) {
+        Integer topLevel = intValue(response, "tokenUsage");
+        if (topLevel != null) {
+            return topLevel;
+        }
+        return intValue(nestedData(response), "tokenUsage");
     }
 
     @SuppressWarnings("unchecked")
@@ -382,6 +456,24 @@ public class AiServiceImpl implements AiService {
     private String stringValue(Map<String, Object> map, String key) {
         Object value = map.get(key);
         return value == null ? null : String.valueOf(value);
+    }
+
+    private Integer intValue(Map<String, Object> map, String key) {
+        if (map == null) {
+            return null;
+        }
+        Object value = map.get(key);
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 
     private String bestCommentContent(BizComment comment) {

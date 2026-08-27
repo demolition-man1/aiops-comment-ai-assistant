@@ -118,6 +118,44 @@ create table if not exists biz_problem_solution (
     index idx_problem_solution_enabled (enabled)
 );
 
+create table if not exists sys_prompt_template (
+    id bigint primary key auto_increment,
+    template_name varchar(128) not null,
+    business_type varchar(64) not null,
+    language varchar(16) not null default 'zh-CN',
+    template_content longtext not null,
+    variable_schema json null,
+    default_flag tinyint not null default 0,
+    enabled tinyint not null default 1,
+    remark varchar(512) null,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    unique key uk_prompt_template_name (business_type, language, template_name),
+    index idx_prompt_template_business (business_type, language),
+    index idx_prompt_template_default (business_type, language, default_flag),
+    index idx_prompt_template_enabled (enabled)
+);
+
+create table if not exists biz_ai_call_log (
+    id bigint primary key auto_increment,
+    user_id bigint null,
+    business_type varchar(64) not null,
+    target_type varchar(32) null,
+    target_id varchar(128) null,
+    prompt_template_id bigint null,
+    model_name varchar(64) null,
+    call_status varchar(32) not null,
+    token_usage int null,
+    estimated_cost decimal(12,6) null,
+    latency_ms bigint null,
+    error_message text null,
+    create_time datetime not null default current_timestamp,
+    index idx_ai_call_log_business (business_type),
+    index idx_ai_call_log_status (call_status),
+    index idx_ai_call_log_target (target_type, target_id),
+    index idx_ai_call_log_create_time (create_time)
+);
+
 create table if not exists biz_analysis_task (
     id bigint primary key auto_increment,
     user_id bigint null,

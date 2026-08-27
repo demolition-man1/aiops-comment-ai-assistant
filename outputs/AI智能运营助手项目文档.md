@@ -140,6 +140,8 @@ Java Spring Boot 后端作为系统业务中台，负责：
 - 分析任务创建、状态维护、结果落库。
 - 定时同步配置、Quartz 调度注册、同步执行记录和统一任务中心聚合。
 - 全局数据报表接口，提供趋势、分布和商品排行数据。
+- Prompt 模板管理，按业务类型和语言维护 AI 生成提示词。
+- AI 调用日志记录，统计调用状态、token 估算、耗时、成本和异常原因。
 - Redis 缓存、任务进度缓存、分析结果缓存和 AI 调用缓存。
 - Bucket4j 用户级 AI 限流，避免报告、文案、回复等接口被高频调用。
 - Redisson 分布式组件预留，用于后续分布式锁、任务互斥和多实例部署。
@@ -158,6 +160,7 @@ Python FastAPI 服务作为智能分析引擎，负责：
 - 自定义标签统计和时间趋势汇总。
 - 爬虫采集适配层，当前保留低频样例采集，后续可接入 Scrapy / Crawlee。
 - AI Agent 工作流编排。
+- 接收 Java 后端下发的 Prompt 模板和变量，无法匹配模板时使用 Python 内置兜底提示词。
 - 调用大模型生成运营报告、营销文案、差评回复和商品对比报告。
 
 ### 4.4 三语国际化设计
@@ -393,12 +396,13 @@ client
 3. Spring Boot 查询 Redis 是否存在有效报告缓存。
 4. 如果有缓存，直接返回报告。
 5. 如果无缓存，Spring Boot 查询评论分析结果。
-6. Spring Boot 调用 Python AI 报告生成接口。
-7. Python 组织提示词并调用大模型 API。
-8. 大模型返回消费者痛点、商品优缺点、运营建议和文案建议。
-9. Spring Boot 保存报告到 biz_operation_report。
-10. Spring Boot 写入 Redis 缓存。
-11. 前端展示报告内容。
+6. Spring Boot 查询当前业务类型和语言的默认 Prompt 模板。
+7. Spring Boot 调用 Python AI 报告生成接口，并传递模板与变量。
+8. Python 渲染 Prompt，调用大模型 API，并返回 token 估算。
+9. 大模型返回消费者痛点、商品优缺点、运营建议和文案建议。
+10. Spring Boot 保存报告到 biz_operation_report。
+11. Spring Boot 写入 AI 调用日志和 Redis 缓存。
+12. 前端展示报告内容。
 ```
 
 ### 6.5 差评回复生成流程
@@ -408,10 +412,11 @@ client
 2. 前端提交评论 ID 和回复语气。
 3. Spring Boot 查询评论内容和差评类型。
 4. Spring Boot 执行 Bucket4j AI 限流校验。
-5. Spring Boot 调用 Python 差评回复生成接口。
-6. Python 基于单条评论内容、评分、差评原因和语气要求调用大模型生成独立回复。
-7. Spring Boot 保存回复记录到 biz_negative_reply。
-8. 前端展示可复制的回复内容，并支持查看回复历史。
+5. Spring Boot 查询差评回复默认 Prompt 模板。
+6. Spring Boot 调用 Python 差评回复生成接口，并传递评论内容、评分、问题类型和语气变量。
+7. Python 基于单条评论内容、评分、差评原因和语气要求调用大模型生成独立回复。
+8. Spring Boot 保存回复记录到 biz_negative_reply，并写入 AI 调用日志。
+9. 前端展示可复制的回复内容，并支持查看回复历史。
 ```
 
 ### 6.6 单条评论翻译流程
@@ -422,10 +427,11 @@ client
 3. Spring Boot 查询评论原文、评分、商品 ID 和卖家 ID。
 4. Spring Boot 优先读取 Redis 翻译缓存。
 5. 如果无缓存或用户强制刷新，Spring Boot 执行 Bucket4j AI 限流校验。
-6. Spring Boot 调用 Python 评论翻译接口。
-7. Python 将单条评论翻译为目标语言，只返回翻译结果，不改写原始评论。
-8. Spring Boot 写入 Redis 翻译缓存。
-9. 前端弹窗展示原文和译文，并支持复制译文。
+6. Spring Boot 查询评论翻译 Prompt 模板。
+7. Spring Boot 调用 Python 评论翻译接口。
+8. Python 将单条评论翻译为目标语言，只返回翻译结果，不改写原始评论。
+9. Spring Boot 写入 AI 调用日志和 Redis 翻译缓存。
+10. 前端弹窗展示原文和译文，并支持复制译文。
 ```
 
 ### 6.7 商品对比分析流程
@@ -436,11 +442,12 @@ client
 3. Spring Boot 校验两个商品 ID，检查 Redis 是否存在有效对比缓存。
 4. 如果无缓存，Spring Boot 查询两个商品最新的 biz_comment_analysis_result。
 5. Spring Boot 组装情感占比、关键词、差评原因、自定义标签和趋势数据。
-6. Spring Boot 调用 Python AI 商品对比接口。
-7. Python 调用大模型生成优势、风险和运营建议。
-8. Spring Boot 保存对比报告到 biz_product_compare_report。
-9. Spring Boot 写入 Redis 缓存。
-10. 前端展示 A/B 对比报告和图表。
+6. Spring Boot 查询商品对比默认 Prompt 模板。
+7. Spring Boot 调用 Python AI 商品对比接口。
+8. Python 调用大模型生成优势、风险和运营建议。
+9. Spring Boot 保存对比报告到 biz_product_compare_report。
+10. Spring Boot 写入 AI 调用日志和 Redis 缓存。
+11. 前端展示 A/B 对比报告和图表。
 ```
 
 ### 6.8 差评回复效果跟踪流程
@@ -477,6 +484,18 @@ client
 6. Spring Boot 优先读取 Redis 报表缓存，缓存不存在时聚合首页概览、评论趋势、情感分布、问题分布和商品排行。
 7. 前端通过 ECharts 和表格展示全局运营复盘数据。
 8. 用户点击报表导出时，前端调用 /api/reports/export，后端导出 UTF-8 BOM CSV，方便 Excel 打开。
+```
+
+### 6.11 Prompt 模板与 AI 调用日志流程
+
+```text
+1. 用户进入 Prompt 模板页面，按业务类型和语言查看系统内置或自定义模板。
+2. 用户新增、编辑、启停模板，或将某个模板设为默认模板。
+3. 触发 AI 报告、营销文案、差评回复、评论翻译或商品对比时，Spring Boot 查询对应默认模板。
+4. Spring Boot 将模板内容、模板 ID 和变量快照传给 Python 服务。
+5. Python 渲染模板后调用大模型；如果没有可用模板，则使用内置兜底 Prompt。
+6. Spring Boot 根据 Python 响应或异常记录 biz_ai_call_log。
+7. 用户进入 AI 调用日志页面，可以查看调用次数、成功率、token 估算、成本估算、平均耗时和失败摘要。
 ```
 
 ## 7. 功能模块
@@ -610,6 +629,15 @@ client
 - 支持全局运营报表 CSV 导出，包含概览指标、趋势、情感分布、问题分布和商品排行。
 - 顶部快捷按钮分别进入独立页面，而不是页面内锚点或占位按钮。
 
+### 7.15 Prompt 模板与 AI 调用日志模块
+
+- Prompt 模板支持按业务类型、语言、启用状态筛选。
+- 支持新增、编辑、启停模板，并将某个模板设为当前业务类型和语言的默认模板。
+- 默认模板覆盖运营报告、营销文案、差评回复、评论翻译和商品 A/B 对比。
+- AI 调用日志记录业务类型、调用目标、模型名称、调用状态、token 估算、成本估算、耗时和失败原因。
+- AI 调用日志总览展示调用总量、成功数、失败数、成功率、token 总量、成本估算和平均耗时。
+- 缓存命中的 AI 报告或翻译不会重复记录为大模型调用，便于更真实地统计成本。
+
 ## 8. 数据库设计
 
 ### 8.1 数据库分层
@@ -638,6 +666,7 @@ client
 |---|---|
 | sys_user | 系统用户表 |
 | sys_file_upload | 文件上传记录表 |
+| sys_prompt_template | Prompt 模板表 |
 | biz_seller | 卖家业务表 |
 | biz_product | 商品业务表 |
 | biz_comment | 评论业务表 |
@@ -651,6 +680,7 @@ client
 | biz_comment_analysis_result | 评论分析结果表 |
 | biz_operation_report | AI 运营报告表 |
 | biz_ai_content_record | AI 文案生成记录表 |
+| biz_ai_call_log | AI 调用日志表 |
 | biz_negative_reply | 差评回复记录表 |
 | biz_product_compare_report | 商品对比分析报告表 |
 
@@ -666,6 +696,7 @@ biz_problem_solution n - 1 biz_comment.problem_type
 biz_analysis_task 1 - 1 biz_comment_analysis_result
 biz_analysis_task 1 - 1 biz_operation_report
 biz_product 1 - n biz_ai_content_record
+sys_prompt_template 1 - n biz_ai_call_log
 biz_comment 1 - n biz_negative_reply
 biz_product n - n biz_product_compare_report
 biz_sync_config 1 - n biz_sync_execution
@@ -693,6 +724,8 @@ biz_sync_execution n - 1 biz_analysis_task / biz_crawl_task
 | biz_sync_config | 整表新增 | 保存定时同步来源、Cron、启用状态和下次运行时间 |
 | biz_sync_execution | 整表新增 | 保存每次同步触发方式、执行状态和关联任务 |
 | biz_task_record | 整表新增 | 预留统一任务中心扩展记录 |
+| sys_prompt_template | 整表新增 | 保存按业务类型和语言维护的 AI Prompt 模板 |
+| biz_ai_call_log | 整表新增 | 保存 AI 调用状态、token、耗时、成本估算和失败原因 |
 
 已有数据库可执行 `aiops-server/src/main/resources/sql/upgrade-2026-08-20-operations-enhancement.sql` 完成字段升级；新库直接执行 `schema.sql` 即可。
 
@@ -782,6 +815,42 @@ CSV 原文件不建议直接存入 MySQL，建议存入阿里云 OSS，MySQL 只
 
 `biz_task_record` 作为统一任务中心扩展表，当前主要用于同步任务记录，后续可逐步承接更多异步任务快照。
 
+### 8.9 Prompt 模板与 AI 调用日志表
+
+`sys_prompt_template` 保存可编辑的 AI Prompt 模板。
+
+| 字段名 | 类型 | 说明 |
+|---|---|---|
+| id | bigint | 主键 |
+| template_name | varchar(128) | 模板名称 |
+| business_type | varchar(64) | 业务类型：report / content / negative_reply / translation / product_compare |
+| language | varchar(16) | 输出语言：zh-CN / en-US / pt-BR |
+| template_content | text | Prompt 模板正文，支持 `{变量名}` 占位符 |
+| variable_schema | json | 模板变量说明 |
+| default_flag | tinyint | 是否默认模板 |
+| enabled | tinyint | 是否启用 |
+| remark | varchar(255) | 备注 |
+| create_time | datetime | 创建时间 |
+| update_time | datetime | 更新时间 |
+
+`biz_ai_call_log` 保存 Java 编排层记录的 AI 调用日志。
+
+| 字段名 | 类型 | 说明 |
+|---|---|---|
+| id | bigint | 主键 |
+| user_id | bigint | 调用用户 ID |
+| business_type | varchar(64) | AI 业务类型 |
+| target_type | varchar(64) | 调用目标类型，如 product / seller / comment / product_pair |
+| target_id | varchar(128) | 调用目标 ID |
+| prompt_template_id | bigint | 使用的 Prompt 模板 ID |
+| model_name | varchar(128) | 模型名称 |
+| call_status | varchar(32) | success / failed |
+| token_usage | int | token 用量估算 |
+| estimated_cost | decimal(12,6) | 成本估算 |
+| latency_ms | bigint | 调用耗时 |
+| error_message | text | 失败原因摘要 |
+| create_time | datetime | 创建时间 |
+
 ## 9. Redis 设计
 
 | Key | Value | 说明 |
@@ -796,6 +865,7 @@ CSV 原文件不建议直接存入 MySQL，建议存入阿里云 OSS，MySQL 只
 | ai:content:{hash} | text | AI 文案缓存 |
 | ai:compare:product:{leftProductId}:{rightProductId} | JSON | 商品对比报告缓存 |
 | ai:translation:comment:{commentId}:{language} | JSON | 单条评论翻译结果缓存 |
+| prompt:default:{businessType}:{language} | JSON | 默认 Prompt 模板缓存，后续可用于减少模板查询 |
 | report:overview | JSON | 全局报表总览缓存，默认 10 分钟 |
 | report:distributions | JSON | 全局报表统计分布缓存，默认 10 分钟 |
 | report:product-rank:{limit} | JSON | 商品排行缓存，默认 10 分钟 |
@@ -815,6 +885,7 @@ AI 限流默认配置为每个用户、每类 AI 业务 60 秒最多 20 次，�
 - 热点分析结果优先从 Redis 读取。
 - AI 接口通过缓存避免重复调用。
 - AI 高成本接口通过 Bucket4j 做用户级限流。
+- AI 调用日志用于统计 token 和成本，便于后续做额度控制、用户套餐或成本看板。
 - Quartz 定时任务自动处理卡住的异步任务，减少人工修复。
 
 ### 10.2 安全需求
@@ -827,6 +898,7 @@ AI 限流默认配置为每个用户、每类 AI 业务 60 秒最多 20 次，�
 - OSS 文件访问建议使用私有 Bucket + 临时签名 URL，避免长期公开暴露。
 - Python 内部接口不直接暴露给公网。
 - AI 调用接口需要做用户级限流。
+- Prompt 模板编辑不展示任何真实 API Key，敏感配置仍通过环境变量或本地配置文件管理。
 
 ### 10.3 可扩展性需求
 
@@ -838,6 +910,7 @@ AI 限流默认配置为每个用户、每类 AI 业务 60 秒最多 20 次，�
 - 关键词提取可从规则模式扩展为 KeyBERT，主题聚类可从规则模式扩展为 BERTopic。
 - 爬虫采集可从低频样例适配器升级为 Scrapy / Crawlee。
 - 任务进度可从前端轮询升级为 WebSocket 推送。
+- Prompt 模板可进一步升级为 RAG + LangChain 工作流，引入商品知识库、历史回复库和运营 SOP 检索。
 
 ## 11. 项目创新点
 
@@ -845,6 +918,7 @@ AI 限流默认配置为每个用户、每类 AI 业务 60 秒最多 20 次，�
 - Java 与 Python 双服务解耦：Java 管业务，Python 管分析和 AI。
 - Redis 降本增效：缓存热点结果并限制 AI 高频调用。
 - Bucket4j + Quartz 提升工程成熟度：既控制 AI 成本，又能自动处理异常任务。
+- Prompt 模板 + AI 调用日志：把大模型能力从“黑盒调用”升级为可配置、可审计、可估算成本的业务能力。
 - 关键词提取与主题聚类结合：不仅统计高频词，还能归纳物流、质量、价格等运营主题。
 - 面向中小商家的低成本数字化工具：降低数据分析和内容生产门槛。
 - 支持跨境电商多语言评论分析：Olist 评论以葡萄牙语为主，可生成中文运营报告。

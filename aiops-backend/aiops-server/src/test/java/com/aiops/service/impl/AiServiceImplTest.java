@@ -17,8 +17,10 @@ import com.aiops.mapper.BizCommentAnalysisResultMapper;
 import com.aiops.mapper.BizCommentMapper;
 import com.aiops.mapper.BizNegativeReplyMapper;
 import com.aiops.mapper.BizOperationReportMapper;
+import com.aiops.service.AiCallLogService;
 import com.aiops.service.AiRateLimitService;
 import com.aiops.service.CacheService;
+import com.aiops.service.PromptTemplateService;
 import com.aiops.vo.NegativeReplyVO;
 import com.aiops.vo.CommentTranslationVO;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,6 +71,12 @@ class AiServiceImplTest {
     @Mock
     private AiRateLimitService aiRateLimitService;
 
+    @Mock
+    private PromptTemplateService promptTemplateService;
+
+    @Mock
+    private AiCallLogService aiCallLogService;
+
     private AiServiceImpl aiService;
 
     @BeforeEach
@@ -81,7 +89,9 @@ class AiServiceImplTest {
                 commentMapper,
                 negativeReplyMapper,
                 cacheService,
-                aiRateLimitService
+                aiRateLimitService,
+                promptTemplateService,
+                aiCallLogService
         );
     }
 
@@ -116,6 +126,8 @@ class AiServiceImplTest {
         ArgumentCaptor<BizAiContentRecord> recordCaptor = ArgumentCaptor.forClass(BizAiContentRecord.class);
         verify(aiContentRecordMapper).insert(recordCaptor.capture());
         assertThat(recordCaptor.getValue().getGeneratedContent()).isEqualTo("English product copy");
+        verify(aiCallLogService).record(any(), eq("content"), eq("product"), eq("product-a"),
+                any(), eq("deepseek-chat"), eq("success"), any(), any(), any());
     }
 
     @Test
@@ -154,6 +166,8 @@ class AiServiceImplTest {
         ArgumentCaptor<Map<String, Object>> requestCaptor = ArgumentCaptor.forClass(Map.class);
         verify(pythonAiClient).generateReport(requestCaptor.capture());
         assertThat(requestCaptor.getValue()).containsEntry("language", "en-US");
+        verify(aiCallLogService).record(any(), eq("report"), eq("product"), eq("product-a"),
+                any(), eq("deepseek-chat"), eq("success"), any(), any(), any());
     }
 
     @Test

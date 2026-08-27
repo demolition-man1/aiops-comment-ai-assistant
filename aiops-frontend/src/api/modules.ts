@@ -17,12 +17,15 @@ import type {
   Product,
   ProductCompareReport,
   ProductRank,
+  PromptTemplate,
   ProblemSolution,
   ReportOverview,
   SyncConfig,
   SyncExecution,
   TaskRecord,
-  Task
+  Task,
+  AiCallLog,
+  AiCallLogOverview
 } from './types'
 
 export const authApi = {
@@ -71,6 +74,28 @@ export const problemSolutionApi = {
     http.put<ProblemSolution, ProblemSolution>(`/problem-solutions/${solutionId}`, payload),
   updateStatus: (solutionId: number, enabled: number) =>
     http.put<ProblemSolution, ProblemSolution>(`/problem-solutions/${solutionId}/status`, undefined, { params: { enabled } })
+}
+
+export const promptTemplateApi = {
+  page: (params: Record<string, unknown>) =>
+    http.get<PageResult<PromptTemplate>, PageResult<PromptTemplate>>('/prompt-templates', { params }),
+  active: (params: Record<string, unknown>) =>
+    http.get<PromptTemplate[], PromptTemplate[]>('/prompt-templates/active', { params }),
+  create: (payload: Partial<PromptTemplate>) =>
+    http.post<PromptTemplate, PromptTemplate>('/prompt-templates', payload),
+  update: (templateId: number, payload: Partial<PromptTemplate>) =>
+    http.put<PromptTemplate, PromptTemplate>(`/prompt-templates/${templateId}`, payload),
+  updateStatus: (templateId: number, enabled: number) =>
+    http.put<PromptTemplate, PromptTemplate>(`/prompt-templates/${templateId}/status`, undefined, { params: { enabled } }),
+  setDefault: (templateId: number) =>
+    http.post<PromptTemplate, PromptTemplate>(`/prompt-templates/${templateId}/default`)
+}
+
+export const aiCallLogApi = {
+  overview: (params: Record<string, unknown>) =>
+    http.get<AiCallLogOverview, AiCallLogOverview>('/ai/call-logs/overview', { params }),
+  page: (params: Record<string, unknown>) =>
+    http.get<PageResult<AiCallLog>, PageResult<AiCallLog>>('/ai/call-logs', { params })
 }
 
 export const analysisApi = {
