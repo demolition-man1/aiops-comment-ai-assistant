@@ -142,7 +142,7 @@ CREATE DATABASE IF NOT EXISTS aiops DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb
 
 ### 3. 配置 Java 后端
 
-后端默认使用 `dev` profile。敏感配置建议放在本地 `application-secret.yml` 或环境变量中，不要提交到 GitHub。
+后端默认使用 `dev` profile。敏感配置建议放在本地 `application-secret.yml` 或环境变量中。
 
 ```yaml
 aiops:
