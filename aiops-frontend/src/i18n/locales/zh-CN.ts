@@ -51,6 +51,7 @@ export default {
       prompts: 'Prompt模板',
       aiLogs: 'AI日志',
       import: '数据导入',
+      categories: '类目分析',
       compare: '商品对比',
       content: 'AI文案',
       alerts: '告警中心',
@@ -400,6 +401,32 @@ export default {
     highRiskProducts: '高风险商品排行',
     topRatedProducts: '高评分商品排行',
     exported: '报表 CSV 已导出'
+  },
+  categories: {
+    title: '类目聚合分析',
+    subtitle: '从类目维度观察评论规模、评分、负面风险和主要问题',
+    categoryCount: '类目数量',
+    categoryHint: '已导入且可分析的类目',
+    productTotal: '商品总量',
+    productHint: '当前类目覆盖商品',
+    commentTotal: '评论总量',
+    commentHint: '参与类目聚合的评论',
+    highRiskCount: '高风险类目',
+    topRiskHint: '最高风险：{category}',
+    riskChart: '类目负面率排行',
+    volumeChart: '类目评论与商品规模',
+    tableTitle: '类目风险明细',
+    productVolume: '商品数',
+    commentVolume: '评论数',
+    negativeCount: '负面数',
+    topProblem: '主要问题',
+    riskLevel: '风险等级',
+    risk: {
+      none: '无数据',
+      low: '低风险',
+      medium: '中风险',
+      high: '高风险'
+    }
   },
   compare: {
     title: '商品 A / B 对比',

@@ -1,6 +1,7 @@
 package com.aiops.service;
 
 import com.aiops.vo.DashboardVO;
+import com.aiops.vo.CategoryAnalysisVO;
 import com.aiops.vo.ProductRankVO;
 import com.aiops.vo.ReportOverviewVO;
 import com.aiops.vo.TrendItemVO;
@@ -15,6 +16,8 @@ public interface ReportService {
     DashboardVO distributions();
 
     ProductRankVO productRank(Integer limit);
+
+    List<CategoryAnalysisVO> categoryAnalysis(Integer limit);
 
     byte[] exportOverviewCsv();
 }

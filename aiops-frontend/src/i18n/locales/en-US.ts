@@ -51,6 +51,7 @@ export default {
       prompts: 'Prompt Templates',
       aiLogs: 'AI Logs',
       import: 'Data Import',
+      categories: 'Category Analytics',
       compare: 'Product Compare',
       content: 'AI Copywriting',
       alerts: 'Alert Center',
@@ -400,6 +401,32 @@ export default {
     highRiskProducts: 'High-risk Product Ranking',
     topRatedProducts: 'Top-rated Product Ranking',
     exported: 'Report CSV exported'
+  },
+  categories: {
+    title: 'Category Analytics',
+    subtitle: 'Review volume, ratings, negative risk, and top issues by product category',
+    categoryCount: 'Categories',
+    categoryHint: 'Imported categories available for analysis',
+    productTotal: 'Products',
+    productHint: 'Products covered by current categories',
+    commentTotal: 'Reviews',
+    commentHint: 'Reviews included in category aggregation',
+    highRiskCount: 'High-risk Categories',
+    topRiskHint: 'Top risk: {category}',
+    riskChart: 'Category Negative Rate Ranking',
+    volumeChart: 'Category Review and Product Scale',
+    tableTitle: 'Category Risk Details',
+    productVolume: 'Products',
+    commentVolume: 'Reviews',
+    negativeCount: 'Negative Reviews',
+    topProblem: 'Top Issue',
+    riskLevel: 'Risk Level',
+    risk: {
+      none: 'No Data',
+      low: 'Low',
+      medium: 'Medium',
+      high: 'High'
+    }
   },
   compare: {
     title: 'Product A / B Comparison',

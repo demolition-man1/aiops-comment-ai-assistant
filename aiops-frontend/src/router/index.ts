@@ -31,6 +31,7 @@ export const router = createRouter({
         { path: 'sync', name: 'sync', component: () => import('@/views/SyncCenterView.vue') },
         { path: 'tasks', name: 'tasks', component: () => import('@/views/TaskCenterView.vue') },
         { path: 'reports', name: 'reports', component: () => import('@/views/ReportsView.vue') },
+        { path: 'categories', name: 'categories', component: () => import('@/views/CategoryAnalysisView.vue') },
         { path: 'compare', name: 'compare', component: () => import('@/views/ProductCompareView.vue') },
         { path: 'content', name: 'content', component: () => import('@/views/AiContentView.vue') },
         { path: 'alerts', name: 'alerts', component: () => import('@/views/AlertCenterView.vue') },

@@ -1,6 +1,7 @@
 import { downloadFile, http, uploadFile } from './http'
 import type {
   AiContent,
+  CategoryAnalysis,
   AnalysisResult,
   Comment,
   CommentTranslation,
@@ -175,6 +176,8 @@ export const reportApi = {
   distributions: () => http.get<DashboardData, DashboardData>('/reports/distributions'),
   productRank: (params: Record<string, unknown>) =>
     http.get<ProductRank, ProductRank>('/reports/product-rank', { params }),
+  categories: (params: Record<string, unknown>) =>
+    http.get<CategoryAnalysis[], CategoryAnalysis[]>('/reports/categories', { params }),
   exportCsv: () => downloadFile('/reports/export')
 }
 

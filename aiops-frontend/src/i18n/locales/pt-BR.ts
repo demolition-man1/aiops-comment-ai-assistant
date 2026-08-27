@@ -51,6 +51,7 @@ export default {
       prompts: 'Modelos de Prompt',
       aiLogs: 'Logs de IA',
       import: 'Importação de Dados',
+      categories: 'Análise por Categoria',
       compare: 'Comparar Produtos',
       content: 'Textos com IA',
       alerts: 'Central de Alertas',
@@ -400,6 +401,32 @@ export default {
     highRiskProducts: 'Ranking de produtos de risco',
     topRatedProducts: 'Ranking de produtos bem avaliados',
     exported: 'CSV de relatório exportado'
+  },
+  categories: {
+    title: 'Análise por Categoria',
+    subtitle: 'Volume, notas, risco negativo e principais problemas por categoria de produto',
+    categoryCount: 'Categorias',
+    categoryHint: 'Categorias importadas disponíveis para análise',
+    productTotal: 'Produtos',
+    productHint: 'Produtos cobertos pelas categorias atuais',
+    commentTotal: 'Avaliações',
+    commentHint: 'Avaliações incluídas na agregação por categoria',
+    highRiskCount: 'Categorias de risco',
+    topRiskHint: 'Maior risco: {category}',
+    riskChart: 'Ranking de taxa negativa por categoria',
+    volumeChart: 'Escala de avaliações e produtos por categoria',
+    tableTitle: 'Detalhes de risco por categoria',
+    productVolume: 'Produtos',
+    commentVolume: 'Avaliações',
+    negativeCount: 'Avaliações negativas',
+    topProblem: 'Principal problema',
+    riskLevel: 'Nível de risco',
+    risk: {
+      none: 'Sem dados',
+      low: 'Baixo',
+      medium: 'Médio',
+      high: 'Alto'
+    }
   },
   compare: {
     title: 'Comparação de Produtos A / B',

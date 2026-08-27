@@ -2,6 +2,7 @@ package com.aiops.controller;
 
 import com.aiops.result.Result;
 import com.aiops.service.ReportService;
+import com.aiops.vo.CategoryAnalysisVO;
 import com.aiops.vo.DashboardVO;
 import com.aiops.vo.ProductRankVO;
 import com.aiops.vo.ReportOverviewVO;
@@ -51,6 +52,13 @@ public class ReportController {
     public Result<ProductRankVO> productRank(
             @Parameter(description = "排行数量") @RequestParam(defaultValue = "10") Integer limit) {
         return Result.success(reportService.productRank(limit));
+    }
+
+    @GetMapping("/categories")
+    @Operation(summary = "类目聚合分析", description = "按商品类目聚合商品数、评论数、平均评分、负面占比和主要差评问题")
+    public Result<List<CategoryAnalysisVO>> categoryAnalysis(
+            @Parameter(description = "返回类目数量，最大 100") @RequestParam(defaultValue = "20") Integer limit) {
+        return Result.success(reportService.categoryAnalysis(limit));
     }
 
     @GetMapping(value = "/export", produces = "text/csv;charset=UTF-8")

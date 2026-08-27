@@ -77,6 +77,18 @@ export interface ProductRank {
   topRatedProducts: Product[]
 }
 
+export interface CategoryAnalysis {
+  categoryName: string
+  productCount: number
+  commentCount: number
+  avgScore: number
+  negativeCount: number
+  negativeRate: number
+  topProblemType?: string
+  topProblemCount?: number
+  riskLevel: 'none' | 'low' | 'medium' | 'high' | string
+}
+
 export interface Comment {
   id: number
   reviewId?: string

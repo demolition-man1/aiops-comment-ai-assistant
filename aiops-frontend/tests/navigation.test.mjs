@@ -9,6 +9,7 @@ const commentWorkbenchView = await readFile(new URL('../src/views/CommentWorkben
 const syncCenterView = await readFile(new URL('../src/views/SyncCenterView.vue', import.meta.url), 'utf8')
 const taskCenterView = await readFile(new URL('../src/views/TaskCenterView.vue', import.meta.url), 'utf8')
 const reportsView = await readFile(new URL('../src/views/ReportsView.vue', import.meta.url), 'utf8')
+const categoryAnalysisView = await readFile(new URL('../src/views/CategoryAnalysisView.vue', import.meta.url), 'utf8')
 const promptTemplateView = await readFile(new URL('../src/views/PromptTemplateView.vue', import.meta.url), 'utf8')
 const aiCallLogView = await readFile(new URL('../src/views/AiCallLogView.vue', import.meta.url), 'utf8')
 const apiModules = await readFile(new URL('../src/api/modules.ts', import.meta.url), 'utf8')
@@ -96,6 +97,16 @@ test('tag and solution library pages are routed and backed by api modules', asyn
   assert.match(apiModules, /recommend:/)
   await access(new URL('../src/views/TagLibraryView.vue', import.meta.url))
   await access(new URL('../src/views/ProblemSolutionView.vue', import.meta.url))
+})
+
+test('category analytics page is routed and backed by reports api', async () => {
+  assert.match(router, /path:\s*'categories'/)
+  assert.match(router, /CategoryAnalysisView\.vue/)
+  assert.match(layout, /layout\.nav\.categories/)
+  assert.match(apiModules, /categories:\s*\(params/)
+  assert.match(categoryAnalysisView, /reportApi\.categories/)
+  assert.match(categoryAnalysisView, /categories\.title/)
+  await access(new URL('../src/views/CategoryAnalysisView.vue', import.meta.url))
 })
 
 test('prompt template and ai log pages are routed and backed by api modules', async () => {

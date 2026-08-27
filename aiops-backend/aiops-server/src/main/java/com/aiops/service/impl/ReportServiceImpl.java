@@ -7,6 +7,7 @@ import com.aiops.service.DashboardService;
 import com.aiops.service.ReportService;
 import com.aiops.vo.DashboardOverviewVO;
 import com.aiops.vo.DashboardVO;
+import com.aiops.vo.CategoryAnalysisVO;
 import com.aiops.vo.DistributionItemVO;
 import com.aiops.vo.ProductRankVO;
 import com.aiops.vo.ProductVO;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -27,6 +29,7 @@ public class ReportServiceImpl implements ReportService {
     private static final String OVERVIEW_CACHE_KEY = "report:overview";
     private static final String DISTRIBUTIONS_CACHE_KEY = "report:distributions";
     private static final String PRODUCT_RANK_CACHE_PREFIX = "report:product-rank:";
+    private static final String CATEGORY_ANALYSIS_CACHE_PREFIX = "report:category-analysis:";
 
     private final DashboardService dashboardService;
     private final BizCommentMapper commentMapper;
@@ -83,6 +86,19 @@ public class ReportServiceImpl implements ReportService {
                             productMapper.selectHighRiskProducts(3, normalizedLimit),
                             productMapper.selectTopRatedProducts(3, normalizedLimit)
                     );
+                    cacheService.set(cacheKey, result, REPORT_CACHE_TTL);
+                    return result;
+                });
+    }
+
+    @Override
+    public List<CategoryAnalysisVO> categoryAnalysis(Integer limit) {
+        int normalizedLimit = limit == null || limit < 1 ? 20 : Math.min(limit, 100);
+        String cacheKey = CATEGORY_ANALYSIS_CACHE_PREFIX + normalizedLimit;
+        return cacheService.get(cacheKey, CategoryAnalysisVO[].class)
+                .map(Arrays::asList)
+                .orElseGet(() -> {
+                    List<CategoryAnalysisVO> result = productMapper.selectCategoryAnalysis(normalizedLimit);
                     cacheService.set(cacheKey, result, REPORT_CACHE_TTL);
                     return result;
                 });

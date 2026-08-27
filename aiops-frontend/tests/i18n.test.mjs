@@ -19,6 +19,7 @@ const productCompareView = await readFile(new URL('../src/views/ProductCompareVi
 const syncCenterView = await readFile(new URL('../src/views/SyncCenterView.vue', import.meta.url), 'utf8')
 const taskCenterView = await readFile(new URL('../src/views/TaskCenterView.vue', import.meta.url), 'utf8')
 const reportsView = await readFile(new URL('../src/views/ReportsView.vue', import.meta.url), 'utf8')
+const categoryAnalysisView = await readFile(new URL('../src/views/CategoryAnalysisView.vue', import.meta.url), 'utf8')
 const promptTemplateView = await readFile(new URL('../src/views/PromptTemplateView.vue', import.meta.url), 'utf8')
 const aiCallLogView = await readFile(new URL('../src/views/AiCallLogView.vue', import.meta.url), 'utf8')
 
@@ -47,6 +48,7 @@ test('locale dictionaries expose the same root sections', () => {
     'sync',
     'tasks',
     'reports',
+    'categories',
     'compare',
     'aiContent',
     'prompts',
@@ -139,16 +141,21 @@ test('settings hides development connection details from production merchants', 
 })
 
 test('scheduled sync task center and reports pages render labels through i18n', () => {
-  for (const source of [syncCenterView, taskCenterView, reportsView]) {
+  for (const source of [syncCenterView, taskCenterView, reportsView, categoryAnalysisView]) {
     assert.match(source, /useI18n/)
   }
   assert.match(syncCenterView, /sync\.title/)
   assert.match(taskCenterView, /tasks\.title/)
   assert.match(reportsView, /reports\.title/)
+  assert.match(categoryAnalysisView, /categories\.title/)
   assert.ok(!syncCenterView.includes('定时同步中心'))
   assert.ok(!taskCenterView.includes('统一任务中心'))
   assert.ok(!reportsView.includes('数据报表中心'))
+  assert.ok(!categoryAnalysisView.includes('类目聚合分析'))
   assert.ok(zh.includes('exportCsv:'))
   assert.ok(en.includes('exportCsv:'))
   assert.ok(pt.includes('exportCsv:'))
+  assert.ok(zh.includes('categories:'))
+  assert.ok(en.includes('categories:'))
+  assert.ok(pt.includes('categories:'))
 })

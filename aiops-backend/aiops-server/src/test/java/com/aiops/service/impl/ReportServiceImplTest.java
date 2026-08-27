@@ -4,6 +4,7 @@ import com.aiops.mapper.BizCommentMapper;
 import com.aiops.mapper.BizProductMapper;
 import com.aiops.service.CacheService;
 import com.aiops.service.DashboardService;
+import com.aiops.vo.CategoryAnalysisVO;
 import com.aiops.vo.DashboardOverviewVO;
 import com.aiops.vo.ProductRankVO;
 import com.aiops.vo.ProductVO;
@@ -104,8 +105,36 @@ class ReportServiceImplTest {
                 .contains("p-hot");
     }
 
+    @Test
+    void categoryAnalysisCachesFreshRowsWhenCacheMisses() {
+        when(cacheService.get("report:category-analysis:20", CategoryAnalysisVO[].class)).thenReturn(Optional.empty());
+        when(productMapper.selectCategoryAnalysis(20)).thenReturn(List.of(category("health_beauty", 12, 40)));
+
+        List<CategoryAnalysisVO> result = reportService.categoryAnalysis(null);
+
+        assertThat(result).extracting(CategoryAnalysisVO::getCategoryName).containsExactly("health_beauty");
+        verify(productMapper).selectCategoryAnalysis(20);
+        verify(cacheService).set(eq("report:category-analysis:20"), eq(result), any(Duration.class));
+    }
+
+    @Test
+    void categoryAnalysisReturnsCachedRowsWithoutQueryingDatabase() {
+        CategoryAnalysisVO[] cached = {category("sports_leisure", 8, 22)};
+        when(cacheService.get("report:category-analysis:8", CategoryAnalysisVO[].class)).thenReturn(Optional.of(cached));
+
+        List<CategoryAnalysisVO> result = reportService.categoryAnalysis(8);
+
+        assertThat(result).extracting(CategoryAnalysisVO::getCategoryName).containsExactly("sports_leisure");
+        verify(productMapper, never()).selectCategoryAnalysis(any());
+    }
+
     private ProductVO product(String productId, int reviewCount) {
         return new ProductVO(productId, "seller-1", "health_beauty",
                 new BigDecimal("19.90"), reviewCount, new BigDecimal("4.80"), new BigDecimal("0.1000"));
+    }
+
+    private CategoryAnalysisVO category(String categoryName, int productCount, int commentCount) {
+        return new CategoryAnalysisVO(categoryName, productCount, commentCount, new BigDecimal("4.30"),
+                3, new BigDecimal("0.0750"), "quality", 2, "low");
     }
 }
