@@ -140,6 +140,12 @@ textarea {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
 .grid.two {
   grid-template-columns: minmax(0, 1.4fr) minmax(340px, 0.7fr);
 }

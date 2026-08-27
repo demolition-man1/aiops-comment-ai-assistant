@@ -9,6 +9,8 @@ const commentWorkbenchView = await readFile(new URL('../src/views/CommentWorkben
 const syncCenterView = await readFile(new URL('../src/views/SyncCenterView.vue', import.meta.url), 'utf8')
 const taskCenterView = await readFile(new URL('../src/views/TaskCenterView.vue', import.meta.url), 'utf8')
 const reportsView = await readFile(new URL('../src/views/ReportsView.vue', import.meta.url), 'utf8')
+const promptTemplateView = await readFile(new URL('../src/views/PromptTemplateView.vue', import.meta.url), 'utf8')
+const aiCallLogView = await readFile(new URL('../src/views/AiCallLogView.vue', import.meta.url), 'utf8')
 const apiModules = await readFile(new URL('../src/api/modules.ts', import.meta.url), 'utf8')
 const httpClient = await readFile(new URL('../src/api/http.ts', import.meta.url), 'utf8')
 
@@ -94,6 +96,23 @@ test('tag and solution library pages are routed and backed by api modules', asyn
   assert.match(apiModules, /recommend:/)
   await access(new URL('../src/views/TagLibraryView.vue', import.meta.url))
   await access(new URL('../src/views/ProblemSolutionView.vue', import.meta.url))
+})
+
+test('prompt template and ai log pages are routed and backed by api modules', async () => {
+  assert.match(router, /path:\s*'prompts'/)
+  assert.match(router, /PromptTemplateView\.vue/)
+  assert.match(router, /path:\s*'ai-logs'/)
+  assert.match(router, /AiCallLogView\.vue/)
+  assert.match(layout, /layout\.nav\.prompts/)
+  assert.match(layout, /layout\.nav\.aiLogs/)
+  assert.match(apiModules, /export const promptTemplateApi/)
+  assert.match(apiModules, /setDefault:/)
+  assert.match(apiModules, /export const aiCallLogApi/)
+  assert.match(apiModules, /overview:/)
+  assert.match(promptTemplateView, /promptTemplateApi/)
+  assert.match(aiCallLogView, /aiCallLogApi/)
+  await access(new URL('../src/views/PromptTemplateView.vue', import.meta.url))
+  await access(new URL('../src/views/AiCallLogView.vue', import.meta.url))
 })
 
 test('comment workspace consumes active tags and solution recommendations', () => {

@@ -36,6 +36,8 @@ const navItems = [
   { path: '/comments', labelKey: 'layout.nav.comments', icon: MessageSquareText },
   { path: '/tags', labelKey: 'layout.nav.tags', icon: Tags },
   { path: '/solutions', labelKey: 'layout.nav.solutions', icon: Lightbulb },
+  { path: '/prompts', labelKey: 'layout.nav.prompts', icon: Bot },
+  { path: '/ai-logs', labelKey: 'layout.nav.aiLogs', icon: ClipboardList },
   { path: '/import', labelKey: 'layout.nav.import', icon: FileUp },
   { path: '/compare', labelKey: 'layout.nav.compare', icon: GitCompareArrows },
   { path: '/content', labelKey: 'layout.nav.content', icon: PenLine },

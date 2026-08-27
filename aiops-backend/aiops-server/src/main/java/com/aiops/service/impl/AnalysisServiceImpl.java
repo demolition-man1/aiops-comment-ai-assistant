@@ -10,14 +10,17 @@ import com.aiops.dto.ProductCompareDTO;
 import com.aiops.entity.BizAnalysisTask;
 import com.aiops.entity.BizCommentAnalysisResult;
 import com.aiops.entity.BizProductCompareReport;
+import com.aiops.entity.SysPromptTemplate;
 import com.aiops.exception.BusinessException;
 import com.aiops.mapper.BizAnalysisTaskMapper;
 import com.aiops.mapper.BizCommentAnalysisResultMapper;
 import com.aiops.mapper.BizProductCompareReportMapper;
+import com.aiops.service.AiCallLogService;
 import com.aiops.service.CacheService;
 import com.aiops.result.PageResult;
 import com.aiops.service.AiRateLimitService;
 import com.aiops.service.AnalysisService;
+import com.aiops.service.PromptTemplateService;
 import com.aiops.vo.AnalysisResultVO;
 import com.aiops.vo.ProductCompareReportVO;
 import com.aiops.vo.TaskVO;
@@ -57,6 +60,8 @@ public class AnalysisServiceImpl implements AnalysisService {
     private final BizProductCompareReportMapper compareReportMapper;
     private final ObjectMapper objectMapper;
     private final AiRateLimitService aiRateLimitService;
+    private final PromptTemplateService promptTemplateService;
+    private final AiCallLogService aiCallLogService;
 
     @Override
     public TaskVO createAnalysisTask(AnalysisTaskCreateDTO createDTO) {
@@ -194,7 +199,11 @@ public class AnalysisServiceImpl implements AnalysisService {
         request.put("leftAnalysis", leftVO);
         request.put("rightAnalysis", rightVO);
         request.put("language", compareDTO.getLanguage());
-        Map<String, Object> response = callPythonAi(() -> pythonAiClient.generateProductCompare(request));
+        SysPromptTemplate template = attachPromptTemplate(request, "product_compare",
+                compareDTO.getLanguage(), new HashMap<>(request));
+        Map<String, Object> response = callPythonAi("product_compare", "product_pair",
+                compareDTO.getLeftProductId() + ":" + compareDTO.getRightProductId(), templateId(template),
+                () -> pythonAiClient.generateProductCompare(request));
         Map<String, Object> data = nestedData(response);
 
         BizProductCompareReport report = new BizProductCompareReport();
@@ -307,18 +316,75 @@ public class AnalysisServiceImpl implements AnalysisService {
         }
     }
 
-    private Map<String, Object> callPythonAi(PythonAiCall call) {
+    private Map<String, Object> callPythonAi(String businessType, String targetType, String targetId,
+                                             Long promptTemplateId, PythonAiCall call) {
+        long startedAt = System.nanoTime();
         try {
             Map<String, Object> response = call.execute();
             if (response == null || Boolean.FALSE.equals(response.get("success"))) {
                 throw new BusinessException(503, "Python AI 服务返回失败");
             }
+            recordAiCall(businessType, targetType, targetId, promptTemplateId,
+                    modelName(response), tokenUsage(response), latencyMs(startedAt), null);
             return response;
         } catch (BusinessException exception) {
+            recordAiCallFailure(businessType, targetType, targetId, promptTemplateId, latencyMs(startedAt), exception);
             throw exception;
         } catch (Exception exception) {
+            recordAiCallFailure(businessType, targetType, targetId, promptTemplateId, latencyMs(startedAt), exception);
             throw new BusinessException(503, "Python AI 服务不可用：" + exception.getMessage());
         }
+    }
+
+    private SysPromptTemplate attachPromptTemplate(Map<String, Object> request, String businessType,
+                                                   String language, Map<String, Object> variables) {
+        Optional<SysPromptTemplate> template = Optional.ofNullable(promptTemplateService.findDefaultTemplate(businessType, language))
+                .orElse(Optional.empty());
+        template.ifPresent(value -> {
+            request.put("promptTemplateId", value.getId());
+            request.put("promptTemplate", value.getTemplateContent());
+            request.put("promptVariables", variables);
+        });
+        return template.orElse(null);
+    }
+
+    private void recordAiCall(String businessType, String targetType, String targetId, Long promptTemplateId,
+                              String modelName, Integer tokenUsage, Long latencyMs, String errorMessage) {
+        try {
+            aiCallLogService.record(BaseContext.getCurrentId(), businessType, targetType, targetId, promptTemplateId,
+                    modelName, errorMessage == null ? "success" : "failed", tokenUsage, latencyMs, errorMessage);
+        } catch (Exception ignored) {
+            // AI logging must not break product comparison generation.
+        }
+    }
+
+    private void recordAiCallFailure(String businessType, String targetType, String targetId, Long promptTemplateId,
+                                     Long latencyMs, Exception exception) {
+        recordAiCall(businessType, targetType, targetId, promptTemplateId, null, 0, latencyMs, exception.getMessage());
+    }
+
+    private Long latencyMs(long startedAt) {
+        return Math.max(0, (System.nanoTime() - startedAt) / 1_000_000);
+    }
+
+    private Long templateId(SysPromptTemplate template) {
+        return template == null ? null : template.getId();
+    }
+
+    private String modelName(Map<String, Object> response) {
+        String topLevel = stringValue(response, "modelName");
+        if (topLevel != null) {
+            return topLevel;
+        }
+        return stringValue(nestedData(response), "modelName");
+    }
+
+    private Integer tokenUsage(Map<String, Object> response) {
+        Integer topLevel = intValue(response, "tokenUsage");
+        if (topLevel != null) {
+            return topLevel;
+        }
+        return intValue(nestedData(response), "tokenUsage");
     }
 
     @SuppressWarnings("unchecked")

@@ -128,6 +128,39 @@ class TextToolTests(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertEqual(result["data"]["compareSummary"], "A negative rate is lower.")
         self.assertEqual(result["data"]["operationSuggestions"], "Use A as benchmark.")
+        self.assertGreater(result["tokenUsage"], 0)
+
+    def test_prompt_template_replaces_variables_when_supplied(self) -> None:
+        service = AiService()
+        captured = {}
+
+        def fake_chat(prompt: str, temperature: float) -> str:
+            captured["prompt"] = prompt
+            return "Custom reply"
+
+        service._chat = fake_chat
+
+        result = service.generate_negative_reply(
+            {
+                "promptTemplate": "Reply in {language} about {commentContent} for score {reviewScore}.",
+                "promptVariables": {
+                    "language": "en-US",
+                    "commentContent": "produto quebrado",
+                    "reviewScore": 1,
+                },
+            }
+        )
+
+        self.assertTrue(result["success"])
+        self.assertEqual(captured["prompt"], "Reply in en-US about produto quebrado for score 1.")
+        self.assertEqual(result["replyContent"], "Custom reply")
+        self.assertGreater(result["tokenUsage"], 0)
+
+    def test_prompt_template_keeps_unknown_variables_for_safe_editing(self) -> None:
+        service = AiService()
+        rendered = service._render_template("Use {known} and {missing}.", {"known": "value"})
+
+        self.assertEqual(rendered, "Use value and {missing}.")
 
     def test_generate_product_compare_flattens_nested_ai_sections(self) -> None:
         service = AiService()

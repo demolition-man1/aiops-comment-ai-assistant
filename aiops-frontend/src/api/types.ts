@@ -174,6 +174,46 @@ export interface ProblemSolution {
   updateTime?: string
 }
 
+export interface PromptTemplate {
+  id: number
+  templateName: string
+  businessType: string
+  language: string
+  templateContent: string
+  variableSchema?: string
+  defaultFlag: number
+  enabled: number
+  remark?: string
+  createTime?: string
+  updateTime?: string
+}
+
+export interface AiCallLog {
+  id: number
+  userId?: number
+  businessType: string
+  targetType?: string
+  targetId?: string
+  promptTemplateId?: number
+  modelName?: string
+  callStatus: string
+  tokenUsage?: number
+  estimatedCost?: number
+  latencyMs?: number
+  errorMessage?: string
+  createTime?: string
+}
+
+export interface AiCallLogOverview {
+  totalCalls: number
+  successCalls: number
+  failedCalls: number
+  successRate: number
+  totalTokens: number
+  totalCost: number
+  avgLatencyMs: number
+}
+
 export interface TaskRecord {
   recordKey: string
   sourceId: number

@@ -19,6 +19,8 @@ const productCompareView = await readFile(new URL('../src/views/ProductCompareVi
 const syncCenterView = await readFile(new URL('../src/views/SyncCenterView.vue', import.meta.url), 'utf8')
 const taskCenterView = await readFile(new URL('../src/views/TaskCenterView.vue', import.meta.url), 'utf8')
 const reportsView = await readFile(new URL('../src/views/ReportsView.vue', import.meta.url), 'utf8')
+const promptTemplateView = await readFile(new URL('../src/views/PromptTemplateView.vue', import.meta.url), 'utf8')
+const aiCallLogView = await readFile(new URL('../src/views/AiCallLogView.vue', import.meta.url), 'utf8')
 
 test('i18n supports chinese english and portuguese locales', () => {
   for (const locale of ['zh-CN', 'en-US', 'pt-BR']) {
@@ -47,6 +49,8 @@ test('locale dictionaries expose the same root sections', () => {
     'reports',
     'compare',
     'aiContent',
+    'prompts',
+    'aiLogs',
     'alerts',
     'settings',
     'login'
@@ -55,6 +59,22 @@ test('locale dictionaries expose the same root sections', () => {
     assert.ok(en.includes(`${section}:`), `en missing ${section}`)
     assert.ok(pt.includes(`${section}:`), `pt missing ${section}`)
   }
+})
+
+test('phase 3 ai governance pages render labels through i18n', () => {
+  for (const source of [promptTemplateView, aiCallLogView]) {
+    assert.match(source, /useI18n/)
+  }
+  assert.match(promptTemplateView, /prompts\.title/)
+  assert.match(aiCallLogView, /aiLogs\.title/)
+  assert.ok(!promptTemplateView.includes('Prompt 模板管理'))
+  assert.ok(!aiCallLogView.includes('AI 调用日志'))
+  assert.ok(zh.includes('prompts:'))
+  assert.ok(en.includes('prompts:'))
+  assert.ok(pt.includes('prompts:'))
+  assert.ok(zh.includes('aiLogs:'))
+  assert.ok(en.includes('aiLogs:'))
+  assert.ok(pt.includes('aiLogs:'))
 })
 
 test('core pages and request fallbacks use i18n', () => {

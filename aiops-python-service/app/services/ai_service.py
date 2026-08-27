@@ -13,7 +13,7 @@ class AiService:
         target_id = request.get("targetId") or ""
         language = request.get("language") or "zh-CN"
         analysis_result = request.get("analysisResult") or {}
-        prompt = (
+        fallback_prompt = (
             "你是中小电商商家的AI运营顾问。请基于评论分析结果生成一份运营报告。"
             "必须只输出JSON，不要输出Markdown。JSON字段必须包含："
             "reportTitle, consumerPainPoints, productAdvantages, productDisadvantages, "
@@ -21,6 +21,7 @@ class AiService:
             f"目标类型：{target_type}，目标ID：{target_id}，输出语言：{language}。"
             f"评论分析结果：{json.dumps(analysis_result, ensure_ascii=False, default=str)}"
         )
+        prompt = self._prompt_from_template(request, fallback_prompt)
         content = self._chat(prompt, temperature=0.4)
         parsed = self._parse_json_object(content)
         report = {
@@ -33,8 +34,9 @@ class AiService:
             "serviceSuggestions": parsed.get("serviceSuggestions") or "",
             "fullReport": parsed.get("fullReport") or content,
             "modelName": settings.ai_model,
+            "tokenUsage": self._estimate_token_usage(prompt, content),
         }
-        return {"success": True, "data": report}
+        return {"success": True, "data": report, "tokenUsage": report["tokenUsage"]}
 
     def generate_content(self, request: dict[str, Any]) -> dict[str, Any]:
         content_type = request.get("contentType") or "商品文案"
@@ -43,14 +45,20 @@ class AiService:
         target_type = request.get("targetType") or "product"
         target_id = request.get("targetId") or ""
         extra_requirement = request.get("extraRequirement") or ""
-        prompt = (
+        fallback_prompt = (
             "你是电商运营文案专家。请生成可直接给商家使用的营销文案。"
             f"文案类型：{content_type}。风格：{style_type}。语言：{language}。"
             f"目标类型：{target_type}，目标ID：{target_id}。补充要求：{extra_requirement}。"
             "输出正文即可，不要解释生成过程。"
         )
+        prompt = self._prompt_from_template(request, fallback_prompt)
         content = self._chat(prompt, temperature=0.7)
-        return {"success": True, "generatedContent": content, "modelName": settings.ai_model}
+        return {
+            "success": True,
+            "generatedContent": content,
+            "modelName": settings.ai_model,
+            "tokenUsage": self._estimate_token_usage(prompt, content),
+        }
 
     def generate_negative_reply(self, request: dict[str, Any]) -> dict[str, Any]:
         comment_id = request.get("commentId") or ""
@@ -62,7 +70,7 @@ class AiService:
         problem_type = request.get("problemType") or "unknown"
         tone_type = request.get("toneType") or "诚恳专业"
         language = request.get("language") or "zh-CN"
-        prompt = (
+        fallback_prompt = (
             "你是电商客服主管。请为差评生成一段商家回复模板。"
             "回复要真诚、承担责任、给出解决路径，避免争辩和过度承诺。"
             "每条回复都必须针对这条评论单独生成，不要复用通用模板；"
@@ -73,8 +81,14 @@ class AiService:
             f"评论标题：{comment_title}。客户评论：{comment_content}。"
             "如果评论原文缺失，只能基于评分和问题类型表达歉意并引导客服核实。只输出回复内容。"
         )
+        prompt = self._prompt_from_template(request, fallback_prompt)
         content = self._chat(prompt, temperature=0.75)
-        return {"success": True, "replyContent": content, "modelName": settings.ai_model}
+        return {
+            "success": True,
+            "replyContent": content,
+            "modelName": settings.ai_model,
+            "tokenUsage": self._estimate_token_usage(prompt, content),
+        }
 
     def translate_comment(self, request: dict[str, Any]) -> dict[str, Any]:
         comment_id = request.get("commentId") or ""
@@ -84,7 +98,7 @@ class AiService:
         comment_title = request.get("commentTitle") or ""
         comment_content = request.get("commentContent") or ""
         target_language = request.get("targetLanguage") or request.get("language") or "zh-CN"
-        prompt = (
+        fallback_prompt = (
             "You are a precise ecommerce review translator. Translate the customer review into the target language. "
             "Preserve product facts, sentiment, complaint details, numbers, and named entities. "
             "Do not add explanations or invented details. "
@@ -93,6 +107,7 @@ class AiService:
             f"commentId: {comment_id}. reviewId: {review_id}. productId: {product_id}. "
             f"reviewScore: {review_score}. title: {comment_title}. review: {comment_content}."
         )
+        prompt = self._prompt_from_template(request, fallback_prompt)
         content = self._chat(prompt, temperature=0.2)
         parsed = self._parse_json_object(content)
         translated_content = self._to_plain_text(parsed.get("translatedContent")) or content
@@ -103,7 +118,9 @@ class AiService:
                 "translatedContent": translated_content,
                 "sourceLanguage": source_language,
                 "modelName": settings.ai_model,
+                "tokenUsage": self._estimate_token_usage(prompt, translated_content),
             },
+            "tokenUsage": self._estimate_token_usage(prompt, translated_content),
         }
 
     def generate_product_compare(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -112,7 +129,7 @@ class AiService:
         language = request.get("language") or "zh-CN"
         left_analysis = request.get("leftAnalysis") or request.get("leftAnalysisResult") or {}
         right_analysis = request.get("rightAnalysis") or request.get("rightAnalysisResult") or {}
-        prompt = (
+        fallback_prompt = (
             "你是中小电商商家的竞品评论分析顾问。请基于两个商品的评论分析结果生成对比报告。"
             "必须只输出JSON，不要输出Markdown。JSON字段必须包含："
             "compareSummary, advantageAnalysis, riskAnalysis, operationSuggestions。"
@@ -121,6 +138,7 @@ class AiService:
             f"左侧商品分析结果：{json.dumps(left_analysis, ensure_ascii=False, default=str)}"
             f"右侧商品分析结果：{json.dumps(right_analysis, ensure_ascii=False, default=str)}"
         )
+        prompt = self._prompt_from_template(request, fallback_prompt)
         content = self._chat(prompt, temperature=0.4)
         parsed = self._parse_json_object(content)
         report = {
@@ -129,8 +147,34 @@ class AiService:
             "riskAnalysis": self._to_plain_text(parsed.get("riskAnalysis")),
             "operationSuggestions": self._to_plain_text(parsed.get("operationSuggestions")),
             "modelName": settings.ai_model,
+            "tokenUsage": self._estimate_token_usage(prompt, content),
         }
-        return {"success": True, "data": report}
+        return {"success": True, "data": report, "tokenUsage": report["tokenUsage"]}
+
+    def _prompt_from_template(self, request: dict[str, Any], fallback_prompt: str) -> str:
+        template = request.get("promptTemplate")
+        if not isinstance(template, str) or not template.strip():
+            return fallback_prompt
+        variables = request.get("promptVariables")
+        if not isinstance(variables, dict):
+            variables = request
+        return self._render_template(template, variables)
+
+    def _render_template(self, template: str, variables: dict[str, Any]) -> str:
+        def replace(match: re.Match[str]) -> str:
+            key = match.group(1).strip()
+            value = variables.get(key)
+            if value is None:
+                return match.group(0)
+            if isinstance(value, (dict, list)):
+                return json.dumps(value, ensure_ascii=False, default=str)
+            return str(value)
+
+        return re.sub(r"\{([A-Za-z_][A-Za-z0-9_]*)\}", replace, template)
+
+    def _estimate_token_usage(self, prompt: str, content: str) -> int:
+        # A lightweight demo estimate; the Java side uses it for cost trend display.
+        return max(1, (len(prompt or "") + len(content or "")) // 4)
 
     def _chat(self, prompt: str, temperature: float) -> str:
         if not settings.ai_api_key:
