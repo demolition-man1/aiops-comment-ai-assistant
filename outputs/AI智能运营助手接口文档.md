@@ -1574,6 +1574,124 @@ Body 字段同“创建 Prompt 模板”。
 | ├─ createTime | string | 非必须 |  | 创建时间 | datetime |
 | msg | string | 非必须 |  | 提示信息 |  |
 
+# 报告归档相关接口
+
+报告归档接口将已生成的 AI 运营报告保存为独立快照。除特别说明外，以下接口都需要在请求头携带 `Authorization: Bearer token`。
+
+## 分页查询报告归档
+
+### 基本信息
+
+**Path：** /api/report-archives
+
+**Method：** GET
+
+**接口描述：** 分页查询报告归档快照，支持按目标、关键词、归档状态和归档时间范围组合筛选。
+
+### 请求参数
+
+**Query**
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| pageNum | 否 | 1 | 页码，默认 1 |
+| pageSize | 否 | 10 | 每页条数，最大 100 |
+| targetType | 否 | product | 目标类型：product / seller |
+| targetId | 否 | abc123 | 精确匹配目标 ID |
+| keyword | 否 | August | 匹配报告标题或目标 ID |
+| archiveStatus | 否 | archived | archived / restored |
+| startTime | 否 | 2026-08-01 00:00:00 | 归档开始时间 |
+| endTime | 否 | 2026-08-31 23:59:59 | 归档结束时间 |
+
+### 返回数据
+
+| 名称 | 类型 | 是否必须 | 备注 |
+|---|---|---|---|
+| code | integer | 是 | 状态码 |
+| data.records | array | 否 | 归档记录列表 |
+| data.records[].archiveId | integer | 否 | 归档 ID |
+| data.records[].sourceReportId | integer | 否 | 源 AI 报告 ID |
+| data.records[].targetType | string | 否 | 目标类型 |
+| data.records[].targetId | string | 否 | 目标 ID |
+| data.records[].reportTitle | string | 否 | 报告标题快照 |
+| data.records[].archiveStatus | string | 否 | archived / restored |
+| data.records[].reportCreateTime | string | 否 | 源报告生成时间 |
+| data.records[].archiveTime | string | 否 | 归档时间 |
+| data.total | integer | 否 | 总记录数 |
+| data.pageNum | integer | 否 | 当前页码 |
+| data.pageSize | integer | 否 | 每页条数 |
+| msg | string | 否 | 提示信息 |
+
+## 归档运营报告
+
+### 基本信息
+
+**Path：** /api/report-archives/{reportId}
+
+**Method：** POST
+
+**接口描述：** 将指定 AI 运营报告复制为独立归档快照。同一源报告重复归档时幂等返回已有记录；已恢复记录会重新变为 archived。
+
+### 请求参数
+
+**路径参数**
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| reportId | 是 | 30001 | `/api/ai/reports` 返回的报告 ID |
+
+**Body**
+
+| 名称 | 类型 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|---|
+| remark | string | 否 | 2026 年 8 月运营复盘 | 归档备注 |
+
+### 返回数据
+
+返回一条完整报告归档记录，字段同“分页查询报告归档”的 `data.records[]`，并包含痛点、优劣势、运营建议、文案建议、客服建议、风险提示、完整报告和归档备注。
+
+## 查询归档详情
+
+### 基本信息
+
+**Path：** /api/report-archives/{archiveId}
+
+**Method：** GET
+
+**接口描述：** 根据归档 ID 回看完整报告快照。
+
+### 请求参数
+
+| 参数名称 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|
+| archiveId | 是 | 10001 | 归档 ID |
+
+### 返回数据
+
+返回一条完整报告归档记录。
+
+## 修改归档状态
+
+### 基本信息
+
+**Path：** /api/report-archives/{archiveId}/status
+
+**Method：** PUT
+
+**接口描述：** 恢复归档记录或将已恢复记录重新归档。记录快照不会被删除。
+
+### 请求参数
+
+**Body**
+
+| 名称 | 类型 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|---|
+| archiveStatus | string | 是 | restored | archived / restored |
+
+### 返回数据
+
+返回状态更新后的完整报告归档记录。
+
 # AI 文案相关接口
 
 ## 生成营销文案

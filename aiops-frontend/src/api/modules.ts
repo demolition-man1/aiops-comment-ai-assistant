@@ -20,6 +20,7 @@ import type {
   ProductRank,
   PromptTemplate,
   ProblemSolution,
+  ReportArchive,
   ReportOverview,
   SyncConfig,
   SyncExecution,
@@ -179,6 +180,17 @@ export const reportApi = {
   categories: (params: Record<string, unknown>) =>
     http.get<CategoryAnalysis[], CategoryAnalysis[]>('/reports/categories', { params }),
   exportCsv: () => downloadFile('/reports/export')
+}
+
+export const reportArchiveApi = {
+  page: (params: Record<string, unknown>) =>
+    http.get<PageResult<ReportArchive>, PageResult<ReportArchive>>('/report-archives', { params }),
+  detail: (archiveId: number) =>
+    http.get<ReportArchive, ReportArchive>(`/report-archives/${archiveId}`),
+  archive: (reportId: number, payload?: { remark?: string }) =>
+    http.post<ReportArchive, ReportArchive>(`/report-archives/${reportId}`, payload),
+  updateStatus: (archiveId: number, archiveStatus: 'archived' | 'restored') =>
+    http.put<ReportArchive, ReportArchive>(`/report-archives/${archiveId}/status`, { archiveStatus })
 }
 
 export const aiApi = {

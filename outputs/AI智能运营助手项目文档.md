@@ -561,6 +561,10 @@ client
 - 生成卖家运营报告。
 - 查询报告列表。
 - 查询报告详情。
+- 将指定报告保存为独立归档快照，重复归档保持幂等。
+- 按目标类型、目标 ID、关键词、归档状态和时间范围筛选历史归档。
+- 回看归档时的痛点、优劣势、运营建议、文案建议、客服建议和完整报告。
+- 支持将归档标记为已恢复，并可重新归档，不物理删除历史快照。
 
 ### 7.8 AI 文案生成模块
 
@@ -679,6 +683,7 @@ client
 | biz_task_record | 统一任务记录扩展表 |
 | biz_comment_analysis_result | 评论分析结果表 |
 | biz_operation_report | AI 运营报告表 |
+| biz_report_archive | AI 运营报告归档快照表 |
 | biz_ai_content_record | AI 文案生成记录表 |
 | biz_ai_call_log | AI 调用日志表 |
 | biz_negative_reply | 差评回复记录表 |
@@ -695,6 +700,7 @@ biz_comment n - n biz_custom_tag
 biz_problem_solution n - 1 biz_comment.problem_type
 biz_analysis_task 1 - 1 biz_comment_analysis_result
 biz_analysis_task 1 - 1 biz_operation_report
+biz_operation_report 1 - 0..1 biz_report_archive
 biz_product 1 - n biz_ai_content_record
 sys_prompt_template 1 - n biz_ai_call_log
 biz_comment 1 - n biz_negative_reply

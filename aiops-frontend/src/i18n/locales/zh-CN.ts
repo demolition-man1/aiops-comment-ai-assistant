@@ -39,6 +39,7 @@ export default {
     taskStatus: '任务状态',
     createdAt: '时间',
     countSuffix: '条',
+    to: '至',
     dash: '-'
   },
   layout: {
@@ -405,13 +406,28 @@ export default {
     archiveSubtitle: '查看已生成的 AI 运营报告，支持按目标类型和目标 ID 筛选',
     archiveStatus: '已接入归档',
     archived: '已归档',
+    restored: '已恢复',
+    archiveAction: '选择报告归档',
+    archiveCreated: '报告已归档',
+    archiveStatusUpdated: '归档状态已更新',
+    restoreAction: '恢复',
+    rearchiveAction: '重新归档',
     filterTargetType: '目标类型',
     allTargets: '全部目标',
     targetIdPlaceholder: '输入目标 ID',
+    archiveKeywordPlaceholder: '搜索标题或目标 ID',
+    archiveStatusFilter: '归档状态',
+    allStatuses: '全部状态',
+    archiveTimeRange: '归档时间范围',
     archiveReportTitle: '报告标题',
     untitledReport: '未命名报告',
     target: '目标',
     createTime: '生成时间',
+    reportCreateTime: '报告生成时间',
+    archiveTime: '归档时间',
+    sourceReportId: '源报告 ID',
+    archiveRemark: '归档备注',
+    selectReportSubtitle: '从已生成的 AI 运营报告中选择一份保存为稳定快照。',
     viewDetail: '查看',
     detailTitle: '报告详情',
     painPoints: '用户痛点',
@@ -421,6 +437,10 @@ export default {
     copywritingSuggestions: '文案建议',
     serviceSuggestions: '客服建议',
     fullReport: '完整报告',
+    archiveStatuses: {
+      archived: '已归档',
+      restored: '已恢复'
+    },
     targetTypes: {
       product: '商品',
       seller: '商家'

@@ -39,6 +39,7 @@ export default {
     taskStatus: 'Task Status',
     createdAt: 'Time',
     countSuffix: 'items',
+    to: 'to',
     dash: '-'
   },
   layout: {
@@ -405,13 +406,28 @@ export default {
     archiveSubtitle: 'Review generated AI operations reports and filter by target type or target ID',
     archiveStatus: 'Archive Enabled',
     archived: 'Archived',
+    restored: 'Restored',
+    archiveAction: 'Select Report to Archive',
+    archiveCreated: 'Report archived',
+    archiveStatusUpdated: 'Archive status updated',
+    restoreAction: 'Restore',
+    rearchiveAction: 'Archive Again',
     filterTargetType: 'Target Type',
     allTargets: 'All Targets',
     targetIdPlaceholder: 'Enter target ID',
+    archiveKeywordPlaceholder: 'Search title or target ID',
+    archiveStatusFilter: 'Archive Status',
+    allStatuses: 'All Statuses',
+    archiveTimeRange: 'Archive Time Range',
     archiveReportTitle: 'Report Title',
     untitledReport: 'Untitled Report',
     target: 'Target',
     createTime: 'Generated At',
+    reportCreateTime: 'Report Generated At',
+    archiveTime: 'Archived At',
+    sourceReportId: 'Source Report ID',
+    archiveRemark: 'Archive Note',
+    selectReportSubtitle: 'Select a generated AI operations report to preserve as a stable snapshot.',
     viewDetail: 'View',
     detailTitle: 'Report Details',
     painPoints: 'Customer Pain Points',
@@ -421,6 +437,10 @@ export default {
     copywritingSuggestions: 'Copywriting Suggestions',
     serviceSuggestions: 'Service Suggestions',
     fullReport: 'Full Report',
+    archiveStatuses: {
+      archived: 'Archived',
+      restored: 'Restored'
+    },
     targetTypes: {
       product: 'Product',
       seller: 'Seller'

@@ -64,11 +64,19 @@ test('task center and report pages expose csv export downloads', () => {
   assert.match(reportsView, /reports\.exportCsv/)
 })
 
-test('report archive list and detail are backed by ai report apis', () => {
-  assert.match(apiModules, /reports:\s*\(params/)
-  assert.match(apiModules, /report:\s*\(reportId/)
+test('report archive uses dedicated archive apis with source report selection', () => {
+  assert.match(apiModules, /reportArchiveApi/)
+  assert.match(apiModules, /'\/report-archives'/)
+  assert.match(apiModules, /archive:\s*\(reportId/)
+  assert.match(apiModules, /updateStatus:\s*\(archiveId/)
+  assert.match(reportsView, /reportArchiveApi\.page/)
+  assert.match(reportsView, /reportArchiveApi\.detail/)
+  assert.match(reportsView, /reportArchiveApi\.archive/)
+  assert.match(reportsView, /reportArchiveApi\.updateStatus/)
   assert.match(reportsView, /aiApi\.reports/)
-  assert.match(reportsView, /aiApi\.report/)
+  assert.match(reportsView, /archiveQuery\.keyword/)
+  assert.match(reportsView, /archiveQuery\.archiveStatus/)
+  assert.match(reportsView, /archiveQuery\.dateRange/)
   assert.match(reportsView, /archiveDialogVisible/)
   assert.match(reportsView, /reports\.archiveTitle/)
 })

@@ -3,10 +3,10 @@ import type { EChartsOption } from 'echarts'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Archive, BarChart3, Download, Eye, FileText, MessageSquareWarning, RefreshCw, Search, ShoppingBag, Star } from 'lucide-vue-next'
+import { Archive, ArchiveRestore, BarChart3, Download, Eye, FileText, MessageSquareWarning, RefreshCw, Search, ShoppingBag, Star } from 'lucide-vue-next'
 
-import { aiApi, reportApi } from '@/api/modules'
-import type { DashboardData, OperationReport, ProductRank, ReportOverview } from '@/api/types'
+import { aiApi, reportApi, reportArchiveApi } from '@/api/modules'
+import type { DashboardData, OperationReport, ProductRank, ReportArchive, ReportOverview } from '@/api/types'
 import ChartPanel from '@/components/ChartPanel.vue'
 import MetricCard from '@/components/MetricCard.vue'
 import { saveBlob } from '@/utils/download'
@@ -18,13 +18,26 @@ const exporting = ref(false)
 const archiveLoading = ref(false)
 const archiveDetailLoading = ref(false)
 const archiveDialogVisible = ref(false)
-const archivedReports = ref<OperationReport[]>([])
-const selectedArchive = ref<OperationReport>()
+const sourceReportDialogVisible = ref(false)
+const sourceReportLoading = ref(false)
+const archiveActionLoadingId = ref<number>()
+const archiveStatusLoadingId = ref<number>()
+const archivedReports = ref<ReportArchive[]>([])
+const sourceReports = ref<OperationReport[]>([])
+const selectedArchive = ref<ReportArchive>()
 const archiveQuery = reactive({
   targetType: '',
-  targetId: ''
+  targetId: '',
+  keyword: '',
+  archiveStatus: '',
+  dateRange: [] as string[]
 })
 const archivePage = reactive({
+  pageNum: 1,
+  pageSize: 5,
+  total: 0
+})
+const sourcePage = reactive({
   pageNum: 1,
   pageSize: 5,
   total: 0
@@ -63,6 +76,7 @@ const ranks = reactive<ProductRank>({
 const sentimentTypes = new Set(['positive', 'neutral', 'negative'])
 const problemTypes = new Set(['quality', 'logistics', 'price', 'service', 'size', 'other', 'unclassified', 'pending'])
 const targetTypes = new Set(['product', 'seller'])
+const archiveStatuses = new Set(['archived', 'restored'])
 
 const displaySentiment = (value?: string) => {
   const key = value?.trim()
@@ -77,6 +91,11 @@ const displayProblemType = (value?: string) => {
 const displayTargetType = (value?: string) => {
   const key = value?.trim()
   return key && targetTypes.has(key) ? t(`reports.targetTypes.${key}`) : key || t('common.unknown')
+}
+
+const displayArchiveStatus = (value?: string) => {
+  const key = value?.trim()
+  return key && archiveStatuses.has(key) ? t(`reports.archiveStatuses.${key}`) : key || t('common.unknown')
 }
 
 const formatDateTime = (value?: string) => {
@@ -107,11 +126,15 @@ const loadData = async () => {
 const loadArchives = async () => {
   archiveLoading.value = true
   try {
-    const page = await aiApi.reports({
+    const page = await reportArchiveApi.page({
       pageNum: archivePage.pageNum,
       pageSize: archivePage.pageSize,
       targetType: archiveQuery.targetType || undefined,
-      targetId: archiveQuery.targetId.trim() || undefined
+      targetId: archiveQuery.targetId.trim() || undefined,
+      keyword: archiveQuery.keyword.trim() || undefined,
+      archiveStatus: archiveQuery.archiveStatus || undefined,
+      startTime: archiveQuery.dateRange[0] || undefined,
+      endTime: archiveQuery.dateRange[1] || undefined
     })
     archivedReports.value = page.records || []
     archivePage.total = page.total || 0
@@ -128,6 +151,9 @@ const searchArchives = async () => {
 const resetArchiveFilters = async () => {
   archiveQuery.targetType = ''
   archiveQuery.targetId = ''
+  archiveQuery.keyword = ''
+  archiveQuery.archiveStatus = ''
+  archiveQuery.dateRange = []
   archivePage.pageNum = 1
   await loadArchives()
 }
@@ -138,13 +164,66 @@ const handleArchivePageSize = async (pageSize: number) => {
   await loadArchives()
 }
 
-const viewArchive = async (row: OperationReport) => {
+const viewArchive = async (row: ReportArchive) => {
   archiveDialogVisible.value = true
   archiveDetailLoading.value = true
   try {
-    selectedArchive.value = await aiApi.report(row.reportId)
+    selectedArchive.value = await reportArchiveApi.detail(row.archiveId)
   } finally {
     archiveDetailLoading.value = false
+  }
+}
+
+const loadSourceReports = async () => {
+  sourceReportLoading.value = true
+  try {
+    const page = await aiApi.reports({
+      pageNum: sourcePage.pageNum,
+      pageSize: sourcePage.pageSize,
+      targetType: archiveQuery.targetType || undefined,
+      targetId: archiveQuery.targetId.trim() || undefined
+    })
+    sourceReports.value = page.records || []
+    sourcePage.total = page.total || 0
+  } finally {
+    sourceReportLoading.value = false
+  }
+}
+
+const openSourceReportDialog = async () => {
+  sourceReportDialogVisible.value = true
+  sourcePage.pageNum = 1
+  await loadSourceReports()
+}
+
+const handleSourcePageSize = async (pageSize: number) => {
+  sourcePage.pageSize = pageSize
+  sourcePage.pageNum = 1
+  await loadSourceReports()
+}
+
+const archiveSourceReport = async (row: OperationReport) => {
+  archiveActionLoadingId.value = row.reportId
+  try {
+    await reportArchiveApi.archive(row.reportId)
+    ElMessage.success(t('reports.archiveCreated'))
+    sourceReportDialogVisible.value = false
+    archivePage.pageNum = 1
+    await loadArchives()
+  } finally {
+    archiveActionLoadingId.value = undefined
+  }
+}
+
+const updateArchiveStatus = async (row: ReportArchive) => {
+  const nextStatus = row.archiveStatus === 'archived' ? 'restored' : 'archived'
+  archiveStatusLoadingId.value = row.archiveId
+  try {
+    await reportArchiveApi.updateStatus(row.archiveId, nextStatus)
+    ElMessage.success(t('reports.archiveStatusUpdated'))
+    await loadArchives()
+  } finally {
+    archiveStatusLoadingId.value = undefined
   }
 }
 
@@ -336,10 +415,15 @@ onMounted(() => {
           <div class="panel-title">{{ t('reports.archiveTitle') }}</div>
           <span class="muted">{{ t('reports.archiveSubtitle') }}</span>
         </div>
-        <el-tag type="success" effect="plain">
-          <Archive :size="14" />
-          {{ t('reports.archiveStatus') }}
-        </el-tag>
+        <div class="archive-heading-actions">
+          <el-tag type="success" effect="plain">
+            <Archive :size="14" />
+            {{ t('reports.archiveStatus') }}
+          </el-tag>
+          <el-button type="primary" :icon="Archive" @click="openSourceReportDialog">
+            {{ t('reports.archiveAction') }}
+          </el-button>
+        </div>
       </div>
 
       <div class="archive-toolbar">
@@ -355,12 +439,39 @@ onMounted(() => {
           clearable
           @keyup.enter="searchArchives"
         />
+        <el-input
+          v-model="archiveQuery.keyword"
+          class="archive-keyword-input"
+          :placeholder="t('reports.archiveKeywordPlaceholder')"
+          clearable
+          @keyup.enter="searchArchives"
+        />
+        <el-select
+          v-model="archiveQuery.archiveStatus"
+          class="archive-status-select"
+          :placeholder="t('reports.archiveStatusFilter')"
+          clearable
+        >
+          <el-option :label="t('reports.allStatuses')" value="" />
+          <el-option :label="t('reports.archiveStatuses.archived')" value="archived" />
+          <el-option :label="t('reports.archiveStatuses.restored')" value="restored" />
+        </el-select>
+        <el-date-picker
+          v-model="archiveQuery.dateRange"
+          class="archive-date-range"
+          type="datetimerange"
+          value-format="YYYY-MM-DD HH:mm:ss"
+          :range-separator="t('common.to')"
+          :start-placeholder="t('taskCenter.startTime')"
+          :end-placeholder="t('taskCenter.endTime')"
+          :aria-label="t('reports.archiveTimeRange')"
+        />
         <el-button :icon="Search" type="primary" @click="searchArchives">{{ t('common.search') }}</el-button>
         <el-button @click="resetArchiveFilters">{{ t('common.reset') }}</el-button>
       </div>
 
       <el-table v-loading="archiveLoading" :data="archivedReports" size="small" height="330">
-        <el-table-column prop="reportId" :label="t('common.id')" width="90" />
+        <el-table-column prop="archiveId" :label="t('common.id')" width="90" />
         <el-table-column :label="t('reports.archiveReportTitle')" min-width="220" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="archive-title-cell">
@@ -376,17 +487,28 @@ onMounted(() => {
           </template>
         </el-table-column>
         <el-table-column prop="modelName" :label="t('common.model')" width="130" show-overflow-tooltip />
-        <el-table-column :label="t('reports.createTime')" width="170">
-          <template #default="{ row }">{{ formatDateTime(row.createTime) }}</template>
+        <el-table-column :label="t('reports.archiveTime')" width="170">
+          <template #default="{ row }">{{ formatDateTime(row.archiveTime) }}</template>
         </el-table-column>
         <el-table-column :label="t('common.status')" width="110">
-          <template #default>
-            <el-tag type="success" effect="plain">{{ t('reports.archived') }}</el-tag>
+          <template #default="{ row }">
+            <el-tag :type="row.archiveStatus === 'archived' ? 'success' : 'info'" effect="plain">
+              {{ displayArchiveStatus(row.archiveStatus) }}
+            </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.action')" width="110" fixed="right">
+        <el-table-column :label="t('common.action')" width="220" fixed="right">
           <template #default="{ row }">
             <el-button size="small" :icon="Eye" @click="viewArchive(row)">{{ t('reports.viewDetail') }}</el-button>
+            <el-button
+              size="small"
+              :type="row.archiveStatus === 'archived' ? 'default' : 'primary'"
+              :icon="row.archiveStatus === 'archived' ? ArchiveRestore : Archive"
+              :loading="archiveStatusLoadingId === row.archiveId"
+              @click="updateArchiveStatus(row)"
+            >
+              {{ row.archiveStatus === 'archived' ? t('reports.restoreAction') : t('reports.rearchiveAction') }}
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -407,14 +529,23 @@ onMounted(() => {
     <el-dialog v-model="archiveDialogVisible" :title="selectedArchive?.reportTitle || t('reports.detailTitle')" width="760px">
       <div v-loading="archiveDetailLoading" class="archive-detail">
         <el-descriptions v-if="selectedArchive" :column="2" border size="small">
-          <el-descriptions-item :label="t('common.id')">{{ selectedArchive.reportId }}</el-descriptions-item>
-          <el-descriptions-item :label="t('common.status')">{{ t('reports.archived') }}</el-descriptions-item>
+          <el-descriptions-item :label="t('common.id')">{{ selectedArchive.archiveId }}</el-descriptions-item>
+          <el-descriptions-item :label="t('reports.sourceReportId')">{{ selectedArchive.sourceReportId }}</el-descriptions-item>
+          <el-descriptions-item :label="t('common.status')">
+            {{ displayArchiveStatus(selectedArchive.archiveStatus) }}
+          </el-descriptions-item>
           <el-descriptions-item :label="t('reports.target')">
             {{ displayTargetType(selectedArchive.targetType) }} / {{ selectedArchive.targetId || t('common.dash') }}
           </el-descriptions-item>
           <el-descriptions-item :label="t('common.model')">{{ selectedArchive.modelName || t('common.dash') }}</el-descriptions-item>
-          <el-descriptions-item :label="t('reports.createTime')" :span="2">
-            {{ formatDateTime(selectedArchive.createTime) }}
+          <el-descriptions-item :label="t('reports.reportCreateTime')">
+            {{ formatDateTime(selectedArchive.reportCreateTime) }}
+          </el-descriptions-item>
+          <el-descriptions-item :label="t('reports.archiveTime')">
+            {{ formatDateTime(selectedArchive.archiveTime) }}
+          </el-descriptions-item>
+          <el-descriptions-item :label="t('reports.archiveRemark')" :span="2">
+            {{ selectedArchive.archiveRemark || t('common.dash') }}
           </el-descriptions-item>
         </el-descriptions>
 
@@ -427,6 +558,47 @@ onMounted(() => {
           <strong>{{ t('reports.fullReport') }}</strong>
           <p>{{ selectedArchive.fullReport }}</p>
         </div>
+      </div>
+    </el-dialog>
+
+    <el-dialog v-model="sourceReportDialogVisible" :title="t('reports.archiveAction')" width="860px">
+      <p class="source-dialog-hint">{{ t('reports.selectReportSubtitle') }}</p>
+      <el-table v-loading="sourceReportLoading" :data="sourceReports" size="small" height="360">
+        <el-table-column prop="reportId" :label="t('common.id')" width="90" />
+        <el-table-column prop="reportTitle" :label="t('reports.archiveReportTitle')" min-width="220" show-overflow-tooltip />
+        <el-table-column :label="t('reports.target')" min-width="210" show-overflow-tooltip>
+          <template #default="{ row }">
+            <el-tag size="small" effect="plain">{{ displayTargetType(row.targetType) }}</el-tag>
+            <span class="archive-target-id">{{ row.targetId || t('common.dash') }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column :label="t('reports.reportCreateTime')" width="170">
+          <template #default="{ row }">{{ formatDateTime(row.createTime) }}</template>
+        </el-table-column>
+        <el-table-column :label="t('common.action')" width="120" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              type="primary"
+              size="small"
+              :icon="Archive"
+              :loading="archiveActionLoadingId === row.reportId"
+              @click="archiveSourceReport(row)"
+            >
+              {{ t('reports.archiveAction') }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div class="archive-pagination">
+        <el-pagination
+          v-model:current-page="sourcePage.pageNum"
+          v-model:page-size="sourcePage.pageSize"
+          :total="sourcePage.total"
+          :page-sizes="[5, 10, 20]"
+          layout="total, sizes, prev, pager, next"
+          @size-change="handleSourcePageSize"
+          @current-change="loadSourceReports"
+        />
       </div>
     </el-dialog>
   </section>
@@ -455,8 +627,15 @@ onMounted(() => {
 
 .archive-toolbar {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin: 16px 0;
+}
+
+.archive-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .archive-target-select {
@@ -464,7 +643,19 @@ onMounted(() => {
 }
 
 .archive-target-input {
-  width: 340px;
+  width: 240px;
+}
+
+.archive-keyword-input {
+  width: 220px;
+}
+
+.archive-status-select {
+  width: 170px;
+}
+
+.archive-date-range {
+  width: 360px;
 }
 
 .archive-title-cell {
@@ -501,5 +692,24 @@ onMounted(() => {
   color: #334155;
   line-height: 1.7;
   white-space: pre-wrap;
+}
+
+.source-dialog-hint {
+  margin: 0 0 14px;
+  color: #64748b;
+}
+
+@media (max-width: 900px) {
+  .archive-heading-actions {
+    flex-wrap: wrap;
+  }
+
+  .archive-target-select,
+  .archive-target-input,
+  .archive-keyword-input,
+  .archive-status-select,
+  .archive-date-range {
+    width: 100%;
+  }
 }
 </style>

@@ -237,6 +237,34 @@ create table if not exists biz_operation_report (
     index idx_operation_report_target (target_type, target_id)
 );
 
+create table if not exists biz_report_archive (
+    id bigint primary key auto_increment,
+    source_report_id bigint not null,
+    task_id bigint null,
+    target_type varchar(32) not null,
+    target_id varchar(64) not null,
+    report_title varchar(255) null,
+    consumer_pain_points text null,
+    product_advantages text null,
+    product_disadvantages text null,
+    operation_suggestions text null,
+    copywriting_suggestions text null,
+    service_suggestions text null,
+    risk_tips text null,
+    full_report longtext null,
+    model_name varchar(64) null,
+    report_create_time datetime null,
+    archive_status varchar(16) not null default 'archived',
+    archive_remark varchar(500) null,
+    archived_by bigint null,
+    archive_time datetime not null default current_timestamp,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    unique key uk_report_archive_source (source_report_id),
+    index idx_report_archive_target (target_type, target_id),
+    index idx_report_archive_status_time (archive_status, archive_time)
+);
+
 create table if not exists biz_ai_content_record (
     id bigint primary key auto_increment,
     user_id bigint null,

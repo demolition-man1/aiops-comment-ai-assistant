@@ -303,6 +303,31 @@ export interface OperationReport {
   createTime?: string
 }
 
+export interface ReportArchive {
+  archiveId: number
+  sourceReportId: number
+  taskId?: number
+  targetType?: string
+  targetId?: string
+  reportTitle?: string
+  consumerPainPoints?: string
+  productAdvantages?: string
+  productDisadvantages?: string
+  operationSuggestions?: string
+  copywritingSuggestions?: string
+  serviceSuggestions?: string
+  riskTips?: string
+  fullReport?: string
+  modelName?: string
+  reportCreateTime?: string
+  archiveStatus: 'archived' | 'restored'
+  archiveRemark?: string
+  archivedBy?: number
+  archiveTime?: string
+  createTime?: string
+  updateTime?: string
+}
+
 export interface AiContent {
   recordId: number
   generatedContent: string

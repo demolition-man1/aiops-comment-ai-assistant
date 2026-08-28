@@ -39,6 +39,7 @@ export default {
     taskStatus: 'Status da tarefa',
     createdAt: 'Data',
     countSuffix: 'itens',
+    to: 'até',
     dash: '-'
   },
   layout: {
@@ -405,13 +406,28 @@ export default {
     archiveSubtitle: 'Consulte relatórios de operações gerados por IA e filtre por tipo ou ID do alvo',
     archiveStatus: 'Arquivo ativo',
     archived: 'Arquivado',
+    restored: 'Restaurado',
+    archiveAction: 'Selecionar Relatório para Arquivar',
+    archiveCreated: 'Relatório arquivado',
+    archiveStatusUpdated: 'Status do arquivo atualizado',
+    restoreAction: 'Restaurar',
+    rearchiveAction: 'Arquivar Novamente',
     filterTargetType: 'Tipo de alvo',
     allTargets: 'Todos os alvos',
     targetIdPlaceholder: 'Digite o ID do alvo',
+    archiveKeywordPlaceholder: 'Pesquisar título ou ID do alvo',
+    archiveStatusFilter: 'Status do arquivo',
+    allStatuses: 'Todos os status',
+    archiveTimeRange: 'Período de arquivamento',
     archiveReportTitle: 'Título do relatório',
     untitledReport: 'Relatório sem título',
     target: 'Alvo',
     createTime: 'Gerado em',
+    reportCreateTime: 'Relatório gerado em',
+    archiveTime: 'Arquivado em',
+    sourceReportId: 'ID do relatório de origem',
+    archiveRemark: 'Nota do arquivo',
+    selectReportSubtitle: 'Selecione um relatório operacional gerado por IA para preservar como snapshot.',
     viewDetail: 'Ver',
     detailTitle: 'Detalhes do relatório',
     painPoints: 'Dores do cliente',
@@ -421,6 +437,10 @@ export default {
     copywritingSuggestions: 'Sugestões de texto',
     serviceSuggestions: 'Sugestões de atendimento',
     fullReport: 'Relatório completo',
+    archiveStatuses: {
+      archived: 'Arquivado',
+      restored: 'Restaurado'
+    },
     targetTypes: {
       product: 'Produto',
       seller: 'Vendedor'

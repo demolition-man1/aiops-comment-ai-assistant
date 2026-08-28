@@ -44,6 +44,7 @@ A review-driven AI operations assistant for small and medium-sized e-commerce me
 | Prompt Templates | Default prompts by business type, including reports, copywriting, negative replies, translation, and product comparison |
 | AI Call Logs | AI call volume, success rate, token estimates, cost estimates, latency, and errors |
 | AI Generation | Operation reports, product titles, detail copy, short video scripts, promotion copy, and negative review replies |
+| Categories and Archives | Category-level review risk aggregation plus report snapshots, filtering, detail review, and restore status |
 | Product Comparison | Product A / B review pain points, strengths, weaknesses, risks, and operation suggestions |
 | Alert Center | Alerts for negative review ratio, recent negative review count, and key issue types |
 | Scheduled Sync | Quartz-based dynamic import schedules, enable / disable controls, manual trigger, and execution history |
