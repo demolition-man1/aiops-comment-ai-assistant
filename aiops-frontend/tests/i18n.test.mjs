@@ -127,6 +127,21 @@ test('comment workspace exposes on-demand translation in the current locale', ()
   assert.ok(pt.includes('translate:'))
 })
 
+test('one-click analysis workflow labels are available in every locale', () => {
+  for (const key of [
+    'analyzeOnly:',
+    'analyzeAndGenerateReport:',
+    'analysisAndReportDone:',
+    'analysisDoneReportFailed:'
+  ]) {
+    assert.ok(zh.includes(key), `zh missing ${key}`)
+    assert.ok(en.includes(key), `en missing ${key}`)
+    assert.ok(pt.includes(key), `pt missing ${key}`)
+  }
+  assert.match(commentWorkbenchView, /comments\.analyzeOnly/)
+  assert.match(commentWorkbenchView, /comments\.analyzeAndGenerateReport/)
+})
+
 test('settings hides development connection details from production merchants', () => {
   assert.match(settingsView, /showRuntimeStatus/)
   assert.match(settingsView, /import\.meta\.env\.DEV/)

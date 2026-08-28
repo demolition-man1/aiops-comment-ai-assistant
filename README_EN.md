@@ -38,7 +38,7 @@ A review-driven AI operations assistant for small and medium-sized e-commerce me
 | --- | --- |
 | Merchant Dashboard | Product count, seller count, review count, average score, negative rate, trend charts, and risk overview |
 | Data Import | Local Olist directory import, single CSV preview / field mapping / OSS import, one-click sample data import, and low-frequency public sample crawler import |
-| Review Analysis | Review pagination and filtering, sentiment detection, negative review detection, manual tag editing, and on-demand review translation |
+| Review Analysis | Review pagination and filtering, sentiment detection, negative review detection, manual tag editing, on-demand translation, and one-click analysis with report generation |
 | Tag Library | Custom tag management, grouping, color, enabled status, and direct selection in the review tag dialog |
 | Solution Library | Solutions by issue type and category, with reusable suggestions in the review workspace |
 | Prompt Templates | Default prompts by business type, including reports, copywriting, negative replies, translation, and product comparison |
@@ -223,7 +223,7 @@ Default frontend URL:
 
 If the port is occupied, Vite automatically switches to the next available port, such as `5174`.
 
-After logging in, open the Data Import page and click "Import Sample Data" to quickly create demo data. For single CSV upload, the page previews field mapping, estimated rows, and the first 20 rows before upload. OSS upload and task creation happen only after clicking "Start Import". After import, maintain business tags in "Tag Library", maintain handling playbooks in "Solution Library", customize AI instructions in "Prompt Templates", and return to "Review Analytics" to view recommended solutions and trigger AI generation. After AI calls, use "AI Call Logs" to review call volume, success rate, tokens, and estimated cost.
+After logging in, open the Data Import page and click "Import Sample Data" to quickly create demo data. For single CSV upload, the page previews field mapping, estimated rows, and the first 20 rows before upload. OSS upload and task creation happen only after clicking "Start Import". After import, maintain business tags in "Tag Library", maintain handling playbooks in "Solution Library", and customize AI instructions in "Prompt Templates". In "Review Analytics", run analysis only or click "Analyze and Generate Report" to create the task, wait for its result, and generate the localized AI operations report in one flow. A completed analysis can also be used to regenerate the report separately. After AI calls, use "AI Call Logs" to review call volume, success rate, tokens, and estimated cost.
 
 ## Configuration
 

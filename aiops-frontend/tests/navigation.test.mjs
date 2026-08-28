@@ -149,3 +149,15 @@ test('comment workspace consumes active tags and solution recommendations', () =
   assert.match(commentWorkbenchView, /activeTags/)
   assert.match(commentWorkbenchView, /recommendedSolutions/)
 })
+
+test('comment workspace exposes analysis-only and complete analysis report workflows', () => {
+  assert.match(commentWorkbenchView, /runAnalysisWorkflow/)
+  assert.match(commentWorkbenchView, /runReviewWorkflow\(false\)/)
+  assert.match(commentWorkbenchView, /runReviewWorkflow\(true\)/)
+  assert.match(commentWorkbenchView, /fullWorkflowLoading/)
+  assert.match(commentWorkbenchView, /reportLoading/)
+  assert.match(commentWorkbenchView, /comments\.analyzeOnly/)
+  assert.match(commentWorkbenchView, /comments\.analyzeAndGenerateReport/)
+  assert.match(commentWorkbenchView, /comments\.analysisAndReportDone/)
+  assert.match(commentWorkbenchView, /comments\.analysisDoneReportFailed/)
+})

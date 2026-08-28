@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Bot, ClipboardCheck, Copy, Languages, MessageCircleReply, RefreshCw, Tags } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { aiApi, analysisApi, commentApi, pollTask, problemSolutionApi, tagApi } from '@/api/modules'
@@ -16,6 +16,7 @@ import type {
   Task
 } from '@/api/types'
 import { resolveAnalysisProductId } from '@/utils/analysisTarget'
+import { AnalysisWorkflowError, runAnalysisWorkflow } from '@/utils/analysisWorkflow'
 import { formatPercent } from '@/utils/metricFormat'
 import { useLocaleStore } from '@/stores/locale'
 
@@ -23,6 +24,8 @@ const { t } = useI18n()
 const localeStore = useLocaleStore()
 const loading = ref(false)
 const taskLoading = ref(false)
+const fullWorkflowLoading = ref(false)
+const reportLoading = ref(false)
 const comments = ref<Comment[]>([])
 const total = ref(0)
 const selected = ref<Comment>()
@@ -43,6 +46,7 @@ const solutionLoading = ref(false)
 const stopPolling = ref<(() => void) | null>(null)
 const sentimentTypes = new Set(['positive', 'neutral', 'negative'])
 const problemTypes = new Set(['quality', 'logistics', 'price', 'service', 'size', 'other', 'unclassified', 'pending'])
+const workflowBusy = computed(() => taskLoading.value || fullWorkflowLoading.value)
 
 const query = reactive({
   pageNum: 1,
@@ -117,60 +121,121 @@ const selectComment = (row?: Comment) => {
   void loadRecommendations(row)
 }
 
-const createAnalysisTask = async () => {
-  const productId = resolveAnalysisProductId({
+const resolveWorkflowProductId = () =>
+  resolveAnalysisProductId({
     queryProductId: query.productId,
     selectedProductId: selected.value?.productId,
     firstVisibleProductId: comments.value[0]?.productId
   })
+
+const waitForAnalysisTask = (taskId: number, onTaskUpdate: (latestTask: Task) => void) =>
+  new Promise<Task>((resolve, reject) => {
+    let settled = false
+    let cancelPolling: () => void = () => undefined
+
+    const finish = (action: () => void) => {
+      if (settled) {
+        return
+      }
+      settled = true
+      cancelPolling()
+      stopPolling.value = null
+      action()
+    }
+
+    stopPolling.value?.()
+    cancelPolling = pollTask(
+      () => analysisApi.task(taskId),
+      (latestTask) => {
+        onTaskUpdate(latestTask)
+        if (latestTask.taskStatus === 'success') {
+          finish(() => resolve(latestTask))
+        } else if (latestTask.taskStatus === 'failed') {
+          finish(() => reject(new Error(latestTask.errorMessage || t('comments.analysisFailed'))))
+        }
+      },
+      3000,
+      (error) => finish(() => reject(error))
+    )
+    stopPolling.value = cancelPolling
+  })
+
+const runReviewWorkflow = async (includeReport: boolean) => {
+  const productId = resolveWorkflowProductId()
   if (!productId) {
     ElMessage.warning(t('comments.selectProductWarning'))
     return
   }
 
-  taskLoading.value = true
   query.productId = productId
+  taskLoading.value = !includeReport
+  fullWorkflowLoading.value = includeReport
+  analysis.value = undefined
+  report.value = undefined
   try {
-    task.value = await analysisApi.createTask({
-      targetType: 'product',
-      targetId: productId,
-      analysisType: 'comment'
+    const result = await runAnalysisWorkflow<Task, AnalysisResult, OperationReport>({
+      productId,
+      includeReport,
+      dependencies: {
+        createTask: (targetId) => analysisApi.createTask({
+          targetType: 'product',
+          targetId,
+          analysisType: 'comment'
+        }),
+        waitForTask: waitForAnalysisTask,
+        loadAnalysis: (targetId) => analysisApi.product(targetId),
+        generateReport: (targetId) => aiApi.productReport({
+          productId: targetId,
+          language: localeStore.locale
+        })
+      },
+      callbacks: {
+        onTaskUpdate: (latestTask) => {
+          task.value = latestTask
+        },
+        onAnalysisLoaded: (latestAnalysis) => {
+          analysis.value = latestAnalysis
+        }
+      }
     })
-  } catch {
-    taskLoading.value = false
-    return
-  }
-
-  stopPolling.value?.()
-  stopPolling.value = pollTask(
-    () => analysisApi.task(task.value!.taskId),
-    async (latestTask) => {
-      task.value = latestTask
-      if (latestTask.taskStatus === 'success') {
-        taskLoading.value = false
-        analysis.value = await analysisApi.product(productId)
-        ElMessage.success(t('comments.analysisDone'))
-      }
-      if (latestTask.taskStatus === 'failed') {
-        taskLoading.value = false
-        ElMessage.error(latestTask.errorMessage || t('comments.analysisFailed'))
-      }
-    },
-    3000,
-    () => {
-      taskLoading.value = false
+    task.value = result.task
+    analysis.value = result.analysis
+    report.value = result.report
+    ElMessage.success(t(includeReport ? 'comments.analysisAndReportDone' : 'comments.analysisDone'))
+  } catch (error) {
+    if (error instanceof AnalysisWorkflowError && error.stage === 'generate-report') {
+      ElMessage.error(t('comments.analysisDoneReportFailed'))
+    } else if (
+      error instanceof AnalysisWorkflowError
+      && error.stage === 'wait-task'
+      && task.value?.taskStatus === 'failed'
+    ) {
+      ElMessage.error(task.value.errorMessage || t('comments.analysisFailed'))
     }
-  )
+  } finally {
+    taskLoading.value = false
+    fullWorkflowLoading.value = false
+  }
 }
 
+const analyzeOnly = () => runReviewWorkflow(false)
+
+const analyzeAndGenerateReport = () => runReviewWorkflow(true)
+
 const generateReport = async () => {
-  const productId = query.productId || selected.value?.productId
+  const productId = resolveWorkflowProductId()
   if (!productId) {
     ElMessage.warning(t('comments.specifyProductWarning'))
     return
   }
-  report.value = await aiApi.productReport({ productId, language: localeStore.locale })
-  ElMessage.success(t('comments.reportGenerated'))
+  query.productId = productId
+  reportLoading.value = true
+  try {
+    report.value = await aiApi.productReport({ productId, language: localeStore.locale })
+    ElMessage.success(t('comments.reportGenerated'))
+  } finally {
+    reportLoading.value = false
+  }
 }
 
 const generateReply = async () => {
@@ -276,6 +341,10 @@ const saveTags = async () => {
 onMounted(async () => {
   await Promise.all([loadComments(), loadActiveTags()])
 })
+
+onBeforeUnmount(() => {
+  stopPolling.value?.()
+})
 </script>
 
 <template>
@@ -290,9 +359,18 @@ onMounted(async () => {
           <RefreshCw :size="16" />
           {{ t('common.refresh') }}
         </el-button>
-        <el-button type="primary" :loading="taskLoading" @click="createAnalysisTask">
+        <el-button :loading="taskLoading" :disabled="fullWorkflowLoading || reportLoading" @click="analyzeOnly">
           <Bot :size="16" />
-          {{ t('comments.analyzeProduct') }}
+          {{ t('comments.analyzeOnly') }}
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="fullWorkflowLoading"
+          :disabled="taskLoading || reportLoading"
+          @click="analyzeAndGenerateReport"
+        >
+          <ClipboardCheck :size="16" />
+          {{ t('comments.analyzeAndGenerateReport') }}
         </el-button>
       </div>
     </div>
@@ -393,7 +471,7 @@ onMounted(async () => {
           :total="total"
           @change="loadComments"
         />
-        <el-button type="success" @click="generateReport">
+        <el-button type="success" :loading="reportLoading" :disabled="workflowBusy" @click="generateReport">
           <ClipboardCheck :size="16" />
           {{ t('comments.generateReport') }}
         </el-button>
