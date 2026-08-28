@@ -186,3 +186,12 @@ test('scheduled sync task center and reports pages render labels through i18n', 
   assert.ok(en.includes('categories:'))
   assert.ok(pt.includes('categories:'))
 })
+
+test('localized pdf export labels are available in every locale', () => {
+  for (const dictionary of [zh, en, pt]) {
+    assert.ok(dictionary.includes('exportPdf:'))
+    assert.ok(dictionary.includes('pdfExported:'))
+  }
+  assert.match(reportsView, /reports\.exportPdf/)
+  assert.match(reportsView, /reports\.pdfExported/)
+})

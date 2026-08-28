@@ -1670,6 +1670,30 @@ Body 字段同“创建 Prompt 模板”。
 
 返回一条完整报告归档记录。
 
+## 导出归档 PDF
+
+### 基本信息
+
+**Path：** /api/report-archives/{archiveId}/export/pdf
+
+**Method：** GET
+
+**接口描述：** 使用归档快照生成 PDF 运营报告。接口需要登录，返回 PDF 二进制附件，不使用统一 JSON 返回结构。
+
+### 请求参数
+
+| 参数名称 | 位置 | 是否必须 | 示例 | 备注 |
+|---|---|---|---|---|
+| archiveId | Path | 是 | 10001 | 归档 ID |
+| language | Query | 否 | zh-CN | 报告标签语言，支持 zh-CN、en-US、pt-BR，默认 zh-CN |
+
+### 返回数据
+
+- `Content-Type: application/pdf`
+- `Content-Disposition: attachment; filename*=UTF-8''operations-report-...pdf`
+- Body 为 PDF 二进制内容。
+- 归档不存在时返回业务错误；PDF 生成失败时返回可读错误信息。
+
 ## 修改归档状态
 
 ### 基本信息

@@ -3,8 +3,10 @@ package com.aiops.controller;
 import com.aiops.dto.ReportArchiveCreateDTO;
 import com.aiops.dto.ReportArchiveQueryDTO;
 import com.aiops.dto.ReportArchiveStatusDTO;
+import com.aiops.pdf.ReportPdfDocument;
 import com.aiops.result.PageResult;
 import com.aiops.result.Result;
+import com.aiops.service.ReportArchivePdfService;
 import com.aiops.service.ReportArchiveService;
 import com.aiops.vo.ReportArchiveVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,7 +20,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping("/api/report-archives")
@@ -27,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReportArchiveController {
 
     private final ReportArchiveService reportArchiveService;
+    private final ReportArchivePdfService reportArchivePdfService;
 
     @GetMapping
     @Operation(summary = "分页查询报告归档", description = "支持目标类型、目标 ID、关键词、状态和归档时间范围组合筛选")
@@ -47,6 +59,25 @@ public class ReportArchiveController {
     public Result<ReportArchiveVO> getArchive(
             @Parameter(description = "归档 ID") @PathVariable Long archiveId) {
         return Result.success(reportArchiveService.getArchive(archiveId));
+    }
+
+    @GetMapping("/{archiveId}/export/pdf")
+    @Operation(summary = "导出归档 PDF", description = "将稳定的报告归档快照导出为中、英或葡语版 PDF")
+    public ResponseEntity<byte[]> exportPdf(
+            @Parameter(description = "归档 ID") @PathVariable Long archiveId,
+            @Parameter(description = "标签语言：zh-CN/en-US/pt-BR")
+            @RequestParam(defaultValue = "zh-CN") String language) {
+        ReportPdfDocument document = reportArchivePdfService.exportPdf(archiveId, language);
+        String disposition = ContentDisposition.attachment()
+                .filename(document.filename(), StandardCharsets.UTF_8)
+                .build()
+                .toString();
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .cacheControl(CacheControl.noStore())
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
+                .contentLength(document.content().length)
+                .body(document.content());
     }
 
     @PutMapping("/{archiveId}/status")

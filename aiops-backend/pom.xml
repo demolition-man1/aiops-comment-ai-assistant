@@ -31,6 +31,7 @@
         <aliyun-oss.version>3.17.4</aliyun-oss.version>
         <bucket4j.version>8.14.0</bucket4j.version>
         <redisson.version>3.45.1</redisson.version>
+        <openpdf.version>3.0.5</openpdf.version>
         <swagger-annotations.version>2.2.25</swagger-annotations.version>
     </properties>
 
@@ -60,6 +61,11 @@
                 <groupId>org.redisson</groupId>
                 <artifactId>redisson</artifactId>
                 <version>${redisson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.librepdf</groupId>
+                <artifactId>openpdf</artifactId>
+                <version>${openpdf.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.swagger.core.v3</groupId>

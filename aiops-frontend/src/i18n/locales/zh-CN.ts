@@ -391,6 +391,8 @@ export default {
     title: '数据报表',
     subtitle: '聚合评论趋势、情感分布和商品排行，用于运营复盘',
     exportCsv: '导出 CSV',
+    exportPdf: '导出 PDF',
+    pdfExported: 'PDF 运营报告已导出',
     productHint: '全量商品池',
     commentHint: '评论挖掘样本',
     scoreHint: '整体满意度参考',

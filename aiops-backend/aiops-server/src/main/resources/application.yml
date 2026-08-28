@@ -44,6 +44,8 @@ aiops:
     base-url: ${aiops.config.python.base-url}
     connect-timeout-seconds: ${aiops.config.python.connect-timeout-seconds}
     read-timeout-seconds: ${aiops.config.python.read-timeout-seconds}
+  pdf:
+    font-path: ${aiops.config.pdf.font-path:}
   ai-rate-limit:
     enabled: ${aiops.config.ai-rate-limit.enabled:true}
     capacity: ${aiops.config.ai-rate-limit.capacity:20}

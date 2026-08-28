@@ -81,6 +81,17 @@ test('report archive uses dedicated archive apis with source report selection', 
   assert.match(reportsView, /reports\.archiveTitle/)
 })
 
+test('archived reports can be exported as localized pdf files', () => {
+  assert.match(apiModules, /reportArchiveApi[\s\S]*exportPdf:/)
+  assert.match(apiModules, /\/export\/pdf/)
+  assert.match(apiModules, /downloadFile/)
+  assert.match(reportsView, /reportArchiveApi\.exportPdf/)
+  assert.match(reportsView, /exportArchivePdf/)
+  assert.match(reportsView, /localeStore\.locale/)
+  assert.match(reportsView, /archivePdfLoadingId/)
+  assert.match(reportsView, /reports\.exportPdf/)
+})
+
 test('csv files are selected first and uploaded only when import starts', () => {
   assert.match(dataImportView, /:auto-upload="false"/)
   assert.doesNotMatch(dataImportView, /:http-request="uploadCsv"/)

@@ -1,0 +1,129 @@
+name: aiops-comment-assistant
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${AIOPS_MYSQL_DATABASE:-aiops}
+      MYSQL_ROOT_PASSWORD: ${AIOPS_MYSQL_PASSWORD}
+      TZ: Asia/Shanghai
+    ports:
+      - "${AIOPS_MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    environment:
+      AIOPS_REDIS_PASSWORD: ${AIOPS_REDIS_PASSWORD:-}
+    command:
+      - sh
+      - -c
+      - >-
+        if [ -n "$${AIOPS_REDIS_PASSWORD}" ]; then
+          exec redis-server --appendonly yes --requirepass "$${AIOPS_REDIS_PASSWORD}";
+        else
+          exec redis-server --appendonly yes;
+        fi
+    ports:
+      - "${AIOPS_REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "if [ -n \"$${AIOPS_REDIS_PASSWORD}\" ]; then redis-cli -a \"$${AIOPS_REDIS_PASSWORD}\" ping; else redis-cli ping; fi"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  python-service:
+    build:
+      context: ./aiops-python-service
+    restart: unless-stopped
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${AIOPS_MYSQL_DATABASE:-aiops}
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${AIOPS_MYSQL_PASSWORD}
+      AI_PROVIDER: ${AI_PROVIDER:-deepseek}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.deepseek.com}
+      AI_CHAT_PATH: ${AI_CHAT_PATH:-/v1/chat/completions}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-deepseek-chat}
+      AI_TIMEOUT: ${AI_TIMEOUT:-60}
+      CRAWLER_ENABLED: ${CRAWLER_ENABLED:-false}
+    ports:
+      - "${AIOPS_PYTHON_PORT:-8001}:8001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./aiops-backend
+    restart: unless-stopped
+    environment:
+      AIOPS_MYSQL_HOST: mysql
+      AIOPS_MYSQL_PORT: 3306
+      AIOPS_MYSQL_DATABASE: ${AIOPS_MYSQL_DATABASE:-aiops}
+      AIOPS_MYSQL_USERNAME: root
+      AIOPS_MYSQL_PASSWORD: ${AIOPS_MYSQL_PASSWORD}
+      AIOPS_REDIS_HOST: redis
+      AIOPS_REDIS_PORT: 6379
+      AIOPS_REDIS_PASSWORD: ${AIOPS_REDIS_PASSWORD:-}
+      AIOPS_PYTHON_BASE_URL: http://python-service:8001
+      AIOPS_JWT_SECRET: ${AIOPS_JWT_SECRET}
+      AIOPS_PDF_FONT_PATH: /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc,0
+      ALIYUN_OSS_ENDPOINT: ${ALIYUN_OSS_ENDPOINT:-https://oss-cn-beijing.aliyuncs.com}
+      ALIYUN_OSS_BUCKET_NAME: ${ALIYUN_OSS_BUCKET_NAME:-your-bucket-name}
+      ALIYUN_OSS_ACCESS_KEY_ID: ${ALIYUN_OSS_ACCESS_KEY_ID:-your-access-key-id}
+      ALIYUN_OSS_ACCESS_KEY_SECRET: ${ALIYUN_OSS_ACCESS_KEY_SECRET:-your-access-key-secret}
+    ports:
+      - "${AIOPS_BACKEND_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      python-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/doc.html"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+
+  frontend:
+    build:
+      context: ./aiops-frontend
+    restart: unless-stopped
+    ports:
+      - "${AIOPS_FRONTEND_PORT:-5174}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  mysql-data:
+  redis-data:

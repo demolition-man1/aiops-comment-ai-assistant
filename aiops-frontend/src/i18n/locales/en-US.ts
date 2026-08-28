@@ -391,6 +391,8 @@ export default {
     title: 'Data Reports',
     subtitle: 'Aggregate review trends, sentiment distribution, and product rankings for operations reviews',
     exportCsv: 'Export CSV',
+    exportPdf: 'Export PDF',
+    pdfExported: 'PDF operations report exported',
     productHint: 'Full product pool',
     commentHint: 'Review mining sample',
     scoreHint: 'Overall satisfaction reference',

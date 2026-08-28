@@ -30,3 +30,4 @@ aiops-frontend/.env.local
 runtime-logs/
 local-backups/
 docs/superpowers/
+docs/PHASE2_TODO.md

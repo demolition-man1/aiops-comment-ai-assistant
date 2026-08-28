@@ -9,10 +9,12 @@ import { aiApi, reportApi, reportArchiveApi } from '@/api/modules'
 import type { DashboardData, OperationReport, ProductRank, ReportArchive, ReportOverview } from '@/api/types'
 import ChartPanel from '@/components/ChartPanel.vue'
 import MetricCard from '@/components/MetricCard.vue'
+import { useLocaleStore } from '@/stores/locale'
 import { saveBlob } from '@/utils/download'
 import { formatPercent } from '@/utils/metricFormat'
 
 const { t } = useI18n()
+const localeStore = useLocaleStore()
 const loading = ref(false)
 const exporting = ref(false)
 const archiveLoading = ref(false)
@@ -22,6 +24,7 @@ const sourceReportDialogVisible = ref(false)
 const sourceReportLoading = ref(false)
 const archiveActionLoadingId = ref<number>()
 const archiveStatusLoadingId = ref<number>()
+const archivePdfLoadingId = ref<number>()
 const archivedReports = ref<ReportArchive[]>([])
 const sourceReports = ref<OperationReport[]>([])
 const selectedArchive = ref<ReportArchive>()
@@ -224,6 +227,20 @@ const updateArchiveStatus = async (row: ReportArchive) => {
     await loadArchives()
   } finally {
     archiveStatusLoadingId.value = undefined
+  }
+}
+
+const exportArchivePdf = async (row: ReportArchive) => {
+  archivePdfLoadingId.value = row.archiveId
+  try {
+    const blob = await reportArchiveApi.exportPdf(row.archiveId, localeStore.locale)
+    const target = (row.targetId || 'archive')
+      .replace(/[^A-Za-z0-9._-]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'archive'
+    saveBlob(blob, `operations-report-${target}-${row.archiveId}.pdf`)
+    ElMessage.success(t('reports.pdfExported'))
+  } finally {
+    archivePdfLoadingId.value = undefined
   }
 }
 
@@ -497,9 +514,17 @@ onMounted(() => {
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.action')" width="220" fixed="right">
+        <el-table-column :label="t('common.action')" width="330" fixed="right">
           <template #default="{ row }">
             <el-button size="small" :icon="Eye" @click="viewArchive(row)">{{ t('reports.viewDetail') }}</el-button>
+            <el-button
+              size="small"
+              :icon="Download"
+              :loading="archivePdfLoadingId === row.archiveId"
+              @click="exportArchivePdf(row)"
+            >
+              {{ t('reports.exportPdf') }}
+            </el-button>
             <el-button
               size="small"
               :type="row.archiveStatus === 'archived' ? 'default' : 'primary'"
@@ -559,6 +584,17 @@ onMounted(() => {
           <p>{{ selectedArchive.fullReport }}</p>
         </div>
       </div>
+      <template #footer>
+        <el-button
+          v-if="selectedArchive"
+          type="primary"
+          :icon="Download"
+          :loading="archivePdfLoadingId === selectedArchive.archiveId"
+          @click="exportArchivePdf(selectedArchive)"
+        >
+          {{ t('reports.exportPdf') }}
+        </el-button>
+      </template>
     </el-dialog>
 
     <el-dialog v-model="sourceReportDialogVisible" :title="t('reports.archiveAction')" width="860px">

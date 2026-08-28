@@ -189,6 +189,8 @@ export const reportArchiveApi = {
     http.get<ReportArchive, ReportArchive>(`/report-archives/${archiveId}`),
   archive: (reportId: number, payload?: { remark?: string }) =>
     http.post<ReportArchive, ReportArchive>(`/report-archives/${reportId}`, payload),
+  exportPdf: (archiveId: number, language: string) =>
+    downloadFile(`/report-archives/${archiveId}/export/pdf`, { language }),
   updateStatus: (archiveId: number, archiveStatus: 'archived' | 'restored') =>
     http.put<ReportArchive, ReportArchive>(`/report-archives/${archiveId}/status`, { archiveStatus })
 }

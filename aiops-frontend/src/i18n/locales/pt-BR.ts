@@ -391,6 +391,8 @@ export default {
     title: 'Relatórios',
     subtitle: 'Agregue tendências, sentimentos e rankings de produtos para revisão operacional',
     exportCsv: 'Exportar CSV',
+    exportPdf: 'Exportar PDF',
+    pdfExported: 'Relatório operacional em PDF exportado',
     productHint: 'Base total de produtos',
     commentHint: 'Amostra de mineração de avaliações',
     scoreHint: 'Referência geral de satisfação',

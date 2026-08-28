@@ -18,7 +18,6 @@ A review-driven AI operations assistant for small and medium-sized e-commerce me
 - [Common Tests](#common-tests)
 - [Dataset](#dataset)
 - [Documentation](#documentation)
-- [Phase 2 Roadmap](#phase-2-roadmap)
 - [Security Notes](#security-notes)
 
 ## Highlights
@@ -29,7 +28,9 @@ A review-driven AI operations assistant for small and medium-sized e-commerce me
 - **Reusable operations knowledge base**: merchants can maintain a custom tag library and a problem solution library, turning manual review corrections into reusable assets.
 - **Controllable prompts and AI cost visibility**: supports business-type prompt templates and records AI calls, token estimates, latency, estimated cost, and failure reasons.
 - **Chinese, English, and Portuguese UI**: designed for international merchants, with switchable frontend language and AI request language.
+- **Deliverable operations reports**: archived reports can be exported as localized Chinese, English, or Portuguese PDFs.
 - **Practical engineering stack**: MyBatis-Plus, Quartz, Redis cache, Bucket4j rate limiting, Redisson-ready design, and Knife4j API documentation.
+- **One-command deployment**: Docker Compose provisions the frontend, Java backend, Python service, MySQL, and Redis together.
 - **Low-cost demo flow**: uses the Kaggle Olist dataset to complete import, analysis, reporting, and AI generation.
 
 ## Features
@@ -44,24 +45,24 @@ A review-driven AI operations assistant for small and medium-sized e-commerce me
 | Prompt Templates | Default prompts by business type, including reports, copywriting, negative replies, translation, and product comparison |
 | AI Call Logs | AI call volume, success rate, token estimates, cost estimates, latency, and errors |
 | AI Generation | Operation reports, product titles, detail copy, short video scripts, promotion copy, and negative review replies |
-| Categories and Archives | Category-level review risk aggregation plus report snapshots, filtering, detail review, and restore status |
+| Categories and Archives | Category-level review risk aggregation plus report snapshots, filtering, detail review, restore status, and localized PDF export |
 | Product Comparison | Product A / B review pain points, strengths, weaknesses, risks, and operation suggestions |
 | Alert Center | Alerts for negative review ratio, recent negative review count, and key issue types |
 | Scheduled Sync | Quartz-based dynamic import schedules, enable / disable controls, manual trigger, and execution history |
 | Task Center | Aggregated import, crawler, analysis, and sync tasks with filtering, details, retry, and CSV export |
-| Data Reports | Global trends, sentiment distribution, issue distribution, product rankings, and CSV export |
+| Data Reports | Global trends, sentiment distribution, issue distribution, product rankings, CSV export, and archived-report PDF export |
 
 ## Tech Stack
 
 | Layer | Technologies |
 | --- | --- |
 | Frontend | Vue 3, TypeScript, Vite, Element Plus, ECharts, Pinia, Vue Router, vue-i18n, Axios |
-| Java Backend | Java 21, Spring Boot 3.3, Spring MVC, MyBatis-Plus, Knife4j / OpenAPI |
+| Java Backend | Java 21, Spring Boot 3.3, Spring MVC, MyBatis-Plus, OpenPDF, Knife4j / OpenAPI |
 | Python Service | FastAPI, Pandas, PyMySQL, Requests, rule-based NLP, keyword extraction, topic clustering |
 | Storage | MySQL 8.x, Redis |
 | File Storage | Alibaba Cloud OSS |
 | AI Provider | DeepSeek or any OpenAI-compatible Chat Completion API |
-| Engineering Add-ons | Quartz scheduled jobs, Bucket4j AI rate limiting, Redisson-ready distributed design |
+| Engineering Add-ons | Quartz scheduled jobs, Bucket4j AI rate limiting, Redisson-ready distributed design, Docker Compose, Nginx |
 
 ## Architecture
 
@@ -117,12 +118,51 @@ Alibaba Cloud OSS
 |   |-- app/services/           # Import, crawler, analysis, and AI generation services
 |   |-- app/sample_data/         # Built-in small Olist review sample
 |   `-- tests/                  # Python service tests
+|-- compose.yml                 # Five-service Docker Compose stack
+|-- .env.example                # Deployment environment template
 `-- outputs/                    # Project document and API document
 ```
 
 ## Quick Start
 
-### 1. Prepare the Environment
+### Docker Compose
+
+Install Docker Desktop or Docker Engine with the Compose plugin, then run:
+
+```powershell
+git clone https://github.com/demolition-man1/aiops-comment-ai-assistant.git
+cd aiops-comment-ai-assistant
+Copy-Item .env.example .env
+```
+
+Edit the local `.env` file and replace at least the MySQL password and JWT secret. Add `AI_API_KEY` when AI generation is required. Start the full stack:
+
+```powershell
+docker compose up -d --build
+docker compose ps
+```
+
+Default endpoints:
+
+- Web application: `http://localhost:5174`
+- Backend API: `http://localhost:8080/api`
+- Knife4j: `http://localhost:8080/doc.html`
+- Python health check: `http://localhost:8001/health`
+
+The local seed administrator is `admin / 123456` for the first development login only. Change this password immediately before any public deployment.
+
+Inspect logs or stop the stack:
+
+```powershell
+docker compose logs -f backend python-service
+docker compose down
+```
+
+MySQL and Redis use named volumes, so a regular `docker compose down` keeps business data.
+
+### Manual Development Setup
+
+#### 1. Prepare the Environment
 
 - JDK 21
 - Maven 3.9+
@@ -131,7 +171,7 @@ Alibaba Cloud OSS
 - MySQL 8.x
 - Redis 6+
 
-### 2. Prepare MySQL and Redis
+#### 2. Prepare MySQL and Redis
 
 Create the database:
 
@@ -141,7 +181,7 @@ CREATE DATABASE IF NOT EXISTS aiops DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb
 
 After MySQL and Redis are running, the Java backend initializes base tables and the default admin account from `aiops-backend/aiops-server/src/main/resources/sql/schema.sql` and `data.sql` on first startup.
 
-### 3. Configure the Java Backend
+#### 3. Configure the Java Backend
 
 The backend uses the `dev` profile by default. Put sensitive values in a local `application-secret.yml` file or environment variables. Do not commit them to GitHub.
 
@@ -172,7 +212,7 @@ Default URLs:
 - Backend API: `http://localhost:8080/api`
 - Knife4j: `http://localhost:8080/doc.html`
 
-### 4. Configure the Python Service
+#### 4. Configure the Python Service
 
 Copy the environment example:
 
@@ -206,7 +246,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-### 5. Start the Frontend
+#### 5. Start the Frontend
 
 Copy the frontend environment example:
 
@@ -223,7 +263,7 @@ Default frontend URL:
 
 If the port is occupied, Vite automatically switches to the next available port, such as `5174`.
 
-After logging in, open the Data Import page and click "Import Sample Data" to quickly create demo data. For single CSV upload, the page previews field mapping, estimated rows, and the first 20 rows before upload. OSS upload and task creation happen only after clicking "Start Import". After import, maintain business tags in "Tag Library", maintain handling playbooks in "Solution Library", and customize AI instructions in "Prompt Templates". In "Review Analytics", run analysis only or click "Analyze and Generate Report" to create the task, wait for its result, and generate the localized AI operations report in one flow. A completed analysis can also be used to regenerate the report separately. After AI calls, use "AI Call Logs" to review call volume, success rate, tokens, and estimated cost.
+After logging in, open the Data Import page and click "Import Sample Data" to quickly create demo data. For single CSV upload, the page previews field mapping, estimated rows, and the first 20 rows before upload. OSS upload and task creation happen only after clicking "Start Import". After import, maintain business tags in "Tag Library", maintain handling playbooks in "Solution Library", and customize AI instructions in "Prompt Templates". In "Review Analytics", run analysis only or click "Analyze and Generate Report" to complete analysis and localized report generation in one flow. Archive the report and open "Data Reports" to export a PDF in the active Chinese, English, or Portuguese locale. Use "AI Call Logs" to review call volume, success rate, tokens, and estimated cost.
 
 ## Configuration
 
@@ -233,8 +273,9 @@ After logging in, open the Data Import page and click "Import Sample Data" to qu
 | --- | --- |
 | `AIOPS_MYSQL_PASSWORD` | MySQL password |
 | `AIOPS_JWT_SECRET` | JWT signing secret |
-| `ALIYUN_ACCESS_KEY_ID` | Alibaba Cloud AccessKey ID |
-| `ALIYUN_ACCESS_KEY_SECRET` | Alibaba Cloud AccessKey Secret |
+| `AIOPS_PDF_FONT_PATH` | Optional custom CJK font path for PDF generation |
+| `ALIYUN_OSS_ACCESS_KEY_ID` | Alibaba Cloud AccessKey ID |
+| `ALIYUN_OSS_ACCESS_KEY_SECRET` | Alibaba Cloud AccessKey Secret |
 | `aiops.config.python.base-url` | Python service URL, defaults to `http://localhost:8001` in local development |
 
 ### Python Service Key Configuration
@@ -270,6 +311,12 @@ Python service:
 ```powershell
 cd aiops-python-service
 pytest
+```
+
+The Python test suite also verifies the deployment-file contract. With Docker installed, validate Compose interpolation with:
+
+```powershell
+docker compose --env-file .env.example config
 ```
 
 Frontend:
@@ -308,13 +355,10 @@ Optional mapped fields include `review_content`, `review_title`, `review_id`, `o
 - [Project Document](outputs/AI智能运营助手项目文档.md)
 - [API Document](outputs/AI智能运营助手接口文档.md)
 
-## Phase 2 Roadmap
-
-- [Phase 2 Todo List](docs/PHASE2_TODO.md)
-
 ## Security Notes
 
 - Do not commit `.env`, `.env.local`, `application-secret.yml`, real API keys, OSS keys, or database passwords.
+- Change the seeded administrator password before public deployment, and use separate strong secrets for MySQL, JWT, and Redis.
 - The crawler capability is only for learning, research, and low-frequency prototype demos. It should not bypass login, CAPTCHA, paywalls, or platform access controls.
 - AI output is only an operation decision aid. It cannot guarantee viral products, guaranteed profit, or replace human review.
 - For production deployment, use Nginx or an API gateway to proxy `/api/**`, enable HTTPS, use strong passwords, and manage OSS permissions with a dedicated RAM sub-account.

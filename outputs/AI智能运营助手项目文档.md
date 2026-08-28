@@ -106,13 +106,14 @@ Olist 数据集主要用于课程设计、大创、挑战杯原型验证和学�
 | 层级 | 技术 |
 |---|---|
 | 前端 | Vue3、Element Plus、ECharts、vue-i18n |
-| Java 后端 | Spring Boot、Spring MVC、MyBatis-Plus、Quartz、Bucket4j、Redisson |
+| Java 后端 | Spring Boot、Spring MVC、MyBatis-Plus、Quartz、Bucket4j、Redisson、OpenPDF |
 | 数据库 | MySQL |
 | 缓存 | Redis、Redisson |
 | 文件存储 | 阿里云 OSS |
 | Python 服务 | FastAPI、Pandas、关键词提取、主题聚类、大模型 SDK |
 | AI 能力 | DeepSeek / 通义千问 / 文心一言等大模型 API |
 | 接口文档 | Knife4j / Swagger / OpenAPI 注解 |
+| 部署 | Docker Compose、Nginx |
 
 ### 4.2 总体架构图
 
@@ -179,6 +180,18 @@ Python FastAPI 服务作为智能分析引擎，负责：
 - 一期不新增数据库字段，语言偏好保存在浏览器 `localStorage`。
 - 支持评论原文按需翻译：原始评论保持不变，用户点击翻译按钮后调用大模型生成当前界面语言版本，并通过 Redis 缓存减少重复调用。
 - 后续可扩展用户级语言偏好和多语言报告模板。
+
+### 4.5 容器化部署设计
+
+仓库根目录提供 `compose.yml` 与 `.env.example`，统一编排以下服务：
+
+- `frontend`：构建 Vue 3 静态资源并由 Nginx 提供访问，统一代理 `/api/**` 到 Java 后端。
+- `backend`：构建 Spring Boot 可执行 Jar，连接 MySQL、Redis 和 Python 服务，并通过 Noto CJK 字体生成多语言 PDF。
+- `python-service`：运行 FastAPI 评论分析与 AI 服务。
+- `mysql`：持久化业务数据。
+- `redis`：持久化缓存、任务状态和限流相关数据。
+
+MySQL、Redis、AI、JWT 和 OSS 配置全部通过环境变量注入，仓库只提交占位模板。MySQL 与 Redis 使用命名卷保留数据，各服务配置健康检查和依赖启动条件。
 
 ## 5. 后端工程架构
 
@@ -500,6 +513,17 @@ client
 7. 用户进入 AI 调用日志页面，可以查看调用次数、成功率、token 估算、成本估算、平均耗时和失败摘要。
 ```
 
+### 6.12 归档报告 PDF 导出流程
+
+```text
+1. 用户先将已生成的运营报告保存为归档快照。
+2. 用户在数据报表页的归档列表或详情弹窗点击“导出 PDF”。
+3. 前端读取当前 zh-CN / en-US / pt-BR 界面语言并调用归档 PDF 接口。
+4. Spring Boot 查询 biz_report_archive 稳定快照，避免导出内容随源报告变化。
+5. OpenPDF 使用部署字体生成标题、报告元信息、痛点、优劣势、运营建议、风险提示和完整报告。
+6. 后端以 application/pdf 和附件文件名返回二进制文件，前端触发浏览器下载。
+```
+
 ## 7. 功能模块
 
 ### 7.1 用户认证模块
@@ -568,6 +592,7 @@ client
 - 按目标类型、目标 ID、关键词、归档状态和时间范围筛选历史归档。
 - 回看归档时的痛点、优劣势、运营建议、文案建议、客服建议和完整报告。
 - 支持将归档标记为已恢复，并可重新归档，不物理删除历史快照。
+- 支持在归档列表和详情中按当前中、英、葡界面语言导出 PDF 运营报告。
 
 ### 7.8 AI 文案生成模块
 
@@ -644,6 +669,14 @@ client
 - AI 调用日志记录业务类型、调用目标、模型名称、调用状态、token 估算、成本估算、耗时和失败原因。
 - AI 调用日志总览展示调用总量、成功数、失败数、成功率、token 总量、成本估算和平均耗时。
 - 缓存命中的 AI 报告或翻译不会重复记录为大模型调用，便于更真实地统计成本。
+
+### 7.16 容器化部署模块
+
+- 提供 Java、Python、前端三个独立 Dockerfile，使用多阶段构建减少运行镜像内容。
+- Nginx 托管前端静态资源并反向代理 `/api/**`，支持 SPA 路由回退和大文件上传。
+- Docker Compose 同时启动 MySQL、Redis、Python、Java 和前端，并按健康状态控制依赖顺序。
+- `.env.example` 仅提供可替换占位值，真实密码、JWT、AI Key 和 OSS Key 保存在本地 `.env`。
+- MySQL 与 Redis 使用命名卷，常规停止和重建应用容器不会删除数据。
 
 ## 8. 数据库设计
 

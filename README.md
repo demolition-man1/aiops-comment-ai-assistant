@@ -18,7 +18,6 @@
 - [常用测试](#常用测试)
 - [数据集](#数据集)
 - [项目文档](#项目文档)
-- [二期计划](#二期计划)
 - [安全说明](#安全说明)
 
 ## 项目亮点
@@ -29,7 +28,9 @@
 - **可沉淀运营知识库**：支持商家维护自定义标签库和问题解决方案库，把人工校正转化为复用资产。
 - **Prompt 与成本可控**：支持按业务类型维护 Prompt 模板，并记录 AI 调用次数、token 估算、耗时和失败原因。
 - **中英葡三语界面**：适配国际商家场景，前端界面和 AI 请求语言可切换。
+- **可交付运营报告**：归档报告可按当前界面语言导出为中、英、葡语 PDF。
 - **工程化能力完整**：MyBatis-Plus、Quartz、Redis 缓存、Bucket4j 限流、Redisson 预留、Knife4j 接口文档。
+- **一键部署**：提供前端、Java、Python、MySQL、Redis 的 Docker Compose 完整编排。
 - **低成本可演示**：以 Kaggle Olist 数据集完成导入、分析、报表和 AI 生成闭环。
 
 ## 功能模块
@@ -44,24 +45,24 @@
 | Prompt 模板 | 按报告、文案、差评回复、翻译和商品对比等业务类型维护默认 Prompt |
 | AI 调用日志 | 统计 AI 调用总量、成功率、token 估算、成本估算、耗时和异常信息 |
 | AI 生成 | 运营报告、商品标题、详情文案、短视频脚本、促销话术、差评回复 |
-| 类目与归档 | 类目级评论风险聚合；运营报告快照归档、组合筛选、详情回看和状态恢复 |
+| 类目与归档 | 类目级评论风险聚合；运营报告快照归档、组合筛选、详情回看、状态恢复和三语 PDF 导出 |
 | 商品对比 | 商品 A / B 评论痛点、优势短板、风险和运营建议对比 |
 | 告警中心 | 负面占比、近期差评数量、重点问题类型告警 |
 | 定时同步 | Quartz 动态定时导入、启停配置、立即触发和执行历史 |
 | 任务中心 | 聚合导入、爬虫、分析和同步任务，支持筛选、详情、重试和 CSV 导出 |
-| 数据报表 | 全局趋势、情感分布、问题分布、商品排行和 CSV 导出 |
+| 数据报表 | 全局趋势、情感分布、问题分布、商品排行、CSV 导出和归档 PDF 导出 |
 
 ## 技术栈
 
 | 层级 | 技术 |
 | --- | --- |
 | 前端 | Vue 3、TypeScript、Vite、Element Plus、ECharts、Pinia、Vue Router、vue-i18n、Axios |
-| Java 后端 | Java 21、Spring Boot 3.3、Spring MVC、MyBatis-Plus、Knife4j / OpenAPI |
+| Java 后端 | Java 21、Spring Boot 3.3、Spring MVC、MyBatis-Plus、OpenPDF、Knife4j / OpenAPI |
 | Python 服务 | FastAPI、Pandas、PyMySQL、Requests、规则 NLP、关键词提取、主题聚类 |
 | 数据存储 | MySQL 8.x、Redis |
 | 文件存储 | 阿里云 OSS |
 | AI 能力 | DeepSeek 或其他 OpenAI 兼容 Chat Completion API |
-| 工程增强 | Quartz 定时任务、Bucket4j AI 限流、Redisson 分布式能力预留 |
+| 工程增强 | Quartz 定时任务、Bucket4j AI 限流、Redisson 分布式能力预留、Docker Compose、Nginx |
 
 ## 系统架构
 
@@ -117,12 +118,51 @@ Alibaba Cloud OSS
 │   ├── app/services/           # 导入、爬虫、分析、AI 生成服务
 │   ├── app/sample_data/         # 内置小型 Olist 示例评论数据
 │   └── tests/                  # Python 服务测试
+├── compose.yml                 # 五服务 Docker Compose 编排
+├── .env.example                # 一键部署环境变量模板
 └── outputs/                    # 正式项目文档和接口文档
 ```
 
 ## 快速开始
 
-### 1. 准备环境
+### Docker Compose 一键启动
+
+准备 Docker Desktop 或 Docker Engine + Compose 插件，然后执行：
+
+```powershell
+git clone https://github.com/demolition-man1/aiops-comment-ai-assistant.git
+cd aiops-comment-ai-assistant
+Copy-Item .env.example .env
+```
+
+编辑本地 `.env`，至少替换 MySQL 密码和 JWT 密钥；需要调用大模型时再填写 `AI_API_KEY`。随后启动完整服务：
+
+```powershell
+docker compose up -d --build
+docker compose ps
+```
+
+启动完成后访问：
+
+- Web 管理端：`http://localhost:5174`
+- Backend API：`http://localhost:8080/api`
+- Knife4j：`http://localhost:8080/doc.html`
+- Python 健康检查：`http://localhost:8001/health`
+
+本地初始化管理员为 `admin / 123456`，仅用于首次开发体验；公开部署后应立即修改默认密码。
+
+查看日志或停止服务：
+
+```powershell
+docker compose logs -f backend python-service
+docker compose down
+```
+
+MySQL 与 Redis 数据保存在命名卷中，普通 `docker compose down` 不会删除业务数据。
+
+### 手动启动
+
+#### 1. 准备环境
 
 - JDK 21
 - Maven 3.9+
@@ -131,7 +171,7 @@ Alibaba Cloud OSS
 - MySQL 8.x
 - Redis 6+
 
-### 2. 准备数据库和 Redis
+#### 2. 准备数据库和 Redis
 
 创建数据库：
 
@@ -141,7 +181,7 @@ CREATE DATABASE IF NOT EXISTS aiops DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb
 
 启动 MySQL 和 Redis 后，Java 后端首次启动会按 `aiops-backend/aiops-server/src/main/resources/sql/schema.sql` 和 `data.sql` 初始化基础表和默认管理员。
 
-### 3. 配置 Java 后端
+#### 3. 配置 Java 后端
 
 后端默认使用 `dev` profile。敏感配置建议放在本地 `application-secret.yml` 或环境变量中。
 
@@ -172,7 +212,7 @@ mvn -pl aiops-server -am spring-boot:run
 - Backend API: `http://localhost:8080/api`
 - Knife4j: `http://localhost:8080/doc.html`
 
-### 4. 配置 Python 服务
+#### 4. 配置 Python 服务
 
 复制环境变量示例：
 
@@ -206,7 +246,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-### 5. 启动前端
+#### 5. 启动前端
 
 复制前端环境变量示例：
 
@@ -223,7 +263,7 @@ npm run dev
 
 如果端口被占用，Vite 会自动切到下一个端口，例如 `5174`。
 
-登录后进入“数据导入”页面，可以先点击“一键导入示例数据”快速生成可演示数据；上传单个 CSV 时，页面会先展示字段映射、预计导入行数和前 20 行预览，点击“开始导入”后才会上传到 OSS 并创建导入任务。完成导入后，可在“标签库”维护业务标签，在“方案库”维护问题处理方案，在“Prompt 模板”维护不同 AI 场景的提示词。进入“评论分析”页面后，可以只运行评论分析，也可以点击“分析并生成报告”自动完成分析任务、结果加载和 AI 运营报告生成；已经完成分析时仍可单独重新生成报告。AI 调用后可在“AI 调用日志”页面查看调用量、成功率、token 和成本估算。
+登录后进入“数据导入”页面，可以先点击“一键导入示例数据”快速生成可演示数据；上传单个 CSV 时，页面会先展示字段映射、预计导入行数和前 20 行预览，点击“开始导入”后才会上传到 OSS 并创建导入任务。完成导入后，可在“标签库”维护业务标签，在“方案库”维护问题处理方案，在“Prompt 模板”维护不同 AI 场景的提示词。进入“评论分析”页面后，可以只运行评论分析，也可以点击“分析并生成报告”自动完成分析任务、结果加载和 AI 运营报告生成。报告归档后，可在“数据报表”页面按当前中、英、葡界面语言导出 PDF。AI 调用后可在“AI 调用日志”页面查看调用量、成功率、token 和成本估算。
 
 ## 环境配置
 
@@ -233,8 +273,9 @@ npm run dev
 | --- | --- |
 | `AIOPS_MYSQL_PASSWORD` | MySQL 密码 |
 | `AIOPS_JWT_SECRET` | JWT 签名密钥 |
-| `ALIYUN_ACCESS_KEY_ID` | 阿里云 AccessKey ID |
-| `ALIYUN_ACCESS_KEY_SECRET` | 阿里云 AccessKey Secret |
+| `AIOPS_PDF_FONT_PATH` | 可选，自定义 PDF 中日韩字体文件路径 |
+| `ALIYUN_OSS_ACCESS_KEY_ID` | 阿里云 AccessKey ID |
+| `ALIYUN_OSS_ACCESS_KEY_SECRET` | 阿里云 AccessKey Secret |
 | `aiops.config.python.base-url` | Python 服务地址，默认本地开发为 `http://localhost:8001` |
 
 ### Python 服务关键配置
@@ -270,6 +311,12 @@ Python 服务：
 ```powershell
 cd aiops-python-service
 pytest
+```
+
+部署文件静态契约也包含在 Python 测试中。安装 Docker 后还可执行：
+
+```powershell
+docker compose --env-file .env.example config
 ```
 
 前端：
@@ -308,13 +355,10 @@ npm run build
 - [项目文档](outputs/AI智能运营助手项目文档.md)
 - [接口文档](outputs/AI智能运营助手接口文档.md)
 
-## 二期计划
-
-- [Phase 2 Todo List](docs/PHASE2_TODO.md)
-
 ## 安全说明
 
 - 不要提交 `.env`、`.env.local`、`application-secret.yml`、真实 API Key、OSS Key 或数据库密码。
+- 对外部署前必须修改初始化管理员密码，并为 MySQL、JWT 和 Redis 使用独立强密钥。
 - 当前爬虫能力仅用于学习研究和低频原型演示，不应绕过登录、验证码、付费墙或平台访问控制。
 - AI 结果用于辅助运营决策，不能承诺保证爆款、稳赚不赔或替代人工审核。
 - 上线部署时建议使用 Nginx 或网关统一代理 `/api/**`，并使用 HTTPS、强密码和独立 RAM 子账号管理 OSS 权限。

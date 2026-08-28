@@ -15,17 +15,17 @@ aiops:
   config:
     datasource:
       driver-class-name: com.mysql.cj.jdbc.Driver
-      host: localhost
-      port: 3306
-      database: aiops
-      username: root
+      host: ${AIOPS_MYSQL_HOST:localhost}
+      port: ${AIOPS_MYSQL_PORT:3306}
+      database: ${AIOPS_MYSQL_DATABASE:aiops}
+      username: ${AIOPS_MYSQL_USERNAME:root}
       password: ${AIOPS_MYSQL_PASSWORD:}
     redis:
-      host: localhost
-      port: 6379
-      database: 0
+      host: ${AIOPS_REDIS_HOST:localhost}
+      port: ${AIOPS_REDIS_PORT:6379}
+      database: ${AIOPS_REDIS_DATABASE:0}
       timeout: 3s
-      password:
+      password: ${AIOPS_REDIS_PASSWORD:}
     multipart:
       max-file-size: 200MB
       max-request-size: 250MB
@@ -33,9 +33,11 @@ aiops:
       secret: ${AIOPS_JWT_SECRET:change-me-dev-jwt-secret}
       expire-seconds: 86400
     python:
-      base-url: http://localhost:8001
+      base-url: ${AIOPS_PYTHON_BASE_URL:http://localhost:8001}
       connect-timeout-seconds: 5
       read-timeout-seconds: 300
+    pdf:
+      font-path: ${AIOPS_PDF_FONT_PATH:}
     ai-rate-limit:
       enabled: true
       capacity: 20
@@ -49,9 +51,9 @@ aiops:
       lock-lease-seconds: 60
     aliyun:
       oss:
-        endpoint: https://oss-cn-beijing.aliyuncs.com
-        bucket-name: your-bucket-name
-        access-key-id: your-access-key-id
-        access-key-secret: your-access-key-secret
-        upload-dir: aiops/csv
-        signed-url-expire-seconds: 3600
+        endpoint: ${ALIYUN_OSS_ENDPOINT:https://oss-cn-beijing.aliyuncs.com}
+        bucket-name: ${ALIYUN_OSS_BUCKET_NAME:your-bucket-name}
+        access-key-id: ${ALIYUN_OSS_ACCESS_KEY_ID:your-access-key-id}
+        access-key-secret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:your-access-key-secret}
+        upload-dir: ${ALIYUN_OSS_UPLOAD_DIR:aiops/csv}
+        signed-url-expire-seconds: ${ALIYUN_OSS_SIGNED_URL_EXPIRE_SECONDS:3600}
