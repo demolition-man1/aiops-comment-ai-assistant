@@ -29,6 +29,7 @@ public class CommentAiShadowTaskDTO {
     private Integer sampleSize = 60;
 
     @Schema(description = "可复现抽样种子", example = "20260829")
+    @NotNull(message = "抽样种子不能为空")
     private Integer sampleSeed = 20260829;
 
     @NotNull(message = "Token 预算不能为空")

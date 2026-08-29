@@ -59,6 +59,17 @@ public class PythonAnalysisClient {
                 .body(Map.class);
     }
 
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> analyzeCommentShadow(Map<String, Object> request) {
+        return restClient.post()
+                .uri(properties.getBaseUrl() + "/internal/analysis/comments/shadow")
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .body(jsonBody(request))
+                .retrieve()
+                .body(Map.class);
+    }
+
     private String jsonBody(Map<String, Object> request) {
         try {
             return objectMapper.writeValueAsString(request);

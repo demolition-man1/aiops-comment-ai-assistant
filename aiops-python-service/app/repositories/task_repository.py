@@ -9,7 +9,7 @@ def update_analysis_task(conn: Any, task_id: int, status: str, progress: int, er
             set task_status = %s,
                 progress = %s,
                 error_message = %s,
-                end_time = case when %s in ('success', 'failed') then now() else end_time end,
+                end_time = case when %s in ('success', 'partial', 'budget_stopped', 'failed') then now() else end_time end,
                 update_time = now()
             where id = %s
             """,

@@ -6,6 +6,7 @@ import com.aiops.mapper.BizCrawlTaskMapper;
 import com.aiops.mapper.BizSyncConfigMapper;
 import com.aiops.mapper.BizSyncExecutionMapper;
 import com.aiops.service.AnalysisService;
+import com.aiops.service.CommentAiShadowService;
 import com.aiops.service.DataImportService;
 import com.aiops.service.SyncConfigService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,6 +45,9 @@ class TaskCenterServiceImplExportTest {
     private AnalysisService analysisService;
 
     @Mock
+    private CommentAiShadowService commentAiShadowService;
+
+    @Mock
     private SyncConfigService syncConfigService;
 
     private TaskCenterServiceImpl taskCenterService;
@@ -57,6 +61,7 @@ class TaskCenterServiceImplExportTest {
                 syncConfigMapper,
                 dataImportService,
                 analysisService,
+                commentAiShadowService,
                 syncConfigService,
                 new ObjectMapper()
         );

@@ -1,6 +1,7 @@
 package com.aiops.service.impl;
 
 import com.aiops.dto.AnalysisTaskCreateDTO;
+import com.aiops.dto.CommentAiShadowTaskDTO;
 import com.aiops.dto.CrawlerImportDTO;
 import com.aiops.dto.CsvImportDTO;
 import com.aiops.entity.BizAnalysisTask;
@@ -14,10 +15,12 @@ import com.aiops.mapper.BizSyncConfigMapper;
 import com.aiops.mapper.BizSyncExecutionMapper;
 import com.aiops.result.PageResult;
 import com.aiops.service.AnalysisService;
+import com.aiops.service.CommentAiShadowService;
 import com.aiops.service.DataImportService;
 import com.aiops.service.SyncConfigService;
 import com.aiops.service.TaskCenterService;
 import com.aiops.vo.SyncExecutionVO;
+import com.aiops.vo.CommentAiShadowTaskVO;
 import com.aiops.vo.TaskRecordVO;
 import com.aiops.vo.TaskVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -46,6 +49,7 @@ public class TaskCenterServiceImpl implements TaskCenterService {
     private final BizSyncConfigMapper syncConfigMapper;
     private final DataImportService dataImportService;
     private final AnalysisService analysisService;
+    private final CommentAiShadowService commentAiShadowService;
     private final SyncConfigService syncConfigService;
     private final ObjectMapper objectMapper;
 
@@ -131,6 +135,13 @@ public class TaskCenterServiceImpl implements TaskCenterService {
             CsvImportDTO dto = parseJson(task.getRequestParam(), CsvImportDTO.class, "CSV 导入任务参数不可重试");
             return dataImportService.importCsv(dto);
         }
+        if ("comment_ai_shadow".equals(task.getTaskType())) {
+            CommentAiShadowTaskDTO dto = parseJson(task.getRequestParam(), CommentAiShadowTaskDTO.class,
+                    "评论 Shadow 任务参数不可重试");
+            CommentAiShadowTaskVO shadowTask = commentAiShadowService.createTask(dto);
+            return new TaskVO(shadowTask.getTaskId(), shadowTask.getTaskStatus(), "comment_ai_shadow",
+                    shadowTask.getProgress(), shadowTask.getActualSampleSize(), null, null, shadowTask.getErrorMessage());
+        }
         AnalysisTaskCreateDTO dto = new AnalysisTaskCreateDTO();
         dto.setTargetType(task.getTargetType());
         dto.setTargetId(task.getTargetId());
@@ -214,11 +225,15 @@ public class TaskCenterServiceImpl implements TaskCenterService {
         if ("comment_analysis".equals(taskType)) {
             return "评论分析任务";
         }
+        if ("comment_ai_shadow".equals(taskType)) {
+            return "评论 AI Shadow 任务";
+        }
         return defaultIfBlank(taskType, "后台任务");
     }
 
     private Integer progressOf(String status) {
-        if ("success".equals(status) || "failed".equals(status)) {
+        if ("success".equals(status) || "partial".equals(status)
+                || "budget_stopped".equals(status) || "failed".equals(status)) {
             return 100;
         }
         return 0;
