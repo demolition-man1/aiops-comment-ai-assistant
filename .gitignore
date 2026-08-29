@@ -32,3 +32,4 @@ local-backups/
 docs/superpowers/
 docs/PHASE2_TODO.md
 docs/PHASE3_*.md
+.worktrees/
