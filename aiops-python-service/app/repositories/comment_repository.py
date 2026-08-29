@@ -51,3 +51,21 @@ def fetch_comment_by_id(conn: Any, comment_id: int) -> dict[str, Any] | None:
             (comment_id,),
         )
         return cursor.fetchone()
+
+
+def fetch_shadow_candidates(conn: Any, target_type: str, target_id: str) -> list[dict[str, Any]]:
+    columns = {"product": "product_id", "seller": "seller_id"}
+    column = columns.get(target_type)
+    if column is None:
+        raise ValueError("target_type must be product or seller")
+    with conn.cursor() as cursor:
+        cursor.execute(
+            f"""
+            select id, review_score, review_content, clean_content, sentiment, problem_type
+            from biz_comment
+            where {column} = %s
+            order by id asc
+            """,
+            (target_id,),
+        )
+        return list(cursor.fetchall())

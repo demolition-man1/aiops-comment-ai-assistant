@@ -380,3 +380,55 @@ create table if not exists biz_task_record (
     index idx_task_record_source (source_table, source_id),
     index idx_task_record_create_time (create_time)
 );
+
+create table if not exists biz_comment_ai_shadow_run (
+    id bigint primary key auto_increment,
+    task_id bigint not null,
+    user_id bigint null,
+    target_type varchar(32) not null,
+    target_id varchar(64) not null,
+    sample_seed int not null,
+    requested_sample_size int not null,
+    actual_sample_size int not null default 0,
+    max_total_tokens int not null,
+    total_calls int not null default 0,
+    success_count int not null default 0,
+    failure_count int not null default 0,
+    total_tokens int not null default 0,
+    latency_ms bigint not null default 0,
+    run_status varchar(32) not null,
+    error_message varchar(1000) null,
+    start_time datetime null,
+    end_time datetime null,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    unique key uk_comment_ai_shadow_task (task_id),
+    index idx_comment_ai_shadow_target (target_type, target_id),
+    index idx_comment_ai_shadow_status (run_status)
+);
+
+create table if not exists biz_comment_ai_shadow_result (
+    id bigint primary key auto_increment,
+    run_id bigint not null,
+    comment_id bigint not null,
+    sample_order int not null,
+    rule_sentiment varchar(32) null,
+    rule_problem_type varchar(64) null,
+    ai_sentiment varchar(32) null,
+    ai_sentiment_confidence decimal(6,4) null,
+    ai_primary_problem varchar(64) null,
+    ai_problems json null,
+    ai_evidence json null,
+    json_valid tinyint not null default 0,
+    evidence_valid tinyint not null default 0,
+    call_status varchar(32) not null,
+    model_name varchar(64) null,
+    token_usage int not null default 0,
+    token_usage_estimated tinyint not null default 0,
+    latency_ms bigint not null default 0,
+    error_message varchar(1000) null,
+    create_time datetime not null default current_timestamp,
+    unique key uk_comment_ai_shadow_sample (run_id, comment_id),
+    index idx_comment_ai_shadow_result_run (run_id, sample_order),
+    index idx_comment_ai_shadow_result_comment (comment_id)
+);

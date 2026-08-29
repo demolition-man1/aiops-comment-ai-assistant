@@ -57,7 +57,16 @@ values
 '["targetLanguage","commentId","reviewId","productId","reviewScore","commentTitle","commentContent"]', 1, 1, '评论翻译默认模板', now(), now()),
 ('默认商品对比模板', 'product_compare', 'zh-CN',
 '你是中小电商商家的竞品评论分析顾问。请基于两个商品的评论分析结果生成对比报告。必须只输出JSON，不要输出Markdown。JSON字段必须包含：compareSummary, advantageAnalysis, riskAnalysis, operationSuggestions。所有字段值必须是字符串，不能返回嵌套对象或数组。左侧商品ID：{leftProductId}。右侧商品ID：{rightProductId}。输出语言：{language}。左侧商品分析结果：{leftAnalysis}。右侧商品分析结果：{rightAnalysis}',
-'["leftProductId","rightProductId","language","leftAnalysis","rightAnalysis"]', 1, 1, '商品对比默认模板', now(), now())
+'["leftProductId","rightProductId","language","leftAnalysis","rightAnalysis"]', 1, 1, '商品对比默认模板', now(), now()),
+('默认评论 Shadow 分析模板', 'comment_analysis_shadow', 'zh-CN',
+'你是电商评论质检分析助手。仅输出一个 JSON 对象，不要 Markdown、代码块或解释。字段必须为 sentiment、sentimentConfidence、primaryProblem、problems。sentiment 只能是 positive、neutral 或 negative。problems 最多 5 项，每项必须包含 type、confidence、evidence；evidence 必须是评论原文中的连续片段。primaryProblem 必须为 null 或 problems 中某项的 type。评分：{reviewScore}。评论原文：{reviewText}',
+'["reviewScore","reviewText"]', 1, 1, '评论 Shadow 分析默认模板', now(), now()),
+('Default Comment Shadow Analysis Template', 'comment_analysis_shadow', 'en-US',
+'You are an ecommerce review quality analyst. Return exactly one JSON object with no Markdown, code fences, or explanation. Required fields: sentiment, sentimentConfidence, primaryProblem, problems. sentiment must be positive, neutral, or negative. problems may contain at most five items, each with type, confidence, and evidence. Every evidence value must be a contiguous excerpt from the review. primaryProblem must be null or match a problem type. Score: {reviewScore}. Review: {reviewText}',
+'["reviewScore","reviewText"]', 1, 1, 'Default Shadow review analysis template', now(), now()),
+('Modelo Padrao de Analise Shadow de Comentarios', 'comment_analysis_shadow', 'pt-BR',
+'Voce e um analista de qualidade de comentarios de ecommerce. Retorne exatamente um objeto JSON, sem Markdown, bloco de codigo ou explicacao. Campos obrigatorios: sentiment, sentimentConfidence, primaryProblem, problems. sentiment deve ser positive, neutral ou negative. problems pode conter no maximo cinco itens, cada um com type, confidence e evidence. Cada evidence deve ser um trecho continuo da avaliacao. primaryProblem deve ser null ou corresponder ao type de um problema. Nota: {reviewScore}. Avaliacao: {reviewText}',
+'["reviewScore","reviewText"]', 1, 1, 'Modelo padrao para analise Shadow de comentarios', now(), now())
 on duplicate key update
 template_content = values(template_content),
 variable_schema = values(variable_schema),
