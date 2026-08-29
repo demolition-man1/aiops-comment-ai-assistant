@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import os
 from pathlib import Path
 
@@ -32,6 +32,21 @@ def _bool_env(name: str, default: bool) -> bool:
     return value.lower() in {"1", "true", "yes", "on"}
 
 
+def _choice_env(name: str, default: str, allowed: set[str]) -> str:
+    value = os.getenv(name, default).strip().lower()
+    if value not in allowed:
+        supported = ", ".join(sorted(allowed))
+        raise ValueError(f"{name} must be one of: {supported}")
+    return value
+
+
+def _non_negative_int_env(name: str, default: int) -> int:
+    value = _int_env(name, default)
+    if value < 0:
+        raise ValueError(f"{name} must be greater than or equal to 0")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     mysql_host: str = os.getenv("MYSQL_HOST", "localhost")
@@ -46,6 +61,12 @@ class Settings:
     ai_api_key: str = os.getenv("AI_API_KEY", "")
     ai_model: str = os.getenv("AI_MODEL", "deepseek-chat")
     ai_timeout: int = _int_env("AI_TIMEOUT", 30)
+    ai_negative_reply_engine: str = field(
+        default_factory=lambda: _choice_env(
+            "AI_NEGATIVE_REPLY_ENGINE", "langchain", {"langchain", "legacy"}
+        )
+    )
+    ai_max_retries: int = field(default_factory=lambda: _non_negative_int_env("AI_MAX_RETRIES", 2))
 
     crawler_enabled: bool = _bool_env("CRAWLER_ENABLED", False)
 

@@ -16,6 +16,26 @@ def test_compose_stack_wires_all_runtime_services() -> None:
     assert "AI_API_KEY" in compose
 
 
+def test_compose_uses_3307_for_mysql_host_port_only() -> None:
+    compose = (REPOSITORY_ROOT / "compose.yml").read_text(encoding="utf-8")
+    environment = (REPOSITORY_ROOT / ".env.example").read_text(encoding="utf-8")
+
+    assert '${AIOPS_MYSQL_PORT:-3307}:3306' in compose
+    assert "MYSQL_PORT: 3306" in compose
+    assert "AIOPS_MYSQL_PORT: 3306" in compose
+    assert "AIOPS_MYSQL_PORT=3307" in environment
+
+
+def test_compose_passes_langchain_negative_reply_configuration() -> None:
+    compose = (REPOSITORY_ROOT / "compose.yml").read_text(encoding="utf-8")
+    environment = (REPOSITORY_ROOT / ".env.example").read_text(encoding="utf-8")
+
+    assert "AI_NEGATIVE_REPLY_ENGINE" in compose
+    assert "AI_MAX_RETRIES" in compose
+    assert "AI_NEGATIVE_REPLY_ENGINE=langchain" in environment
+    assert "AI_MAX_RETRIES=2" in environment
+
+
 def test_images_and_nginx_proxy_are_declared() -> None:
     backend_dockerfile = (REPOSITORY_ROOT / "aiops-backend" / "Dockerfile").read_text(encoding="utf-8")
     python_dockerfile = (REPOSITORY_ROOT / "aiops-python-service" / "Dockerfile").read_text(encoding="utf-8")
@@ -27,6 +47,14 @@ def test_images_and_nginx_proxy_are_declared() -> None:
     assert "nginx:" in frontend_dockerfile
     assert "proxy_pass http://backend:8080" in nginx_config
     assert "try_files $uri $uri/ /index.html" in nginx_config
+
+
+def test_frontend_healthcheck_uses_ipv4_loopback() -> None:
+    compose = (REPOSITORY_ROOT / "compose.yml").read_text(encoding="utf-8")
+    frontend_dockerfile = (REPOSITORY_ROOT / "aiops-frontend" / "Dockerfile").read_text(encoding="utf-8")
+
+    assert "http://127.0.0.1/healthz" in compose
+    assert "http://127.0.0.1/healthz" in frontend_dockerfile
 
 
 def test_example_environment_contains_placeholders_only() -> None:

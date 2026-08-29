@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from requests import RequestException
 
+from app.ai.errors import AiServiceError
 from app.services.ai_service import AiService
 
 router = APIRouter(prefix="/internal/ai", tags=["internal-ai"])
@@ -36,6 +37,8 @@ def generate_product_compare(request: dict[str, Any]) -> dict[str, Any]:
 def _call_ai(action: Any) -> dict[str, Any]:
     try:
         return action()
+    except AiServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.public_message) from exc
     except RequestException as exc:
         raise HTTPException(status_code=502, detail=f"AI provider request failed: {exc}") from exc
     except RuntimeError as exc:

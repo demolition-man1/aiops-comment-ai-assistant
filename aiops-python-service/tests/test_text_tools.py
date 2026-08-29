@@ -1,8 +1,12 @@
 import unittest
 from decimal import Decimal
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import pandas as pd
 
+from app.ai.results import AiInvocationResult
+from app.ai.schemas import NegativeReplyOutput
 from app.utils.keyword_extractor import extract_keywords, keyword_rank
 from app.utils.problem_classifier import classify_problem
 from app.utils.sentiment_analyzer import sentiment_from_score
@@ -11,6 +15,24 @@ from app.utils.topic_clusterer import topic_distribution
 from app.services.comment_analysis_service import aggregate_custom_tags, build_problem_types, build_trend_distribution
 from app.services.ai_service import AiService
 from app.services.olist_import_service import OlistImportService
+
+
+class FakeNegativeReplyChain:
+    def __init__(self, reply_content: str, token_usage: int = 24) -> None:
+        self.reply_content = reply_content
+        self.token_usage = token_usage
+        self.prompts: list[str] = []
+
+    def generate(self, prompt: str) -> AiInvocationResult[NegativeReplyOutput]:
+        self.prompts.append(prompt)
+        return AiInvocationResult(
+            value=NegativeReplyOutput.model_validate({"replyContent": self.reply_content}),
+            model_name="deepseek-chat",
+            input_tokens=14,
+            output_tokens=10,
+            total_tokens=self.token_usage,
+            token_usage_estimated=False,
+        )
 
 
 class TextToolTests(unittest.TestCase):
@@ -140,16 +162,20 @@ class TextToolTests(unittest.TestCase):
 
         service._chat = fake_chat
 
-        result = service.generate_negative_reply(
-            {
-                "promptTemplate": "Reply in {language} about {commentContent} for score {reviewScore}.",
-                "promptVariables": {
-                    "language": "en-US",
-                    "commentContent": "produto quebrado",
-                    "reviewScore": 1,
-                },
-            }
-        )
+        with patch(
+            "app.services.ai_service.settings",
+            SimpleNamespace(ai_negative_reply_engine="legacy", ai_model="deepseek-chat"),
+        ):
+            result = service.generate_negative_reply(
+                {
+                    "promptTemplate": "Reply in {language} about {commentContent} for score {reviewScore}.",
+                    "promptVariables": {
+                        "language": "en-US",
+                        "commentContent": "produto quebrado",
+                        "reviewScore": 1,
+                    },
+                }
+            )
 
         self.assertTrue(result["success"])
         self.assertEqual(captured["prompt"], "Reply in en-US about produto quebrado for score 1.")
@@ -198,19 +224,23 @@ class TextToolTests(unittest.TestCase):
 
         service._chat = fake_chat
 
-        result = service.generate_negative_reply(
-            {
-                "commentId": 22,
-                "reviewId": "review-22",
-                "productId": "product-a",
-                "reviewScore": 2,
-                "commentTitle": "Entrega atrasada",
-                "commentContent": "produto chegou quebrado",
-                "problemType": "packaging",
-                "toneType": "professional",
-                "language": "zh-CN",
-            }
-        )
+        with patch(
+            "app.services.ai_service.settings",
+            SimpleNamespace(ai_negative_reply_engine="legacy", ai_model="deepseek-chat"),
+        ):
+            result = service.generate_negative_reply(
+                {
+                    "commentId": 22,
+                    "reviewId": "review-22",
+                    "productId": "product-a",
+                    "reviewScore": 2,
+                    "commentTitle": "Entrega atrasada",
+                    "commentContent": "produto chegou quebrado",
+                    "problemType": "packaging",
+                    "toneType": "professional",
+                    "language": "zh-CN",
+                }
+            )
 
         self.assertTrue(result["success"])
         self.assertIn("produto chegou quebrado", captured["prompt"])
@@ -219,6 +249,36 @@ class TextToolTests(unittest.TestCase):
         self.assertIn("2", captured["prompt"])
         self.assertIn("每条回复都必须针对这条评论单独生成", captured["prompt"])
         self.assertGreaterEqual(captured["temperature"], 0.7)
+
+    def test_generate_negative_reply_langchain_engine_keeps_java_response_contract(self) -> None:
+        service = AiService()
+        chain = FakeNegativeReplyChain("Thank you for sharing the delivery issue.", token_usage=31)
+        service._negative_reply_chain = lambda: chain
+
+        with patch(
+            "app.services.ai_service.settings",
+            SimpleNamespace(ai_negative_reply_engine="langchain", ai_model="deepseek-chat"),
+        ):
+            result = service.generate_negative_reply(
+                {
+                    "commentId": 23,
+                    "commentContent": "The package arrived damaged.",
+                    "problemType": "packaging",
+                    "language": "en-US",
+                }
+            )
+
+        self.assertEqual(
+            result,
+            {
+                "success": True,
+                "replyContent": "Thank you for sharing the delivery issue.",
+                "modelName": "deepseek-chat",
+                "tokenUsage": 31,
+            },
+        )
+        self.assertEqual(len(chain.prompts), 1)
+        self.assertIn("The package arrived damaged.", chain.prompts[0])
 
     def test_translate_comment_uses_target_language_and_parses_json(self) -> None:
         service = AiService()

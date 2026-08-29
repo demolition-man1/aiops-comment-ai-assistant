@@ -148,6 +148,7 @@ Default endpoints:
 - Backend API: `http://localhost:8080/api`
 - Knife4j: `http://localhost:8080/doc.html`
 - Python health check: `http://localhost:8001/health`
+- Docker MySQL: `localhost:3307` (containers still use `mysql:3306`)
 
 The local seed administrator is `admin / 123456` for the first development login only. Change this password immediately before any public deployment.
 
@@ -235,6 +236,8 @@ AI_BASE_URL=https://api.deepseek.com
 AI_CHAT_PATH=/v1/chat/completions
 AI_API_KEY=your-ai-api-key
 AI_MODEL=deepseek-chat
+AI_NEGATIVE_REPLY_ENGINE=langchain
+AI_MAX_RETRIES=2
 ```
 
 Start the Python service:
@@ -288,6 +291,8 @@ After logging in, open the Data Import page and click "Import Sample Data" to qu
 | `AI_BASE_URL` | OpenAI-compatible API base URL |
 | `AI_API_KEY` | LLM API key |
 | `AI_MODEL` | Model name |
+| `AI_NEGATIVE_REPLY_ENGINE` | Negative-reply engine: `langchain`; temporarily use `legacy` for rollback during troubleshooting |
+| `AI_MAX_RETRIES` | Maximum retries for temporary AI provider failures; defaults to `2` |
 | `CRAWLER_ENABLED` | Whether to enable the real crawler adapter |
 
 ### Frontend Configuration

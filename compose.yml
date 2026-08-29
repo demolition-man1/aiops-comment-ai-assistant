@@ -9,7 +9,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${AIOPS_MYSQL_PASSWORD}
       TZ: Asia/Shanghai
     ports:
-      - "${AIOPS_MYSQL_PORT:-3306}:3306"
+      - "${AIOPS_MYSQL_PORT:-3307}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -59,6 +59,8 @@ services:
       AI_API_KEY: ${AI_API_KEY:-}
       AI_MODEL: ${AI_MODEL:-deepseek-chat}
       AI_TIMEOUT: ${AI_TIMEOUT:-60}
+      AI_NEGATIVE_REPLY_ENGINE: ${AI_NEGATIVE_REPLY_ENGINE:-langchain}
+      AI_MAX_RETRIES: ${AI_MAX_RETRIES:-2}
       CRAWLER_ENABLED: ${CRAWLER_ENABLED:-false}
     ports:
       - "${AIOPS_PYTHON_PORT:-8001}:8001"
@@ -118,7 +120,7 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/healthz"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/healthz"]
       interval: 15s
       timeout: 5s
       retries: 10

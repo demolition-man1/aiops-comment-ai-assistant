@@ -4,6 +4,8 @@ from typing import Any
 
 import requests
 
+from app.ai.chains.negative_reply import NegativeReplyChain
+from app.ai.provider import LangChainProvider
 from app.config import settings
 
 
@@ -82,6 +84,14 @@ class AiService:
             "如果评论原文缺失，只能基于评分和问题类型表达歉意并引导客服核实。只输出回复内容。"
         )
         prompt = self._prompt_from_template(request, fallback_prompt)
+        if settings.ai_negative_reply_engine == "langchain":
+            result = self._negative_reply_chain().generate(prompt)
+            return {
+                "success": True,
+                "replyContent": result.value.reply_content,
+                "modelName": result.model_name,
+                "tokenUsage": result.total_tokens,
+            }
         content = self._chat(prompt, temperature=0.75)
         return {
             "success": True,
@@ -89,6 +99,9 @@ class AiService:
             "modelName": settings.ai_model,
             "tokenUsage": self._estimate_token_usage(prompt, content),
         }
+
+    def _negative_reply_chain(self) -> NegativeReplyChain:
+        return NegativeReplyChain(LangChainProvider())
 
     def translate_comment(self, request: dict[str, Any]) -> dict[str, Any]:
         comment_id = request.get("commentId") or ""

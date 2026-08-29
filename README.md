@@ -148,6 +148,7 @@ docker compose ps
 - Backend API：`http://localhost:8080/api`
 - Knife4j：`http://localhost:8080/doc.html`
 - Python 健康检查：`http://localhost:8001/health`
+- Docker MySQL：`localhost:3307`（容器内部仍为 `mysql:3306`）
 
 本地初始化管理员为 `admin / 123456`，仅用于首次开发体验；公开部署后应立即修改默认密码。
 
@@ -235,6 +236,8 @@ AI_BASE_URL=https://api.deepseek.com
 AI_CHAT_PATH=/v1/chat/completions
 AI_API_KEY=your-ai-api-key
 AI_MODEL=deepseek-chat
+AI_NEGATIVE_REPLY_ENGINE=langchain
+AI_MAX_RETRIES=2
 ```
 
 启动 Python 服务：
@@ -288,6 +291,8 @@ npm run dev
 | `AI_BASE_URL` | OpenAI 兼容接口地址 |
 | `AI_API_KEY` | 大模型 API Key |
 | `AI_MODEL` | 模型名称 |
+| `AI_NEGATIVE_REPLY_ENGINE` | 差评回复引擎：`langchain`，异常排查时可临时切换为 `legacy` |
+| `AI_MAX_RETRIES` | AI provider 临时错误的最大重试次数，默认 `2` |
 | `CRAWLER_ENABLED` | 是否启用真实爬虫适配器 |
 
 ### 前端配置
