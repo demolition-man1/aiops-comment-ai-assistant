@@ -47,6 +47,13 @@ def _non_negative_int_env(name: str, default: int) -> int:
     return value
 
 
+def _bounded_int_env(name: str, default: int, minimum: int, maximum: int) -> int:
+    value = _int_env(name, default)
+    if value < minimum or value > maximum:
+        raise ValueError(f"{name} must be between {minimum} and {maximum}")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     mysql_host: str = os.getenv("MYSQL_HOST", "localhost")
@@ -67,8 +74,26 @@ class Settings:
         )
     )
     ai_max_retries: int = field(default_factory=lambda: _non_negative_int_env("AI_MAX_RETRIES", 2))
+    comment_ai_shadow_default_sample_size: int = field(
+        default_factory=lambda: _bounded_int_env("COMMENT_AI_SHADOW_DEFAULT_SAMPLE_SIZE", 60, 1, 100)
+    )
+    comment_ai_shadow_max_sample_size: int = field(
+        default_factory=lambda: _bounded_int_env("COMMENT_AI_SHADOW_MAX_SAMPLE_SIZE", 100, 1, 100)
+    )
+    comment_ai_shadow_default_max_total_tokens: int = field(
+        default_factory=lambda: _bounded_int_env("COMMENT_AI_SHADOW_DEFAULT_MAX_TOTAL_TOKENS", 60000, 1000, 100000)
+    )
+    comment_ai_shadow_max_total_tokens: int = field(
+        default_factory=lambda: _bounded_int_env("COMMENT_AI_SHADOW_MAX_TOTAL_TOKENS", 100000, 1000, 100000)
+    )
 
     crawler_enabled: bool = _bool_env("CRAWLER_ENABLED", False)
+
+    def __post_init__(self) -> None:
+        if self.comment_ai_shadow_default_sample_size > self.comment_ai_shadow_max_sample_size:
+            raise ValueError("COMMENT_AI_SHADOW_MAX_SAMPLE_SIZE must be at least the default sample size")
+        if self.comment_ai_shadow_default_max_total_tokens > self.comment_ai_shadow_max_total_tokens:
+            raise ValueError("COMMENT_AI_SHADOW_MAX_TOTAL_TOKENS must be at least the default token budget")
 
 
 settings = Settings()

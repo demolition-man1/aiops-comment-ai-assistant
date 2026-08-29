@@ -45,6 +45,36 @@ class ConfigTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "AI_MAX_RETRIES"):
                 config.Settings()
 
+    def test_settings_supports_comment_ai_shadow_limits(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "COMMENT_AI_SHADOW_DEFAULT_SAMPLE_SIZE": "24",
+                "COMMENT_AI_SHADOW_MAX_SAMPLE_SIZE": "80",
+                "COMMENT_AI_SHADOW_DEFAULT_MAX_TOTAL_TOKENS": "5000",
+                "COMMENT_AI_SHADOW_MAX_TOTAL_TOKENS": "9000",
+            },
+            clear=False,
+        ):
+            settings = config.Settings()
+
+        self.assertEqual(settings.comment_ai_shadow_default_sample_size, 24)
+        self.assertEqual(settings.comment_ai_shadow_max_sample_size, 80)
+        self.assertEqual(settings.comment_ai_shadow_default_max_total_tokens, 5000)
+        self.assertEqual(settings.comment_ai_shadow_max_total_tokens, 9000)
+
+    def test_settings_rejects_inconsistent_comment_ai_shadow_limits(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "COMMENT_AI_SHADOW_DEFAULT_SAMPLE_SIZE": "61",
+                "COMMENT_AI_SHADOW_MAX_SAMPLE_SIZE": "60",
+            },
+            clear=False,
+        ):
+            with self.assertRaisesRegex(ValueError, "COMMENT_AI_SHADOW_MAX_SAMPLE_SIZE"):
+                config.Settings()
+
 
 if __name__ == "__main__":
     unittest.main()
