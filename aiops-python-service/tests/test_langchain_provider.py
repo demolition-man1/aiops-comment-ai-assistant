@@ -6,6 +6,7 @@ from pydantic import ValidationError
 
 from app.ai.errors import (
     AiAuthenticationError,
+    AiOutputValidationError,
     AiProviderRequestError,
     AiProviderTemporaryError,
     AiProviderTimeoutError,
@@ -112,6 +113,22 @@ def test_provider_prefers_usage_metadata_from_structured_model() -> None:
     assert result.input_tokens == 12
     assert result.output_tokens == 8
     assert result.token_usage_estimated is False
+
+
+def test_provider_preserves_usage_when_structured_output_is_invalid() -> None:
+    raw = SimpleNamespace(
+        content='{"replyContent": ""}',
+        usage_metadata={"input_tokens": 12, "output_tokens": 4, "total_tokens": 16},
+        response_metadata={},
+    )
+    model = FakeChatModel([{"parsed": None, "raw": raw, "parsing_error": ValueError("invalid output")}])
+    provider = LangChainProvider(settings_for_test(), chat_model=model, sleep=lambda _seconds: None)
+
+    with pytest.raises(AiOutputValidationError) as captured:
+        provider.invoke_structured("prompt", NegativeReplyOutput)
+
+    assert captured.value.total_tokens == 16
+    assert captured.value.token_usage_estimated is False
 
 
 def test_provider_retries_only_temporary_failures() -> None:

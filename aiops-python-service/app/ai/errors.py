@@ -32,3 +32,18 @@ class AiProviderRequestError(AiServiceError):
 
 class AiOutputValidationError(AiServiceError):
     status_code = 502
+
+    def __init__(
+        self,
+        public_message: str,
+        *,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        total_tokens: int = 0,
+        token_usage_estimated: bool = False,
+    ) -> None:
+        super().__init__(public_message)
+        self.input_tokens = input_tokens
+        self.output_tokens = output_tokens
+        self.total_tokens = total_tokens
+        self.token_usage_estimated = token_usage_estimated

@@ -47,7 +47,19 @@ class LangChainProvider:
     ) -> AiInvocationResult[T]:
         runnable = self._model().with_structured_output(schema, method="json_mode", include_raw=True)
         response = self._invoke_with_retry(lambda: runnable.invoke(prompt), max_retries=max_retries)
-        value, raw = self._structured_value(response, schema)
+        try:
+            value, raw = self._structured_value(response, schema)
+        except AiOutputValidationError as exception:
+            raw = response.get("raw") if isinstance(response, dict) else None
+            raw_content = getattr(raw, "content", "")
+            input_tokens, output_tokens, total_tokens, estimated = self._token_usage(prompt, raw_content, raw)
+            raise AiOutputValidationError(
+                exception.public_message,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                total_tokens=total_tokens,
+                token_usage_estimated=estimated,
+            ) from exception
         input_tokens, output_tokens, total_tokens, estimated = self._token_usage(prompt, value, raw)
         return AiInvocationResult(
             value=value,

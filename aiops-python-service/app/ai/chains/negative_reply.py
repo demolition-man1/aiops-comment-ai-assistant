@@ -37,19 +37,31 @@ class NegativeReplyChain:
         messages = self._messages(rendered_prompt)
         try:
             return self._provider.invoke_structured(messages, NegativeReplyOutput)
-        except AiOutputValidationError:
+        except AiOutputValidationError as initial_error:
             repaired = self._provider.invoke_text(
                 messages + [HumanMessage(content=self._REPAIR_MESSAGE)],
                 max_retries=0,
             )
             output = self.parse_output(repaired.value)
+            initial_has_usage = initial_error.total_tokens > 0
             return AiInvocationResult(
                 value=output,
                 model_name=repaired.model_name,
-                input_tokens=repaired.input_tokens,
-                output_tokens=repaired.output_tokens,
-                total_tokens=repaired.total_tokens,
-                token_usage_estimated=repaired.token_usage_estimated,
+                input_tokens=self._combined_tokens(
+                    initial_error.input_tokens,
+                    repaired.input_tokens,
+                    initial_has_usage,
+                ),
+                output_tokens=self._combined_tokens(
+                    initial_error.output_tokens,
+                    repaired.output_tokens,
+                    initial_has_usage,
+                ),
+                total_tokens=initial_error.total_tokens + repaired.total_tokens,
+                token_usage_estimated=(
+                    repaired.token_usage_estimated
+                    or (initial_has_usage and initial_error.token_usage_estimated)
+                ),
             )
 
     @classmethod
@@ -72,3 +84,11 @@ class NegativeReplyChain:
             SystemMessage(content=cls._SYSTEM_MESSAGE),
             HumanMessage(content=rendered_prompt),
         ]
+
+    @staticmethod
+    def _combined_tokens(initial: int | None, repaired: int | None, initial_has_usage: bool) -> int | None:
+        if not initial_has_usage:
+            return repaired
+        if initial is None or repaired is None:
+            return None
+        return initial + repaired

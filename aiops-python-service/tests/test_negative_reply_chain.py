@@ -89,12 +89,24 @@ def test_negative_reply_chain_repairs_one_invalid_structured_result() -> None:
         total_tokens=20,
         token_usage_estimated=False,
     )
-    provider = FakeProvider(structured_error=AiOutputValidationError("invalid"), text_result=text_result)
+    provider = FakeProvider(
+        structured_error=AiOutputValidationError(
+            "invalid",
+            input_tokens=13,
+            output_tokens=4,
+            total_tokens=17,
+            token_usage_estimated=False,
+        ),
+        text_result=text_result,
+    )
     chain = NegativeReplyChain(provider)
 
     result = chain.generate("customer review prompt")
 
     assert result.value.reply_content == "Please contact our support team."
-    assert result.total_tokens == 20
+    assert result.input_tokens == 24
+    assert result.output_tokens == 13
+    assert result.total_tokens == 37
+    assert result.token_usage_estimated is False
     assert len(provider.text_prompts) == 1
     assert provider.text_retry_limits == [0]
