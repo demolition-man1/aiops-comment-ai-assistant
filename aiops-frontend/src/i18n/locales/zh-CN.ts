@@ -649,7 +649,30 @@ export default {
     manualLabelsPlaceholder: '输入标签后按回车添加，最多 5 个',
     annotationNote: '标注备注',
     tooManyLabels: '人工问题标签最多 5 个',
-    annotationSaved: '人工标注已保存'
+    annotationSaved: '人工标注已保存',
+    hybridActivation: 'Hybrid 受控启用',
+    hybridActivationHint: '只有通过人工评估与有效性门槛的结果才可创建 AI 问题标签；原始评论字段不会被改写。',
+    activateHybrid: '确认启用 Hybrid',
+    hybridReady: '当前运行已通过 Hybrid 准入门槛',
+    hybridBlocked: '当前运行尚未达到 Hybrid 准入门槛',
+    hybridMode: '当前模式：{mode}',
+    eligibleDecisions: '可启用决策：{count}',
+    activeDecisions: '当前批次生效：{count}',
+    activationConfirmTitle: '确认启用 Hybrid 标签',
+    activationConfirmBody: '这会为当前运行中满足条件的评论创建独立 AI 问题标签。人工标签始终优先；切换 COMMENT_AI_MODE=rule 并重启服务即可恢复规则基线。',
+    activationConfirmAction: '确认启用',
+    hybridActivated: 'Hybrid 问题标签已启用',
+    gateFailures: {
+      minimum_annotated: '人工标注数量不足',
+      annotation_coverage: '人工标注覆盖率不足',
+      call_success_rate: 'AI 调用成功率不足',
+      json_valid_rate: '结构化输出有效率不足',
+      evidence_valid_rate: '证据有效率不足',
+      sentiment_accuracy: 'AI 情感准确率未达到规则基线要求',
+      problem_micro_f1: 'AI 问题类型 Micro F1 提升不足',
+      budget_stopped: '任务因 Token 预算停止',
+      no_eligible_decisions: '没有符合 Hybrid 条件的评论'
+    }
   },
   login: {
     title: '商家运营后台',

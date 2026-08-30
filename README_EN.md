@@ -40,7 +40,7 @@ A review-driven AI operations assistant for small and medium-sized e-commerce me
 | Merchant Dashboard | Product count, seller count, review count, average score, negative rate, trend charts, and risk overview |
 | Data Import | Local Olist directory import, single CSV preview / field mapping / OSS import, one-click sample data import, and low-frequency public sample crawler import |
 | Review Analysis | Review pagination and filtering, sentiment detection, negative review detection, manual tag editing, on-demand translation, and one-click analysis with report generation |
-| Comment AI Shadow | Isolated sampled comparison runs, sample review, manual sentiment and issue-label annotation, and quality, validity, latency, and token metrics for rule and AI outputs |
+| Comment AI Shadow | Isolated sampled comparison runs, sample review, manual sentiment and issue-label annotation, rule and AI quality metrics, and controlled Hybrid issue-label activation after all gates pass |
 | Tag Library | Custom tag management, grouping, color, enabled status, and direct selection in the review tag dialog |
 | Solution Library | Solutions by issue type and category, with reusable suggestions in the review workspace |
 | Prompt Templates | Default prompts by business type, including reports, copywriting, negative replies, translation, and product comparison |
@@ -267,7 +267,7 @@ Default frontend URL:
 
 If the port is occupied, Vite automatically switches to the next available port, such as `5174`.
 
-After logging in, open the Data Import page and click "Import Sample Data" to quickly create demo data. For single CSV upload, the page previews field mapping, estimated rows, and the first 20 rows before upload. OSS upload and task creation happen only after clicking "Start Import". After import, maintain business tags in "Tag Library", maintain handling playbooks in "Solution Library", and customize AI instructions in "Prompt Templates". In "Review Analytics", run analysis only or click "Analyze and Generate Report" to complete analysis and localized report generation in one flow. Archive the report and open "Data Reports" to export a PDF in the active Chinese, English, or Portuguese locale. Use "AI Call Logs" to review call volume, success rate, tokens, and estimated cost.
+After logging in, open the Data Import page and click "Import Sample Data" to quickly create demo data. For single CSV upload, the page previews field mapping, estimated rows, and the first 20 rows before upload. OSS upload and task creation happen only after clicking "Start Import". After import, maintain business tags in "Tag Library", maintain handling playbooks in "Solution Library", and customize AI instructions in "Prompt Templates". In "Review Analytics", run analysis only or click "Analyze and Generate Report" to complete analysis and localized report generation in one flow. Archive the report and open "Data Reports" to export a PDF in the active Chinese, English, or Portuguese locale. Use "AI Call Logs" to review call volume, success rate, tokens, and estimated cost. In "Comment AI Evaluation", complete sampling, manual annotation, and evaluation; only a run that passes every gate can explicitly activate independent Hybrid issue-label decisions.
 
 ## Configuration
 
@@ -295,6 +295,22 @@ After logging in, open the Data Import page and click "Import Sample Data" to qu
 | `AI_NEGATIVE_REPLY_ENGINE` | Negative-reply engine: `langchain`; temporarily use `legacy` for rollback during troubleshooting |
 | `AI_MAX_RETRIES` | Maximum retries for temporary AI provider failures; defaults to `2` |
 | `CRAWLER_ENABLED` | Whether to enable the real crawler adapter |
+
+### Comment AI Hybrid Gate Configuration
+
+The default `COMMENT_AI_MODE=rule` keeps rule-based issue types in comment aggregation. After manual annotation and quality evaluation in "Comment AI Evaluation", the UI enables confirmation only for runs that meet every admission gate. Activation writes to an independent decision table and never overwrites original comment fields; manual issue labels always take precedence.
+
+| Config | Default | Description |
+| --- | --- | --- |
+| `COMMENT_AI_MODE` | `rule` | `rule` uses the existing rules; `hybrid` permits enabled independent AI issue-label decisions |
+| `COMMENT_AI_HYBRID_MIN_CONFIDENCE` | `0.80` | Minimum confidence for a single AI issue-label decision |
+| `COMMENT_AI_HYBRID_MIN_ANNOTATED` | `50` | Minimum manual annotations in an evaluation run |
+| `COMMENT_AI_HYBRID_MIN_ANNOTATION_COVERAGE` | `0.80` | Minimum manual-annotation coverage |
+| `COMMENT_AI_HYBRID_MIN_CALL_SUCCESS_RATE` | `0.95` | Minimum AI call success rate |
+| `COMMENT_AI_HYBRID_MIN_JSON_VALID_RATE` | `0.98` | Minimum structured-output validity rate |
+| `COMMENT_AI_HYBRID_MIN_EVIDENCE_VALID_RATE` | `0.98` | Minimum evidence validity rate |
+| `COMMENT_AI_HYBRID_MAX_SENTIMENT_ACCURACY_DROP` | `0.02` | Maximum allowed AI sentiment-accuracy drop relative to rules |
+| `COMMENT_AI_HYBRID_MIN_PROBLEM_MICRO_F1_GAIN` | `0.05` | Minimum AI issue Micro-F1 gain relative to rules |
 
 ### Frontend Configuration
 

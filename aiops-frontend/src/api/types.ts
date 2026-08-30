@@ -204,6 +204,14 @@ export interface CommentAiEvaluation {
   delta: CommentAiMetricBlock
 }
 
+export interface CommentAiHybridReadiness {
+  ready: boolean
+  failures: string[]
+  eligibleDecisionCount: number
+  activeDecisionCount: number
+  mode: 'rule' | 'hybrid' | string
+}
+
 export interface SyncConfig {
   id: number
   syncName: string

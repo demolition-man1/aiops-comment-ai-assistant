@@ -481,3 +481,16 @@ textarea {
 .evaluation-run-form .el-form-item {
   margin-bottom: 0;
 }
+
+.hybrid-status,
+.hybrid-failures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dialog-copy {
+  margin: 0;
+  color: #475569;
+  line-height: 1.7;
+}

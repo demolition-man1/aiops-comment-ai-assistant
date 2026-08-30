@@ -1,9 +1,11 @@
 package com.aiops.service;
 
 import com.aiops.dto.CommentAiAnnotationDTO;
+import com.aiops.dto.CommentAiHybridActivationDTO;
 import com.aiops.dto.CommentAiShadowTaskDTO;
 import com.aiops.result.PageResult;
 import com.aiops.vo.CommentAiEvaluationVO;
+import com.aiops.vo.CommentAiHybridReadinessVO;
 import com.aiops.vo.CommentAiShadowResultVO;
 import com.aiops.vo.CommentAiShadowRunVO;
 import com.aiops.vo.CommentAiShadowTaskVO;
@@ -24,4 +26,8 @@ public interface CommentAiShadowService {
     void upsertAnnotation(Long commentId, CommentAiAnnotationDTO annotationDTO);
 
     CommentAiEvaluationVO evaluateRun(Long runId);
+
+    CommentAiHybridReadinessVO hybridReadiness(Long runId);
+
+    CommentAiHybridReadinessVO activateHybrid(Long runId, CommentAiHybridActivationDTO activationDTO);
 }

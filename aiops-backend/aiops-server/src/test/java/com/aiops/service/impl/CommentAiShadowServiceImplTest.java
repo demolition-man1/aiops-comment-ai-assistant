@@ -7,10 +7,12 @@ import com.aiops.entity.BizCommentAiShadowRun;
 import com.aiops.entity.SysPromptTemplate;
 import com.aiops.mapper.BizAnalysisTaskMapper;
 import com.aiops.mapper.BizCommentAiAnnotationMapper;
+import com.aiops.mapper.BizCommentAiDecisionMapper;
 import com.aiops.mapper.BizCommentAiShadowResultMapper;
 import com.aiops.mapper.BizCommentAiShadowRunMapper;
 import com.aiops.service.AiCallLogService;
 import com.aiops.service.PromptTemplateService;
+import com.aiops.properties.CommentAiHybridProperties;
 import com.aiops.vo.CommentAiShadowTaskVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +52,9 @@ class CommentAiShadowServiceImplTest {
     private BizCommentAiAnnotationMapper annotationMapper;
 
     @Mock
+    private BizCommentAiDecisionMapper decisionMapper;
+
+    @Mock
     private PythonAnalysisClient pythonAnalysisClient;
 
     @Mock
@@ -69,11 +74,13 @@ class CommentAiShadowServiceImplTest {
                 runMapper,
                 resultMapper,
                 annotationMapper,
+                decisionMapper,
                 pythonAnalysisClient,
                 promptTemplateService,
                 aiCallLogService,
                 new ObjectMapper(),
-                taskExecutor
+                taskExecutor,
+                new CommentAiHybridProperties()
         );
     }
 

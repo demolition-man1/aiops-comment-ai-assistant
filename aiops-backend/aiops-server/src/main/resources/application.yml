@@ -51,6 +51,16 @@ aiops:
     capacity: ${aiops.config.ai-rate-limit.capacity:20}
     refill-tokens: ${aiops.config.ai-rate-limit.refill-tokens:20}
     refill-period-seconds: ${aiops.config.ai-rate-limit.refill-period-seconds:60}
+  comment-ai-hybrid:
+    mode: ${aiops.config.comment-ai-hybrid.mode:rule}
+    min-confidence: ${aiops.config.comment-ai-hybrid.min-confidence:0.80}
+    min-annotated: ${aiops.config.comment-ai-hybrid.min-annotated:50}
+    min-annotation-coverage: ${aiops.config.comment-ai-hybrid.min-annotation-coverage:0.80}
+    min-call-success-rate: ${aiops.config.comment-ai-hybrid.min-call-success-rate:0.95}
+    min-json-valid-rate: ${aiops.config.comment-ai-hybrid.min-json-valid-rate:0.98}
+    min-evidence-valid-rate: ${aiops.config.comment-ai-hybrid.min-evidence-valid-rate:0.98}
+    max-sentiment-accuracy-drop: ${aiops.config.comment-ai-hybrid.max-sentiment-accuracy-drop:0.02}
+    min-problem-micro-f1-gain: ${aiops.config.comment-ai-hybrid.min-problem-micro-f1-gain:0.05}
   task-maintenance:
     enabled: ${aiops.config.task-maintenance.enabled:true}
     interval-seconds: ${aiops.config.task-maintenance.interval-seconds:300}

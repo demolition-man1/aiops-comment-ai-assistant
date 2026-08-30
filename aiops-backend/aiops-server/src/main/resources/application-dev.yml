@@ -43,6 +43,16 @@ aiops:
       capacity: 20
       refill-tokens: 20
       refill-period-seconds: 60
+    comment-ai-hybrid:
+      mode: ${COMMENT_AI_MODE:rule}
+      min-confidence: ${COMMENT_AI_HYBRID_MIN_CONFIDENCE:0.80}
+      min-annotated: ${COMMENT_AI_HYBRID_MIN_ANNOTATED:50}
+      min-annotation-coverage: ${COMMENT_AI_HYBRID_MIN_ANNOTATION_COVERAGE:0.80}
+      min-call-success-rate: ${COMMENT_AI_HYBRID_MIN_CALL_SUCCESS_RATE:0.95}
+      min-json-valid-rate: ${COMMENT_AI_HYBRID_MIN_JSON_VALID_RATE:0.98}
+      min-evidence-valid-rate: ${COMMENT_AI_HYBRID_MIN_EVIDENCE_VALID_RATE:0.98}
+      max-sentiment-accuracy-drop: ${COMMENT_AI_HYBRID_MAX_SENTIMENT_ACCURACY_DROP:0.02}
+      min-problem-micro-f1-gain: ${COMMENT_AI_HYBRID_MIN_PROBLEM_MICRO_F1_GAIN:0.05}
     task-maintenance:
       enabled: true
       interval-seconds: 300

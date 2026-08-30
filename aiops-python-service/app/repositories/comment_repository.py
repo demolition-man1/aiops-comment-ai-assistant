@@ -28,11 +28,13 @@ def fetch_comments(conn: Any, target_type: str, target_id: str) -> list[dict[str
     with conn.cursor() as cursor:
         cursor.execute(
             f"""
-            select id, review_id, order_id, product_id, seller_id, review_score, review_title,
-                   review_content, clean_content, review_time, sentiment, sentiment_score,
-                   keywords, problem_type, manual_problem_type, custom_tags, is_negative
-            from biz_comment
-            where {column} = %s
+            select c.id, c.review_id, c.order_id, c.product_id, c.seller_id, c.review_score, c.review_title,
+                   c.review_content, c.clean_content, c.review_time, c.sentiment, c.sentiment_score,
+                   c.keywords, c.problem_type, c.manual_problem_type, c.custom_tags, c.is_negative,
+                   d.accepted_problem_type as active_ai_problem_type
+            from biz_comment c
+            left join biz_comment_ai_decision d on d.comment_id = c.id and d.active = 1
+            where c.{column} = %s
             """,
             (target_id,),
         )

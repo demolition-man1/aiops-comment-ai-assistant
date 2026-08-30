@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus'
 import { useI18n } from 'vue-i18n'
 
 import { commentAiShadowApi } from '@/api/modules'
-import type { CommentAiEvaluation, CommentAiShadowResult, CommentAiShadowRun, CommentAiShadowTask } from '@/api/types'
+import type { CommentAiEvaluation, CommentAiHybridReadiness, CommentAiShadowResult, CommentAiShadowRun, CommentAiShadowTask } from '@/api/types'
 import MetricCard from '@/components/MetricCard.vue'
 
 const { t, locale } = useI18n()
@@ -39,10 +39,13 @@ const resultTotal = ref(0)
 const selectedRunId = ref<number>()
 const activeTask = ref<CommentAiShadowTask>()
 const evaluation = ref<CommentAiEvaluation>()
+const hybridReadiness = ref<CommentAiHybridReadiness>()
 const loading = ref(false)
 const starting = ref(false)
 const resultLoading = ref(false)
 const annotationVisible = ref(false)
+const activationConfirmVisible = ref(false)
+const activating = ref(false)
 const savingCommentId = ref<number>()
 const annotationRow = ref<CommentAiShadowResult>()
 const annotationForm = reactive({
@@ -93,17 +96,20 @@ const loadSelectedRun = async () => {
   if (!selectedRunId.value) {
     results.value = []
     evaluation.value = undefined
+    hybridReadiness.value = undefined
     return
   }
   resultLoading.value = true
   try {
-    const [page, metrics] = await Promise.all([
+    const [page, metrics, readiness] = await Promise.all([
       commentAiShadowApi.results(selectedRunId.value, resultQuery),
-      commentAiShadowApi.evaluation(selectedRunId.value)
+      commentAiShadowApi.evaluation(selectedRunId.value),
+      commentAiShadowApi.hybridReadiness(selectedRunId.value)
     ])
     results.value = page.records || []
     resultTotal.value = page.total || 0
     evaluation.value = metrics
+    hybridReadiness.value = readiness
   } finally {
     resultLoading.value = false
   }
@@ -193,6 +199,23 @@ const saveAnnotation = async () => {
     ElMessage.success(t('aiEvaluation.annotationSaved'))
   } finally {
     savingCommentId.value = undefined
+  }
+}
+
+const openActivationConfirm = () => {
+  if (!hybridReadiness.value?.ready) return
+  activationConfirmVisible.value = true
+}
+
+const activateHybrid = async () => {
+  if (!selectedRunId.value) return
+  activating.value = true
+  try {
+    hybridReadiness.value = await commentAiShadowApi.activateHybrid(selectedRunId.value)
+    activationConfirmVisible.value = false
+    ElMessage.success(t('aiEvaluation.hybridActivated'))
+  } finally {
+    activating.value = false
   }
 }
 
@@ -400,6 +423,36 @@ onBeforeUnmount(() => {
       <el-empty v-else :description="t('aiEvaluation.selectRunHint')" :image-size="72" />
     </section>
 
+    <section class="evaluation-section section-gap">
+      <div class="evaluation-section-head">
+        <div>
+          <h3>{{ t('aiEvaluation.hybridActivation') }}</h3>
+          <p>{{ t('aiEvaluation.hybridActivationHint') }}</p>
+        </div>
+        <el-button type="primary" :disabled="!hybridReadiness?.ready" @click="openActivationConfirm">
+          {{ t('aiEvaluation.activateHybrid') }}
+        </el-button>
+      </div>
+      <template v-if="hybridReadiness">
+        <el-alert
+          :type="hybridReadiness.ready ? 'success' : 'warning'"
+          :closable="false"
+          :title="hybridReadiness.ready ? t('aiEvaluation.hybridReady') : t('aiEvaluation.hybridBlocked')"
+        />
+        <div class="hybrid-status section-gap">
+          <el-tag effect="plain">{{ t('aiEvaluation.hybridMode', { mode: hybridReadiness.mode }) }}</el-tag>
+          <el-tag effect="plain">{{ t('aiEvaluation.eligibleDecisions', { count: hybridReadiness.eligibleDecisionCount }) }}</el-tag>
+          <el-tag effect="plain">{{ t('aiEvaluation.activeDecisions', { count: hybridReadiness.activeDecisionCount }) }}</el-tag>
+        </div>
+        <div v-if="hybridReadiness.failures.length" class="hybrid-failures">
+          <el-tag v-for="failure in hybridReadiness.failures" :key="failure" type="danger" effect="plain">
+            {{ t('aiEvaluation.gateFailures.' + failure) }}
+          </el-tag>
+        </div>
+      </template>
+      <el-empty v-else :description="t('aiEvaluation.selectRunHint')" :image-size="72" />
+    </section>
+
     <el-dialog v-model="annotationVisible" :title="t('aiEvaluation.annotationDialog')" width="520px" destroy-on-close>
       <el-form label-position="top">
         <el-form-item :label="t('aiEvaluation.manualSentiment')">
@@ -419,6 +472,14 @@ onBeforeUnmount(() => {
       <template #footer>
         <el-button @click="annotationVisible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" :icon="Save" :loading="Boolean(savingCommentId)" @click="saveAnnotation">{{ t('common.save') }}</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="activationConfirmVisible" :title="t('aiEvaluation.activationConfirmTitle')" width="480px" destroy-on-close>
+      <p class="dialog-copy">{{ t('aiEvaluation.activationConfirmBody') }}</p>
+      <template #footer>
+        <el-button @click="activationConfirmVisible = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" :loading="activating" @click="activateHybrid">{{ t('aiEvaluation.activationConfirmAction') }}</el-button>
       </template>
     </el-dialog>
   </section>

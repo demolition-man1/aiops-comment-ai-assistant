@@ -2,6 +2,7 @@ package com.aiops;
 
 import com.aiops.properties.AliyunOssProperties;
 import com.aiops.properties.AiRateLimitProperties;
+import com.aiops.properties.CommentAiHybridProperties;
 import com.aiops.properties.JwtProperties;
 import com.aiops.properties.PythonServiceProperties;
 import com.aiops.properties.TaskMaintenanceProperties;
@@ -17,6 +18,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
         PythonServiceProperties.class,
         JwtProperties.class,
         AiRateLimitProperties.class,
+        CommentAiHybridProperties.class,
         TaskMaintenanceProperties.class
 })
 public class AiOpsApplication {

@@ -54,6 +54,13 @@ def _bounded_int_env(name: str, default: int, minimum: int, maximum: int) -> int
     return value
 
 
+def _bounded_float_env(name: str, default: float, minimum: float, maximum: float) -> float:
+    value = float(os.getenv(name, default))
+    if value < minimum or value > maximum:
+        raise ValueError(f"{name} must be between {minimum} and {maximum}")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     mysql_host: str = os.getenv("MYSQL_HOST", "localhost")
@@ -85,6 +92,12 @@ class Settings:
     )
     comment_ai_shadow_max_total_tokens: int = field(
         default_factory=lambda: _bounded_int_env("COMMENT_AI_SHADOW_MAX_TOTAL_TOKENS", 100000, 1000, 100000)
+    )
+    comment_ai_mode: str = field(
+        default_factory=lambda: _choice_env("COMMENT_AI_MODE", "rule", {"rule", "hybrid"})
+    )
+    comment_ai_hybrid_min_confidence: float = field(
+        default_factory=lambda: _bounded_float_env("COMMENT_AI_HYBRID_MIN_CONFIDENCE", 0.80, 0.0, 1.0)
     )
 
     crawler_enabled: bool = _bool_env("CRAWLER_ENABLED", False)

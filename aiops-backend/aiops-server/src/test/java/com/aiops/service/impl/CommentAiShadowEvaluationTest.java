@@ -2,14 +2,19 @@ package com.aiops.service.impl;
 
 import com.aiops.client.PythonAnalysisClient;
 import com.aiops.dto.CommentAiAnnotationDTO;
+import com.aiops.dto.CommentAiHybridActivationDTO;
 import com.aiops.entity.BizCommentAiAnnotation;
+import com.aiops.entity.BizCommentAiDecision;
 import com.aiops.entity.BizCommentAiShadowRun;
+import com.aiops.exception.BusinessException;
 import com.aiops.mapper.BizAnalysisTaskMapper;
 import com.aiops.mapper.BizCommentAiAnnotationMapper;
+import com.aiops.mapper.BizCommentAiDecisionMapper;
 import com.aiops.mapper.BizCommentAiShadowResultMapper;
 import com.aiops.mapper.BizCommentAiShadowRunMapper;
 import com.aiops.service.AiCallLogService;
 import com.aiops.service.PromptTemplateService;
+import com.aiops.properties.CommentAiHybridProperties;
 import com.aiops.vo.CommentAiEvaluationVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
@@ -42,6 +48,8 @@ class CommentAiShadowEvaluationTest {
     @Mock
     private BizCommentAiAnnotationMapper annotationMapper;
     @Mock
+    private BizCommentAiDecisionMapper decisionMapper;
+    @Mock
     private PythonAnalysisClient pythonAnalysisClient;
     @Mock
     private PromptTemplateService promptTemplateService;
@@ -58,11 +66,13 @@ class CommentAiShadowEvaluationTest {
                 runMapper,
                 resultMapper,
                 annotationMapper,
+                decisionMapper,
                 pythonAnalysisClient,
                 promptTemplateService,
                 aiCallLogService,
                 new ObjectMapper(),
-                taskExecutor
+                taskExecutor,
+                new CommentAiHybridProperties()
         );
     }
 
@@ -137,6 +147,21 @@ class CommentAiShadowEvaluationTest {
         verify(annotationMapper).insert(captor.capture());
         assertThat(captor.getValue().getCommentId()).isEqualTo(31L);
         assertThat(captor.getValue().getManualProblemTypes()).contains("delivery");
+    }
+
+    @Test
+    void activationRejectsAnUnreadyRunWithoutPersistingDecisions() {
+        when(runMapper.selectById(7L)).thenReturn(run());
+        when(resultMapper.selectEvaluationRows(7L)).thenReturn(List.of(row(null)));
+        when(decisionMapper.selectEligibleCandidates(anyLong(), any())).thenReturn(List.of());
+        CommentAiHybridActivationDTO activation = new CommentAiHybridActivationDTO();
+        activation.setConfirmed(true);
+
+        assertThatThrownBy(() -> service.activateHybrid(7L, activation))
+                .isInstanceOfSatisfying(BusinessException.class,
+                        exception -> assertThat(exception.getMessage()).contains("minimum_annotated"));
+
+        verify(decisionMapper, never()).insert(any(BizCommentAiDecision.class));
     }
 
     private BizCommentAiShadowRun run() {

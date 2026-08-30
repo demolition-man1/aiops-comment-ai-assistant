@@ -649,7 +649,30 @@ export default {
     manualLabelsPlaceholder: 'Digite um rótulo e pressione Enter, até 5 rótulos',
     annotationNote: 'Observação da anotação',
     tooManyLabels: 'São permitidos no máximo 5 rótulos humanos de problema.',
-    annotationSaved: 'Anotação humana salva'
+    annotationSaved: 'Anotação humana salva',
+    hybridActivation: 'Ativação controlada do Hybrid',
+    hybridActivationHint: 'Somente resultados aprovados pelas regras de revisão e validade podem criar rótulos de problema por IA. Os campos originais não são alterados.',
+    activateHybrid: 'Ativar Hybrid',
+    hybridReady: 'Esta execução atende ao critério de prontidão do Hybrid',
+    hybridBlocked: 'Esta execução ainda não atende ao critério de prontidão do Hybrid',
+    hybridMode: 'Modo atual: {mode}',
+    eligibleDecisions: 'Decisões elegíveis: {count}',
+    activeDecisions: 'Ativas nesta execução: {count}',
+    activationConfirmTitle: 'Confirmar ativação do Hybrid',
+    activationConfirmBody: 'Isto cria rótulos separados de problema por IA para avaliações elegíveis nesta execução. Rótulos humanos sempre têm prioridade. Defina COMMENT_AI_MODE=rule e reinicie os serviços para restaurar a base de regras.',
+    activationConfirmAction: 'Confirmar ativação',
+    hybridActivated: 'Rótulos de problema Hybrid ativados',
+    gateFailures: {
+      minimum_annotated: 'Não há anotações humanas suficientes',
+      annotation_coverage: 'A cobertura de anotações humanas é baixa',
+      call_success_rate: 'A taxa de sucesso de chamadas de IA é baixa',
+      json_valid_rate: 'A validade da saída estruturada é baixa',
+      evidence_valid_rate: 'A validade das evidências é baixa',
+      sentiment_accuracy: 'A precisão de sentimento da IA não atende à base de regras',
+      problem_micro_f1: 'O ganho de Micro F1 do tipo de problema é insuficiente',
+      budget_stopped: 'A execução parou por causa do orçamento de tokens',
+      no_eligible_decisions: 'Nenhuma avaliação é elegível para decisões Hybrid'
+    }
   },
   login: {
     title: 'Console de Operações do Lojista',

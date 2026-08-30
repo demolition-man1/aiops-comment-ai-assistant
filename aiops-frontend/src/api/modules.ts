@@ -29,6 +29,7 @@ import type {
   AiCallLog,
   AiCallLogOverview,
   CommentAiEvaluation,
+  CommentAiHybridReadiness,
   CommentAiShadowResult,
   CommentAiShadowRun,
   CommentAiShadowTask
@@ -206,7 +207,11 @@ export const commentAiShadowApi = {
     annotationNote?: string
   }) => http.put<void, void>(`/analysis/ai-shadow/comments/${commentId}/annotation`, payload),
   evaluation: (runId: number) =>
-    http.get<CommentAiEvaluation, CommentAiEvaluation>(`/analysis/ai-shadow/runs/${runId}/evaluation`)
+    http.get<CommentAiEvaluation, CommentAiEvaluation>(`/analysis/ai-shadow/runs/${runId}/evaluation`),
+  hybridReadiness: (runId: number) =>
+    http.get<CommentAiHybridReadiness, CommentAiHybridReadiness>(`/analysis/ai-shadow/runs/${runId}/hybrid-readiness`),
+  activateHybrid: (runId: number) =>
+    http.post<CommentAiHybridReadiness, CommentAiHybridReadiness>(`/analysis/ai-shadow/runs/${runId}/hybrid-activation`, { confirmed: true })
 }
 
 export const reportArchiveApi = {

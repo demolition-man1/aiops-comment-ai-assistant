@@ -5,6 +5,7 @@ import json
 from typing import Any
 
 from app.db import get_conn
+from app.config import settings
 from app.repositories import analysis_repository, comment_repository, task_repository
 from app.utils.keyword_extractor import keyword_rank
 from app.utils.problem_classifier import problem_distribution
@@ -56,15 +57,26 @@ def build_trend_distribution(comments: list[dict[str, Any]], granularity: str = 
     return trend
 
 
-def build_problem_types(comments: list[dict[str, Any]]) -> list[str]:
+def build_problem_types(comments: list[dict[str, Any]], ai_mode: str = "rule") -> list[str]:
     problem_types: list[str] = []
     for comment in comments:
         if not comment.get("is_negative"):
             continue
-        problem_type = comment.get("manual_problem_type") or comment.get("problem_type")
+        problem_type = effective_problem_type(comment, ai_mode)
         if problem_type:
             problem_types.append(str(problem_type))
     return problem_types
+
+
+def effective_problem_type(comment: dict[str, Any], ai_mode: str) -> str | None:
+    manual_problem_type = _non_blank(comment.get("manual_problem_type"))
+    if manual_problem_type is not None:
+        return manual_problem_type
+    if ai_mode == "hybrid":
+        active_ai_problem_type = _non_blank(comment.get("active_ai_problem_type"))
+        if active_ai_problem_type is not None:
+            return active_ai_problem_type
+    return _non_blank(comment.get("problem_type"))
 
 
 def merge_problem_and_topics(
@@ -98,6 +110,13 @@ def _parse_tags(value: Any) -> list[str]:
     except json.JSONDecodeError:
         pass
     return [item.strip() for item in text.split(",") if item.strip()]
+
+
+def _non_blank(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 def _parse_datetime(value: Any) -> datetime | None:
@@ -145,7 +164,7 @@ class CommentAnalysisService:
 
         total = len(comments)
         sentiment_counter = Counter(comment.get("sentiment") or "neutral" for comment in comments)
-        problem_types = build_problem_types(comments)
+        problem_types = build_problem_types(comments, settings.comment_ai_mode)
         score_distribution = [
             {"name": str(score), "count": count}
             for score, count in sorted(Counter(comment.get("review_score") for comment in comments).items())

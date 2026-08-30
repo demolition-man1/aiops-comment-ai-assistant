@@ -649,7 +649,30 @@ export default {
     manualLabelsPlaceholder: 'Enter a label and press Enter, up to 5 labels',
     annotationNote: 'Annotation Note',
     tooManyLabels: 'At most 5 human problem labels are allowed.',
-    annotationSaved: 'Human annotation saved'
+    annotationSaved: 'Human annotation saved',
+    hybridActivation: 'Controlled Hybrid Activation',
+    hybridActivationHint: 'Only results that pass the review and validity gates can create AI problem labels. Original review fields are unchanged.',
+    activateHybrid: 'Activate Hybrid',
+    hybridReady: 'This run passes the Hybrid readiness gate',
+    hybridBlocked: 'This run does not yet meet the Hybrid readiness gate',
+    hybridMode: 'Current mode: {mode}',
+    eligibleDecisions: 'Eligible decisions: {count}',
+    activeDecisions: 'Active from this run: {count}',
+    activationConfirmTitle: 'Confirm Hybrid Activation',
+    activationConfirmBody: 'This creates separate AI problem labels for eligible reviews in this run. Human labels always take priority. Set COMMENT_AI_MODE=rule and restart services to restore the rule baseline.',
+    activationConfirmAction: 'Confirm Activation',
+    hybridActivated: 'Hybrid problem labels activated',
+    gateFailures: {
+      minimum_annotated: 'Not enough human annotations',
+      annotation_coverage: 'Human annotation coverage is too low',
+      call_success_rate: 'AI call success rate is too low',
+      json_valid_rate: 'Structured output validity is too low',
+      evidence_valid_rate: 'Evidence validity is too low',
+      sentiment_accuracy: 'AI sentiment accuracy does not meet the rule baseline',
+      problem_micro_f1: 'AI problem type Micro F1 improvement is insufficient',
+      budget_stopped: 'The run stopped because of its token budget',
+      no_eligible_decisions: 'No reviews are eligible for Hybrid decisions'
+    }
   },
   login: {
     title: 'Merchant Operations Console',

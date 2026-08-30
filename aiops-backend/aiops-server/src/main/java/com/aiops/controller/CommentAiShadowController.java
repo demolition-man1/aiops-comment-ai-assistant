@@ -1,11 +1,13 @@
 package com.aiops.controller;
 
 import com.aiops.dto.CommentAiAnnotationDTO;
+import com.aiops.dto.CommentAiHybridActivationDTO;
 import com.aiops.dto.CommentAiShadowTaskDTO;
 import com.aiops.result.PageResult;
 import com.aiops.result.Result;
 import com.aiops.service.CommentAiShadowService;
 import com.aiops.vo.CommentAiEvaluationVO;
+import com.aiops.vo.CommentAiHybridReadinessVO;
 import com.aiops.vo.CommentAiShadowResultVO;
 import com.aiops.vo.CommentAiShadowRunVO;
 import com.aiops.vo.CommentAiShadowTaskVO;
@@ -82,5 +84,19 @@ public class CommentAiShadowController {
     @Operation(summary = "计算评论 AI Shadow 质量与运行指标")
     public Result<CommentAiEvaluationVO> evaluateRun(@PathVariable Long runId) {
         return Result.success(commentAiShadowService.evaluateRun(runId));
+    }
+
+    @GetMapping("/runs/{runId}/hybrid-readiness")
+    @Operation(summary = "查询评论 AI Hybrid 准入状态")
+    public Result<CommentAiHybridReadinessVO> hybridReadiness(@PathVariable Long runId) {
+        return Result.success(commentAiShadowService.hybridReadiness(runId));
+    }
+
+    @PostMapping("/runs/{runId}/hybrid-activation")
+    @Operation(summary = "确认启用合格的评论 AI Hybrid 问题标签")
+    public Result<CommentAiHybridReadinessVO> activateHybrid(
+            @PathVariable Long runId,
+            @Valid @RequestBody CommentAiHybridActivationDTO activationDTO) {
+        return Result.success(commentAiShadowService.activateHybrid(runId, activationDTO));
     }
 }

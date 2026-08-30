@@ -19,8 +19,11 @@ test('comment AI evaluation workspace is navigable and backed by public Java API
   assert.match(modules, /\/analysis\/ai-shadow\/runs/)
   assert.match(modules, /\/annotation/)
   assert.match(modules, /\/evaluation/)
+  assert.match(modules, /\/hybrid-readiness/)
+  assert.match(modules, /\/hybrid-activation/)
   assert.match(types, /interface CommentAiShadowRun/)
   assert.match(types, /interface CommentAiEvaluation/)
+  assert.match(types, /interface CommentAiHybridReadiness/)
   await access(new URL('../src/views/CommentAiEvaluationView.vue', import.meta.url))
 })
 
@@ -32,6 +35,9 @@ test('evaluation workspace keeps task execution explicit and polling bounded to 
   assert.match(view, /isTerminalTask/)
   assert.match(view, /commentAiShadowApi\.upsertAnnotation/)
   assert.match(view, /commentAiShadowApi\.evaluation/)
+  assert.match(view, /commentAiShadowApi\.hybridReadiness/)
+  assert.match(view, /commentAiShadowApi\.activateHybrid/)
+  assert.match(view, /activationConfirm/)
   assert.doesNotMatch(view, /internal\/analysis/)
 })
 

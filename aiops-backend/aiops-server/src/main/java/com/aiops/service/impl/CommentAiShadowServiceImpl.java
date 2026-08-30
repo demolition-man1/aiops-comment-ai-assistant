@@ -3,21 +3,26 @@ package com.aiops.service.impl;
 import com.aiops.client.PythonAnalysisClient;
 import com.aiops.context.BaseContext;
 import com.aiops.dto.CommentAiAnnotationDTO;
+import com.aiops.dto.CommentAiHybridActivationDTO;
 import com.aiops.dto.CommentAiShadowTaskDTO;
 import com.aiops.entity.BizAnalysisTask;
 import com.aiops.entity.BizCommentAiAnnotation;
+import com.aiops.entity.BizCommentAiDecision;
 import com.aiops.entity.BizCommentAiShadowRun;
 import com.aiops.entity.SysPromptTemplate;
 import com.aiops.exception.BusinessException;
 import com.aiops.mapper.BizAnalysisTaskMapper;
 import com.aiops.mapper.BizCommentAiAnnotationMapper;
+import com.aiops.mapper.BizCommentAiDecisionMapper;
 import com.aiops.mapper.BizCommentAiShadowResultMapper;
 import com.aiops.mapper.BizCommentAiShadowRunMapper;
 import com.aiops.result.PageResult;
 import com.aiops.service.AiCallLogService;
 import com.aiops.service.CommentAiShadowService;
 import com.aiops.service.PromptTemplateService;
+import com.aiops.properties.CommentAiHybridProperties;
 import com.aiops.vo.CommentAiEvaluationVO;
+import com.aiops.vo.CommentAiHybridReadinessVO;
 import com.aiops.vo.CommentAiShadowResultVO;
 import com.aiops.vo.CommentAiShadowRunVO;
 import com.aiops.vo.CommentAiShadowTaskVO;
@@ -29,6 +34,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -48,11 +54,13 @@ public class CommentAiShadowServiceImpl implements CommentAiShadowService {
     private final BizCommentAiShadowRunMapper runMapper;
     private final BizCommentAiShadowResultMapper resultMapper;
     private final BizCommentAiAnnotationMapper annotationMapper;
+    private final BizCommentAiDecisionMapper decisionMapper;
     private final PythonAnalysisClient pythonAnalysisClient;
     private final PromptTemplateService promptTemplateService;
     private final AiCallLogService aiCallLogService;
     private final ObjectMapper objectMapper;
     private final TaskExecutor taskExecutor;
+    private final CommentAiHybridProperties hybridProperties;
 
     @Override
     public CommentAiShadowTaskVO createTask(CommentAiShadowTaskDTO createDTO) {
@@ -198,11 +206,71 @@ public class CommentAiShadowServiceImpl implements CommentAiShadowService {
         return toEvaluationVO(evaluation, run.getRunStatus());
     }
 
+    @Override
+    public CommentAiHybridReadinessVO hybridReadiness(Long runId) {
+        requireRun(runId);
+        CommentAiHybridReadinessVO base = new CommentAiHybridGate(hybridProperties).evaluate(evaluateRun(runId));
+        int eligibleCount = decisionMapper.selectEligibleCandidates(runId,
+                BigDecimal.valueOf(hybridProperties.getMinConfidence())).size();
+        int activeCount = valueOrZero(decisionMapper.selectActiveCountByRunId(runId));
+        List<String> failures = new ArrayList<>(base.getFailures());
+        if (base.getReady() && eligibleCount == 0) {
+            failures.add("no_eligible_decisions");
+        }
+        return new CommentAiHybridReadinessVO(failures.isEmpty(), List.copyOf(failures), eligibleCount, activeCount,
+                hybridProperties.getMode());
+    }
+
+    @Override
+    @Transactional
+    public CommentAiHybridReadinessVO activateHybrid(Long runId, CommentAiHybridActivationDTO activationDTO) {
+        if (activationDTO == null || !Boolean.TRUE.equals(activationDTO.getConfirmed())) {
+            throw new BusinessException(400, "必须显式确认启用 Hybrid 问题分类");
+        }
+        CommentAiHybridReadinessVO readiness = hybridReadiness(runId);
+        if (!Boolean.TRUE.equals(readiness.getReady())) {
+            throw new BusinessException(422, "当前运行未通过 Hybrid 准入：" + String.join(", ", readiness.getFailures()));
+        }
+        Long userId = BaseContext.getCurrentId();
+        LocalDateTime now = LocalDateTime.now();
+        for (Map<String, Object> candidate : decisionMapper.selectEligibleCandidates(runId,
+                BigDecimal.valueOf(hybridProperties.getMinConfidence()))) {
+            Long commentId = longValue(candidate, "commentId", null);
+            if (commentId == null) {
+                continue;
+            }
+            BizCommentAiDecision decision = decisionMapper.selectOne(new LambdaQueryWrapper<BizCommentAiDecision>()
+                    .eq(BizCommentAiDecision::getCommentId, commentId).last("limit 1"));
+            boolean existing = decision != null;
+            if (!existing) {
+                decision = new BizCommentAiDecision();
+                decision.setCommentId(commentId);
+            }
+            decision.setShadowResultId(longValue(candidate, "shadowResultId", null));
+            decision.setAcceptedProblemType(trimToNull(stringValue(candidate, "acceptedProblemType", null)));
+            decision.setConfidence(decimalValue(candidate.get("confidence")));
+            decision.setGateVersion("v1");
+            decision.setActive(1);
+            decision.setActivatedBy(userId);
+            decision.setActivatedAt(now);
+            if (existing) {
+                decisionMapper.updateById(decision);
+            } else {
+                decisionMapper.insert(decision);
+            }
+        }
+        return hybridReadiness(runId);
+    }
+
     private void setAnnotationFields(BizCommentAiAnnotation annotation, CommentAiAnnotationDTO dto, LocalDateTime now) {
         annotation.setManualSentiment(dto.getManualSentiment().trim().toLowerCase());
         annotation.setManualProblemTypes(toJson(dto.normalizedProblemTypes()));
         annotation.setAnnotationNote(trimToNull(dto.getAnnotationNote()));
         annotation.setUpdateTime(now);
+    }
+
+    private int valueOrZero(Integer value) {
+        return value == null ? 0 : value;
     }
 
     private BizCommentAiShadowRun requireRun(Long runId) {
