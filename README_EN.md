@@ -40,6 +40,7 @@ A review-driven AI operations assistant for small and medium-sized e-commerce me
 | Merchant Dashboard | Product count, seller count, review count, average score, negative rate, trend charts, and risk overview |
 | Data Import | Local Olist directory import, single CSV preview / field mapping / OSS import, one-click sample data import, and low-frequency public sample crawler import |
 | Review Analysis | Review pagination and filtering, sentiment detection, negative review detection, manual tag editing, on-demand translation, and one-click analysis with report generation |
+| Comment AI Shadow | Isolated sampled comparison runs, sample review, manual sentiment and issue-label annotation, and quality, validity, latency, and token metrics for rule and AI outputs |
 | Tag Library | Custom tag management, grouping, color, enabled status, and direct selection in the review tag dialog |
 | Solution Library | Solutions by issue type and category, with reusable suggestions in the review workspace |
 | Prompt Templates | Default prompts by business type, including reports, copywriting, negative replies, translation, and product comparison |

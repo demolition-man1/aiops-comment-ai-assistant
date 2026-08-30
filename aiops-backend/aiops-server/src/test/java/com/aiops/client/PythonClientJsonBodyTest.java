@@ -55,6 +55,23 @@ class PythonClientJsonBodyTest {
     }
 
     @Test
+    void shadowEvaluationClientSendsJsonBody() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        PythonAnalysisClient client = new PythonAnalysisClient(builder.build(), properties(), new ObjectMapper());
+
+        server.expect(requestTo("http://python-service/internal/analysis/comments/evaluation"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(header(HttpHeaders.CONTENT_TYPE, containsString(MediaType.APPLICATION_JSON_VALUE)))
+                .andExpect(content().json("{\"rows\":[]}"))
+                .andRespond(withSuccess("{\"success\":true,\"evaluation\":{}}", MediaType.APPLICATION_JSON));
+
+        client.evaluateCommentShadow(Map.of("rows", java.util.List.of()));
+
+        server.verify();
+    }
+
+    @Test
     void aiClientSendsJsonBody() {
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();

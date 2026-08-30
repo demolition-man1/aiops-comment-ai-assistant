@@ -6,6 +6,8 @@ import com.aiops.entity.BizAnalysisTask;
 import com.aiops.entity.BizCommentAiShadowRun;
 import com.aiops.entity.SysPromptTemplate;
 import com.aiops.mapper.BizAnalysisTaskMapper;
+import com.aiops.mapper.BizCommentAiAnnotationMapper;
+import com.aiops.mapper.BizCommentAiShadowResultMapper;
 import com.aiops.mapper.BizCommentAiShadowRunMapper;
 import com.aiops.service.AiCallLogService;
 import com.aiops.service.PromptTemplateService;
@@ -42,6 +44,12 @@ class CommentAiShadowServiceImplTest {
     private BizCommentAiShadowRunMapper runMapper;
 
     @Mock
+    private BizCommentAiShadowResultMapper resultMapper;
+
+    @Mock
+    private BizCommentAiAnnotationMapper annotationMapper;
+
+    @Mock
     private PythonAnalysisClient pythonAnalysisClient;
 
     @Mock
@@ -59,6 +67,8 @@ class CommentAiShadowServiceImplTest {
         service = new CommentAiShadowServiceImpl(
                 taskMapper,
                 runMapper,
+                resultMapper,
+                annotationMapper,
                 pythonAnalysisClient,
                 promptTemplateService,
                 aiCallLogService,

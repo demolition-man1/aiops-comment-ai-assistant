@@ -49,3 +49,15 @@ create table if not exists biz_comment_ai_shadow_result (
     index idx_comment_ai_shadow_result_run (run_id, sample_order),
     index idx_comment_ai_shadow_result_comment (comment_id)
 );
+
+create table if not exists biz_comment_ai_annotation (
+    id bigint primary key auto_increment,
+    comment_id bigint not null,
+    manual_sentiment varchar(32) not null,
+    manual_problem_types json not null,
+    annotation_note varchar(500) null,
+    annotated_by bigint null,
+    annotation_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    unique key uk_comment_ai_annotation_comment (comment_id)
+);

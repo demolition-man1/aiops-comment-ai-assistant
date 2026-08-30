@@ -15,6 +15,8 @@ def test_shadow_tables_have_matching_migration_and_baseline_schema() -> None:
         assert "create table if not exists biz_comment_ai_shadow_result" in sql
         assert "unique key uk_comment_ai_shadow_sample (run_id, comment_id)" in sql
         assert "index idx_comment_ai_shadow_result_run (run_id, sample_order)" in sql
+        assert "create table if not exists biz_comment_ai_annotation" in sql
+        assert "unique key uk_comment_ai_annotation_comment (comment_id)" in sql
 
 
 def test_default_shadow_prompts_cover_all_supported_languages() -> None:
