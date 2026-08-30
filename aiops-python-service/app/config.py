@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import os
 from pathlib import Path
+import re
 
 
 SERVICE_ROOT = Path(__file__).resolve().parents[1]
@@ -61,6 +62,22 @@ def _bounded_float_env(name: str, default: float, minimum: float, maximum: float
     return value
 
 
+def _rag_collection_env(name: str, default: str) -> str:
+    value = os.getenv(name, default).strip()
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_]{1,61}[a-z0-9]", value):
+        raise ValueError(
+            f"{name} must use lowercase letters, digits, or underscores and be 3 to 63 characters long"
+        )
+    return value
+
+
+def _required_string_env(name: str, default: str) -> str:
+    value = os.getenv(name, default).strip()
+    if not value:
+        raise ValueError(f"{name} must not be empty")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     mysql_host: str = os.getenv("MYSQL_HOST", "localhost")
@@ -98,6 +115,26 @@ class Settings:
     )
     comment_ai_hybrid_min_confidence: float = field(
         default_factory=lambda: _bounded_float_env("COMMENT_AI_HYBRID_MIN_CONFIDENCE", 0.80, 0.0, 1.0)
+    )
+    rag_enabled: bool = field(default_factory=lambda: _bool_env("RAG_ENABLED", False))
+    rag_collection: str = field(
+        default_factory=lambda: _rag_collection_env("RAG_COLLECTION", "aiops_knowledge_v1")
+    )
+    rag_top_k: int = field(default_factory=lambda: _bounded_int_env("RAG_TOP_K", 4, 1, 20))
+    rag_min_relevance_score: float = field(
+        default_factory=lambda: _bounded_float_env("RAG_MIN_RELEVANCE_SCORE", 0.35, 0.0, 1.0)
+    )
+    rag_max_context_chars: int = field(
+        default_factory=lambda: _bounded_int_env("RAG_MAX_CONTEXT_CHARS", 6000, 1000, 20000)
+    )
+    rag_chroma_dir: str = field(
+        default_factory=lambda: _required_string_env("RAG_CHROMA_DIR", "./data/chroma")
+    )
+    embedding_model: str = field(
+        default_factory=lambda: _required_string_env("EMBEDDING_MODEL", "intfloat/multilingual-e5-small")
+    )
+    embedding_device: str = field(
+        default_factory=lambda: _choice_env("EMBEDDING_DEVICE", "cpu", {"cpu", "cuda", "mps"})
     )
     local_import_host_path: str = os.getenv("LOCAL_IMPORT_HOST_PATH", "").strip()
     local_import_container_path: str = os.getenv("LOCAL_IMPORT_CONTAINER_PATH", "/data/local-import").strip()

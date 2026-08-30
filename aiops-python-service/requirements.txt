@@ -7,3 +7,7 @@ python-dotenv==1.0.1
 pytest==8.3.4
 langchain-core==1.6.1
 langchain-deepseek==1.1.0
+langchain-chroma==1.1.0
+chromadb==1.5.9
+langchain-huggingface==1.2.2
+sentence-transformers==6.0.0
