@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import io
 import json
 from typing import Any
@@ -7,6 +7,7 @@ import pandas as pd
 import requests
 
 from app.db import get_conn
+from app.config import settings
 from app.repositories import comment_repository, product_repository, seller_repository, task_repository
 from app.utils.keyword_extractor import extract_keywords
 from app.utils.problem_classifier import classify_problem
@@ -21,6 +22,37 @@ REQUIRED_FILES = {
     "sellers": "olist_sellers_dataset.csv",
     "category_translation": "product_category_name_translation.csv",
 }
+
+
+def resolve_import_data_path(
+    data_path: str,
+    host_root: str | None = None,
+    mounted_root: Path | None = None,
+) -> Path:
+    requested_path = Path(data_path)
+    if requested_path.exists():
+        return requested_path
+
+    configured_host_root = (host_root or "").strip()
+    configured_mounted_root = mounted_root or Path(settings.local_import_container_path)
+    if configured_host_root:
+        try:
+            relative_path = PureWindowsPath(data_path).relative_to(PureWindowsPath(configured_host_root))
+        except ValueError:
+            relative_path = None
+        if relative_path is not None:
+            mapped_path = configured_mounted_root.joinpath(*relative_path.parts)
+            try:
+                mapped_path.resolve().relative_to(configured_mounted_root.resolve())
+            except ValueError:
+                mapped_path = None
+            if mapped_path is not None and mapped_path.exists():
+                return mapped_path
+
+    raise FileNotFoundError(
+        f"dataPath does not exist: {requested_path}. "
+        "When running in Docker, configure AIOPS_LOCAL_IMPORT_HOST_PATH and restart python-service."
+    )
 
 
 def _read_csv(data_dir: Path, name: str) -> pd.DataFrame:
@@ -61,9 +93,7 @@ class OlistImportService:
         if not data_path:
             return self._import_single_comment_csv(request)
 
-        data_dir = Path(str(data_path))
-        if not data_dir.exists():
-            raise FileNotFoundError(f"dataPath does not exist: {data_dir}")
+        data_dir = resolve_import_data_path(str(data_path), settings.local_import_host_path)
 
         with get_conn() as conn:
             task_repository.update_analysis_task(conn, task_id, "processing", 10)

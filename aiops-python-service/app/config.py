@@ -99,6 +99,8 @@ class Settings:
     comment_ai_hybrid_min_confidence: float = field(
         default_factory=lambda: _bounded_float_env("COMMENT_AI_HYBRID_MIN_CONFIDENCE", 0.80, 0.0, 1.0)
     )
+    local_import_host_path: str = os.getenv("LOCAL_IMPORT_HOST_PATH", "").strip()
+    local_import_container_path: str = os.getenv("LOCAL_IMPORT_CONTAINER_PATH", "/data/local-import").strip()
 
     crawler_enabled: bool = _bool_env("CRAWLER_ENABLED", False)
 

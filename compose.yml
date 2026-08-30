@@ -67,7 +67,14 @@ services:
       COMMENT_AI_SHADOW_MAX_TOTAL_TOKENS: ${COMMENT_AI_SHADOW_MAX_TOTAL_TOKENS:-100000}
       COMMENT_AI_MODE: ${COMMENT_AI_MODE:-rule}
       COMMENT_AI_HYBRID_MIN_CONFIDENCE: ${COMMENT_AI_HYBRID_MIN_CONFIDENCE:-0.80}
+      LOCAL_IMPORT_HOST_PATH: ${AIOPS_LOCAL_IMPORT_HOST_PATH:-}
+      LOCAL_IMPORT_CONTAINER_PATH: /data/local-import
       CRAWLER_ENABLED: ${CRAWLER_ENABLED:-false}
+    volumes:
+      - type: bind
+        source: ${AIOPS_LOCAL_IMPORT_HOST_PATH:-./data}
+        target: /data/local-import
+        read_only: true
     ports:
       - "${AIOPS_PYTHON_PORT:-8001}:8001"
     depends_on:

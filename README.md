@@ -372,6 +372,22 @@ npm run build
 
 可选映射字段包括 `review_content`、`review_title`、`review_id`、`order_id`、`seller_id`、`review_time`。
 
+### Docker 本地目录导入
+
+使用 Docker 启动时，Python 容器默认无法直接访问 Windows 路径。先在根目录 `.env` 中配置 Olist 目录的父路径，例如：
+
+```env
+AIOPS_LOCAL_IMPORT_HOST_PATH=D:/data
+```
+
+然后重建 Python 服务：
+
+```powershell
+docker compose up -d --force-recreate python-service
+```
+
+页面仍填写完整 Windows 路径，例如 `D:\\data\\olist-brazilian-ecommerce`。系统只会将该配置目录下的路径映射到容器的只读目录 `/data/local-import`；目录外的路径不会被访问。
+
 ## 项目文档
 
 - [项目文档](outputs/AI智能运营助手项目文档.md)

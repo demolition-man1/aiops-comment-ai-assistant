@@ -372,6 +372,22 @@ Browser upload is suitable for an already merged single CSV review file. The pag
 
 Optional mapped fields include `review_content`, `review_title`, `review_id`, `order_id`, `seller_id`, and `review_time`.
 
+### Docker Local Directory Import
+
+When started with Docker, the Python container cannot directly access Windows paths. Configure the parent directory of the Olist dataset in the root `.env` first, for example:
+
+```env
+AIOPS_LOCAL_IMPORT_HOST_PATH=D:/data
+```
+
+Then recreate the Python service:
+
+```powershell
+docker compose up -d --force-recreate python-service
+```
+
+Keep entering the full Windows path in the page, such as `D:\\data\\olist-brazilian-ecommerce`. The application maps only descendants of the configured directory to the read-only `/data/local-import` container path; paths outside it are not accessible.
+
 ## Documentation
 
 - [Project Document](outputs/AI智能运营助手项目文档.md)
