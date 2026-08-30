@@ -434,3 +434,50 @@ textarea {
   margin-left: 8px;
   color: #64748b;
 }
+
+.evaluation-page {
+  display: grid;
+  gap: 14px;
+}
+
+.evaluation-section {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5eaf3;
+}
+
+.evaluation-section:last-of-type {
+  border-bottom: 0;
+}
+
+.evaluation-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.evaluation-section-head h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.evaluation-section-head p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.evaluation-run-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0 12px;
+}
+
+.evaluation-filter .el-form-item,
+.evaluation-run-form .el-form-item {
+  margin-bottom: 0;
+}

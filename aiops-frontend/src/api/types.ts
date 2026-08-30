@@ -120,6 +120,90 @@ export interface Task {
   errorMessage?: string
 }
 
+export interface CommentAiShadowTask {
+  taskId: number
+  runId?: number
+  taskStatus: 'pending' | 'processing' | 'success' | 'partial' | 'budget_stopped' | 'failed' | string
+  progress: number
+  actualSampleSize: number
+  errorMessage?: string
+}
+
+export interface CommentAiShadowRun {
+  runId: number
+  taskId: number
+  targetType: 'product' | 'seller' | string
+  targetId: string
+  sampleSeed: number
+  requestedSampleSize: number
+  actualSampleSize: number
+  maxTotalTokens: number
+  totalCalls: number
+  successCount: number
+  failureCount: number
+  totalTokens: number
+  latencyMs: number
+  runStatus: 'processing' | 'success' | 'partial' | 'budget_stopped' | 'failed' | string
+  errorMessage?: string
+  startTime?: string
+  endTime?: string
+  createTime?: string
+}
+
+export interface CommentAiShadowResult {
+  resultId: number
+  runId: number
+  commentId: number
+  sampleOrder: number
+  reviewScore?: number
+  reviewContent?: string
+  ruleSentiment?: string
+  ruleProblemType?: string
+  aiSentiment?: string
+  aiSentimentConfidence?: number
+  aiPrimaryProblem?: string
+  aiProblems?: string[]
+  aiEvidence?: string
+  jsonValid: number
+  evidenceValid: number
+  callStatus: 'pending' | 'success' | 'failed' | string
+  modelName?: string
+  tokenUsage: number
+  tokenUsageEstimated: number
+  latencyMs: number
+  errorMessage?: string
+  manualSentiment?: string
+  manualProblemTypes?: string[]
+  annotationNote?: string
+  annotationTime?: string
+}
+
+export interface CommentAiMetricBlock {
+  sentimentAccuracy?: number | null
+  problemMicroF1?: number | null
+  problemMacroF1?: number | null
+}
+
+export interface CommentAiEvaluation {
+  qualityReady: boolean
+  sampleCount: number
+  annotatedCount: number
+  attemptedCallCount: number
+  successfulCallCount: number
+  failedCallCount: number
+  annotationCoverage: number
+  jsonValidRate: number
+  evidenceValidRate: number
+  callSuccessRate: number
+  totalTokens: number
+  estimatedTokenRowCount: number
+  averageLatencyMs: number
+  budgetStopped: boolean
+  rule: CommentAiMetricBlock
+  ai: CommentAiMetricBlock
+  delta: CommentAiMetricBlock
+}
+
 export interface SyncConfig {
   id: number
   syncName: string

@@ -27,6 +27,7 @@ export const router = createRouter({
         { path: 'solutions', name: 'solutions', component: () => import('@/views/ProblemSolutionView.vue') },
         { path: 'prompts', name: 'prompts', component: () => import('@/views/PromptTemplateView.vue') },
         { path: 'ai-logs', name: 'aiLogs', component: () => import('@/views/AiCallLogView.vue') },
+        { path: 'ai-evaluation', name: 'aiEvaluation', component: () => import('@/views/CommentAiEvaluationView.vue') },
         { path: 'import', name: 'import', component: () => import('@/views/DataImportView.vue') },
         { path: 'sync', name: 'sync', component: () => import('@/views/SyncCenterView.vue') },
         { path: 'tasks', name: 'tasks', component: () => import('@/views/TaskCenterView.vue') },

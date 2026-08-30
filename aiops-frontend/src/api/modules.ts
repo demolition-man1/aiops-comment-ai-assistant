@@ -27,7 +27,11 @@ import type {
   TaskRecord,
   Task,
   AiCallLog,
-  AiCallLogOverview
+  AiCallLogOverview,
+  CommentAiEvaluation,
+  CommentAiShadowResult,
+  CommentAiShadowRun,
+  CommentAiShadowTask
 } from './types'
 
 export const authApi = {
@@ -180,6 +184,29 @@ export const reportApi = {
   categories: (params: Record<string, unknown>) =>
     http.get<CategoryAnalysis[], CategoryAnalysis[]>('/reports/categories', { params }),
   exportCsv: () => downloadFile('/reports/export')
+}
+
+export const commentAiShadowApi = {
+  createTask: (payload: {
+    targetType: 'product' | 'seller'
+    targetId: string
+    sampleSize: number
+    sampleSeed: number
+    maxTotalTokens: number
+    language: string
+  }) => http.post<CommentAiShadowTask, CommentAiShadowTask>('/analysis/ai-shadow/tasks', payload),
+  task: (taskId: number) => http.get<CommentAiShadowTask, CommentAiShadowTask>(`/analysis/ai-shadow/tasks/${taskId}`),
+  runs: (params: Record<string, unknown>) =>
+    http.get<PageResult<CommentAiShadowRun>, PageResult<CommentAiShadowRun>>('/analysis/ai-shadow/runs', { params }),
+  results: (runId: number, params: Record<string, unknown>) =>
+    http.get<PageResult<CommentAiShadowResult>, PageResult<CommentAiShadowResult>>(`/analysis/ai-shadow/runs/${runId}/results`, { params }),
+  upsertAnnotation: (commentId: number, payload: {
+    manualSentiment: 'positive' | 'neutral' | 'negative'
+    manualProblemTypes: string[]
+    annotationNote?: string
+  }) => http.put<void, void>(`/analysis/ai-shadow/comments/${commentId}/annotation`, payload),
+  evaluation: (runId: number) =>
+    http.get<CommentAiEvaluation, CommentAiEvaluation>(`/analysis/ai-shadow/runs/${runId}/evaluation`)
 }
 
 export const reportArchiveApi = {
