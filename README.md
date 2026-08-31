@@ -254,7 +254,7 @@ AI_PROVIDER=deepseek
 AI_BASE_URL=https://api.deepseek.com
 AI_CHAT_PATH=/v1/chat/completions
 AI_API_KEY=your-ai-api-key
-AI_MODEL=deepseek-chat
+AI_MODEL=deepseek-v4-flash
 AI_NEGATIVE_REPLY_ENGINE=langchain
 AI_MAX_RETRIES=2
 ```

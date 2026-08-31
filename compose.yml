@@ -57,7 +57,7 @@ services:
       AI_BASE_URL: ${AI_BASE_URL:-https://api.deepseek.com}
       AI_CHAT_PATH: ${AI_CHAT_PATH:-/v1/chat/completions}
       AI_API_KEY: ${AI_API_KEY:-}
-      AI_MODEL: ${AI_MODEL:-deepseek-chat}
+      AI_MODEL: ${AI_MODEL:-deepseek-v4-flash}
       AI_TIMEOUT: ${AI_TIMEOUT:-60}
       AI_NEGATIVE_REPLY_ENGINE: ${AI_NEGATIVE_REPLY_ENGINE:-langchain}
       AI_MAX_RETRIES: ${AI_MAX_RETRIES:-2}

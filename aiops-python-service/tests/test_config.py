@@ -35,6 +35,9 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(settings.ai_negative_reply_engine, "legacy")
         self.assertEqual(settings.ai_max_retries, 1)
 
+    def test_default_deepseek_model_matches_the_supported_configuration_profile(self) -> None:
+        self.assertEqual(config.Settings.__dataclass_fields__["ai_model"].default, "deepseek-v4-flash")
+
     def test_settings_rejects_unknown_negative_reply_engine(self) -> None:
         with patch.dict(os.environ, {"AI_NEGATIVE_REPLY_ENGINE": "unsupported"}, clear=False):
             with self.assertRaisesRegex(ValueError, "AI_NEGATIVE_REPLY_ENGINE"):

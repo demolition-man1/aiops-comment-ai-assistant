@@ -90,7 +90,7 @@ class Settings:
     ai_base_url: str = os.getenv("AI_BASE_URL", "https://api.deepseek.com")
     ai_chat_path: str = os.getenv("AI_CHAT_PATH", "/v1/chat/completions")
     ai_api_key: str = os.getenv("AI_API_KEY", "")
-    ai_model: str = os.getenv("AI_MODEL", "deepseek-chat")
+    ai_model: str = os.getenv("AI_MODEL", "deepseek-v4-flash")
     ai_timeout: int = _int_env("AI_TIMEOUT", 30)
     ai_negative_reply_engine: str = field(
         default_factory=lambda: _choice_env(
