@@ -56,6 +56,19 @@ def test_negative_reply_chain_returns_validated_reply_content() -> None:
     assert len(provider.text_prompts) == 0
 
 
+def test_negative_reply_chain_adds_operating_guidance_as_a_separate_system_message() -> None:
+    provider = FakeProvider(structured_result=result_for("We will verify the delivery issue."))
+    chain = NegativeReplyChain(provider)
+
+    chain.generate("customer review prompt", reference_context="Source: problem_solution #14 - Delivery guide")
+
+    messages = provider.structured_prompts[0]
+    assert len(messages) == 3
+    assert "operating guidance, not facts about the current order" in messages[1].content
+    assert "problem_solution #14" in messages[1].content
+    assert messages[2].content == "customer review prompt"
+
+
 @pytest.mark.parametrize(
     "content",
     [

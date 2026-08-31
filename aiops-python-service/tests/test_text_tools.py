@@ -23,7 +23,7 @@ class FakeNegativeReplyChain:
         self.token_usage = token_usage
         self.prompts: list[str] = []
 
-    def generate(self, prompt: str) -> AiInvocationResult[NegativeReplyOutput]:
+    def generate(self, prompt: str, *, reference_context: str | None = None) -> AiInvocationResult[NegativeReplyOutput]:
         self.prompts.append(prompt)
         return AiInvocationResult(
             value=NegativeReplyOutput.model_validate({"replyContent": self.reply_content}),
@@ -253,7 +253,15 @@ class TextToolTests(unittest.TestCase):
     def test_generate_negative_reply_langchain_engine_keeps_java_response_contract(self) -> None:
         service = AiService()
         chain = FakeNegativeReplyChain("Thank you for sharing the delivery issue.", token_usage=31)
-        service._negative_reply_chain = lambda: chain
+
+        def generate(**kwargs):
+            return SimpleNamespace(
+                invocation=chain.generate(kwargs["rendered_prompt"]),
+                rag_used=False,
+                references=[],
+            )
+
+        service._rag_reply_service = lambda: SimpleNamespace(generate=generate)
 
         with patch(
             "app.services.ai_service.settings",
@@ -275,6 +283,8 @@ class TextToolTests(unittest.TestCase):
                 "replyContent": "Thank you for sharing the delivery issue.",
                 "modelName": "deepseek-chat",
                 "tokenUsage": 31,
+                "ragUsed": False,
+                "references": [],
             },
         )
         self.assertEqual(len(chain.prompts), 1)

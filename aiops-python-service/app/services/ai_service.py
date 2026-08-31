@@ -7,6 +7,7 @@ import requests
 from app.ai.chains.negative_reply import NegativeReplyChain
 from app.ai.provider import LangChainProvider
 from app.config import settings
+from app.rag.reply_service import RagReplyService
 
 
 class AiService:
@@ -85,12 +86,14 @@ class AiService:
         )
         prompt = self._prompt_from_template(request, fallback_prompt)
         if settings.ai_negative_reply_engine == "langchain":
-            result = self._negative_reply_chain().generate(prompt)
+            result = self._rag_reply_service().generate(request=request, rendered_prompt=prompt)
             return {
                 "success": True,
-                "replyContent": result.value.reply_content,
-                "modelName": result.model_name,
-                "tokenUsage": result.total_tokens,
+                "replyContent": result.invocation.value.reply_content,
+                "modelName": result.invocation.model_name,
+                "tokenUsage": result.invocation.total_tokens,
+                "ragUsed": result.rag_used,
+                "references": [reference.to_payload() for reference in result.references],
             }
         content = self._chat(prompt, temperature=0.75)
         return {
@@ -98,10 +101,15 @@ class AiService:
             "replyContent": content,
             "modelName": settings.ai_model,
             "tokenUsage": self._estimate_token_usage(prompt, content),
+            "ragUsed": False,
+            "references": [],
         }
 
     def _negative_reply_chain(self) -> NegativeReplyChain:
         return NegativeReplyChain(LangChainProvider())
+
+    def _rag_reply_service(self) -> RagReplyService:
+        return RagReplyService(reply_chain=self._negative_reply_chain())
 
     def translate_comment(self, request: dict[str, Any]) -> dict[str, Any]:
         comment_id = request.get("commentId") or ""

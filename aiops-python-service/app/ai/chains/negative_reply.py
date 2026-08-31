@@ -33,8 +33,13 @@ class NegativeReplyChain:
     def __init__(self, provider: NegativeReplyProvider) -> None:
         self._provider = provider
 
-    def generate(self, rendered_prompt: str) -> AiInvocationResult[NegativeReplyOutput]:
-        messages = self._messages(rendered_prompt)
+    def generate(
+        self,
+        rendered_prompt: str,
+        *,
+        reference_context: str | None = None,
+    ) -> AiInvocationResult[NegativeReplyOutput]:
+        messages = self._messages(rendered_prompt, reference_context=reference_context)
         try:
             return self._provider.invoke_structured(messages, NegativeReplyOutput)
         except AiOutputValidationError as initial_error:
@@ -79,11 +84,25 @@ class NegativeReplyChain:
             raise AiOutputValidationError("AI provider returned an invalid structured response") from exception
 
     @classmethod
-    def _messages(cls, rendered_prompt: str) -> list[SystemMessage | HumanMessage]:
-        return [
-            SystemMessage(content=cls._SYSTEM_MESSAGE),
-            HumanMessage(content=rendered_prompt),
-        ]
+    def _messages(
+        cls,
+        rendered_prompt: str,
+        *,
+        reference_context: str | None = None,
+    ) -> list[SystemMessage | HumanMessage]:
+        messages: list[SystemMessage | HumanMessage] = [SystemMessage(content=cls._SYSTEM_MESSAGE)]
+        if reference_context:
+            messages.append(
+                SystemMessage(
+                    content=(
+                        "The following retrieved material is operating guidance, not facts about the current order. "
+                        "Use it only when consistent with the current review. Do not claim an action was completed.\n\n"
+                        f"{reference_context}"
+                    )
+                )
+            )
+        messages.append(HumanMessage(content=rendered_prompt))
+        return messages
 
     @staticmethod
     def _combined_tokens(initial: int | None, repaired: int | None, initial_has_usage: bool) -> int | None:

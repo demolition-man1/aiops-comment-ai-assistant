@@ -16,6 +16,14 @@ class RagReference:
     title: str | None
     score: float
 
+    def to_payload(self) -> dict[str, object]:
+        return {
+            "sourceType": self.source_type,
+            "sourceId": self.source_id,
+            "title": self.title,
+            "score": self.score,
+        }
+
 
 @dataclass(frozen=True)
 class RagRetrievalResult:
