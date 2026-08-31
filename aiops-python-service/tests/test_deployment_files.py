@@ -72,6 +72,16 @@ def test_images_and_nginx_proxy_are_declared() -> None:
     assert "try_files $uri $uri/ /index.html" in nginx_config
 
 
+def test_python_image_installs_cpu_only_torch_before_rag_dependencies() -> None:
+    python_dockerfile = (REPOSITORY_ROOT / "aiops-python-service" / "Dockerfile").read_text(encoding="utf-8")
+
+    cpu_torch_install = "https://download.pytorch.org/whl/cpu"
+    requirements_install = "pip install --no-cache-dir -r requirements.txt"
+
+    assert cpu_torch_install in python_dockerfile
+    assert python_dockerfile.index(cpu_torch_install) < python_dockerfile.index(requirements_install)
+
+
 def test_frontend_healthcheck_uses_ipv4_loopback() -> None:
     compose = (REPOSITORY_ROOT / "compose.yml").read_text(encoding="utf-8")
     frontend_dockerfile = (REPOSITORY_ROOT / "aiops-frontend" / "Dockerfile").read_text(encoding="utf-8")

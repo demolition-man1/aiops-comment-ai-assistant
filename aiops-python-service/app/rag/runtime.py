@@ -38,6 +38,10 @@ class RagRuntime:
         return self._chroma_client is not None or self._vector_store is not None
 
     @property
+    def settings(self) -> Settings | Any:
+        return self._settings
+
+    @property
     def is_embedding_initialized(self) -> bool:
         return self._embeddings is not None
 

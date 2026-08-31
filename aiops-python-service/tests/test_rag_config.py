@@ -63,6 +63,15 @@ class RagConfigTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, name):
                         Settings()
 
+    def test_rag_rejects_values_above_the_fixed_contract_limits(self) -> None:
+        cases = (("RAG_TOP_K", "11"), ("RAG_MAX_CONTEXT_CHARS", "12001"))
+
+        for name, value in cases:
+            with self.subTest(name=name):
+                with patch.dict(os.environ, {name: value}, clear=False):
+                    with self.assertRaisesRegex(ValueError, name):
+                        Settings()
+
 
 if __name__ == "__main__":
     unittest.main()

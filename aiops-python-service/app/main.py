@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.routers import ai_router, analysis_router, import_router
+from app.routers import ai_router, analysis_router, import_router, rag_router
 
 app = FastAPI(title="AI Ops Python Service", version="0.1.0")
 
@@ -13,3 +13,4 @@ def health() -> dict[str, object]:
 app.include_router(import_router.router)
 app.include_router(analysis_router.router)
 app.include_router(ai_router.router)
+app.include_router(rag_router.router)

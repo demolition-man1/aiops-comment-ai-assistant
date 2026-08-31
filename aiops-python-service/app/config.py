@@ -120,12 +120,12 @@ class Settings:
     rag_collection: str = field(
         default_factory=lambda: _rag_collection_env("RAG_COLLECTION", "aiops_knowledge_v1")
     )
-    rag_top_k: int = field(default_factory=lambda: _bounded_int_env("RAG_TOP_K", 4, 1, 20))
+    rag_top_k: int = field(default_factory=lambda: _bounded_int_env("RAG_TOP_K", 4, 1, 10))
     rag_min_relevance_score: float = field(
         default_factory=lambda: _bounded_float_env("RAG_MIN_RELEVANCE_SCORE", 0.35, 0.0, 1.0)
     )
     rag_max_context_chars: int = field(
-        default_factory=lambda: _bounded_int_env("RAG_MAX_CONTEXT_CHARS", 6000, 1000, 20000)
+        default_factory=lambda: _bounded_int_env("RAG_MAX_CONTEXT_CHARS", 6000, 500, 12000)
     )
     rag_chroma_dir: str = field(
         default_factory=lambda: _required_string_env("RAG_CHROMA_DIR", "./data/chroma")
