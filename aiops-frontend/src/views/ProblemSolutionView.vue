@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { Lightbulb, Pencil, Plus, RefreshCw } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 
-import { problemSolutionApi } from '@/api/modules'
-import type { ProblemSolution } from '@/api/types'
+import { problemSolutionApi, ragKnowledgeApi } from '@/api/modules'
+import type { ProblemSolution, RagIndexStatus } from '@/api/types'
 
 const { t } = useI18n()
+const route = useRoute()
 const loading = ref(false)
 const saving = ref(false)
+const ragStatusLoading = ref(false)
+const ragReindexing = ref(false)
+const ragStatus = ref<RagIndexStatus>()
 const dialogVisible = ref(false)
 const editingId = ref<number>()
 const solutions = ref<ProblemSolution[]>([])
@@ -26,6 +31,15 @@ const query = reactive({
 
 const page = reactive({
   total: 0
+})
+let ragPollingTimer: number | undefined
+
+const ragStatusLabel = computed(() => t(`solutions.ragStates.${ragStatus.value?.state || 'unknown'}`))
+const ragStatusTag = computed(() => {
+  if (ragStatus.value?.state === 'ready') return 'success'
+  if (ragStatus.value?.state === 'failed') return 'danger'
+  if (ragStatus.value?.state === 'building') return 'warning'
+  return 'info'
 })
 
 const defaultForm = (): Partial<ProblemSolution> => ({
@@ -57,6 +71,53 @@ const loadSolutions = async () => {
     page.total = result.total || 0
   } finally {
     loading.value = false
+  }
+}
+
+const stopRagPolling = () => {
+  if (ragPollingTimer) {
+    window.clearTimeout(ragPollingTimer)
+    ragPollingTimer = undefined
+  }
+}
+
+const loadRagStatus = async () => {
+  ragStatusLoading.value = true
+  try {
+    ragStatus.value = await ragKnowledgeApi.status()
+  } finally {
+    ragStatusLoading.value = false
+  }
+}
+
+const startRagPolling = () => {
+  stopRagPolling()
+  const poll = async () => {
+    try {
+      await loadRagStatus()
+      if (ragStatus.value?.state === 'building') {
+        ragPollingTimer = window.setTimeout(poll, 2000)
+      } else {
+        ragReindexing.value = false
+        stopRagPolling()
+      }
+    } catch {
+      ragReindexing.value = false
+      stopRagPolling()
+    }
+  }
+  ragPollingTimer = window.setTimeout(poll, 2000)
+}
+
+const reindexRag = async () => {
+  ragReindexing.value = true
+  try {
+    ragStatus.value = await ragKnowledgeApi.reindex()
+    ElMessage.success(t('solutions.ragRebuildStarted'))
+    startRagPolling()
+  } catch (error) {
+    ragReindexing.value = false
+    throw error
   }
 }
 
@@ -117,7 +178,18 @@ const toggleSolution = async (row: ProblemSolution) => {
   }
 }
 
-onMounted(loadSolutions)
+onMounted(async () => {
+  const keyword = typeof route.query.keyword === 'string' ? route.query.keyword : ''
+  if (keyword) {
+    query.keyword = keyword
+  }
+  await Promise.all([loadSolutions(), loadRagStatus()])
+  if (ragStatus.value?.state === 'building') {
+    startRagPolling()
+  }
+})
+
+onBeforeUnmount(stopRagPolling)
 </script>
 
 <template>
@@ -137,6 +209,26 @@ onMounted(loadSolutions)
           {{ t('solutions.createSolution') }}
         </el-button>
       </div>
+    </div>
+
+    <div class="rag-status-band" v-loading="ragStatusLoading">
+      <div class="rag-status-copy">
+        <span class="rag-status-label">{{ t('solutions.ragStatus') }}</span>
+        <el-tag size="small" :type="ragStatusTag" effect="plain">{{ ragStatusLabel }}</el-tag>
+        <span class="muted">{{ t('solutions.ragDocuments', { count: ragStatus?.documentCount ?? 0 }) }}</span>
+        <span v-if="ragStatus?.lastReindexAt" class="muted">
+          {{ t('solutions.ragLastReindexAt', { time: ragStatus.lastReindexAt }) }}
+        </span>
+        <span v-if="ragStatus?.state === 'failed'" class="rag-status-error">{{ ragStatus.lastError }}</span>
+      </div>
+      <el-button
+        :loading="ragReindexing"
+        :disabled="ragReindexing || ragStatus?.state === 'building'"
+        @click="reindexRag"
+      >
+        <RefreshCw :size="16" />
+        {{ t('solutions.rebuildRagIndex') }}
+      </el-button>
     </div>
 
     <div class="panel">
@@ -277,3 +369,41 @@ onMounted(loadSolutions)
     </el-dialog>
   </section>
 </template>
+
+<style scoped>
+.rag-status-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 44px;
+  margin-bottom: 16px;
+  padding: 8px 0;
+  border-top: 1px solid var(--el-border-color-lighter);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.rag-status-copy {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.rag-status-label {
+  font-weight: 600;
+}
+
+.rag-status-error {
+  color: var(--el-color-danger);
+}
+
+@media (max-width: 720px) {
+  .rag-status-band {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+</style>

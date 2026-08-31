@@ -152,7 +152,14 @@ export default {
     originalMissing: 'Original review text is missing; only rating {score} and issue tag {tag} were detected',
     replyCopied: 'Reply copied',
     translationCopied: 'Translation copied',
-    tagsSaved: 'Tags saved'
+    tagsSaved: 'Tags saved',
+    ragReferences: 'Knowledge sources:',
+    replyHistory: 'Reply History',
+    replyHistoryEmpty: 'No generated negative-review replies yet',
+    ragSourceTypes: {
+      problem_solution: 'Solution library',
+      historical_reply: 'Historical reply'
+    }
   },
   tags: {
     title: 'Custom Tag Library',
@@ -202,7 +209,20 @@ export default {
     created: 'Solution created',
     updated: 'Solution updated',
     enabled: 'Solution enabled',
-    disabled: 'Solution disabled'
+    disabled: 'Solution disabled',
+    ragStatus: 'Knowledge Index',
+    rebuildRagIndex: 'Rebuild Index',
+    ragRebuildStarted: 'Knowledge index rebuild started',
+    ragDocuments: '{count} knowledge items indexed',
+    ragLastReindexAt: 'Last rebuild: {time}',
+    ragStates: {
+      disabled: 'Disabled',
+      empty: 'Needs build',
+      building: 'Building',
+      ready: 'Ready',
+      failed: 'Unavailable',
+      unknown: 'Unknown'
+    }
   },
   prompts: {
     title: 'Prompt Template Management',

@@ -20,6 +20,7 @@ import type {
   ProductRank,
   PromptTemplate,
   ProblemSolution,
+  RagIndexStatus,
   ReportArchive,
   ReportOverview,
   SyncConfig,
@@ -185,6 +186,11 @@ export const reportApi = {
   categories: (params: Record<string, unknown>) =>
     http.get<CategoryAnalysis[], CategoryAnalysis[]>('/reports/categories', { params }),
   exportCsv: () => downloadFile('/reports/export')
+}
+
+export const ragKnowledgeApi = {
+  status: () => http.get<RagIndexStatus, RagIndexStatus>('/ai/rag/status'),
+  reindex: () => http.post<RagIndexStatus, RagIndexStatus>('/ai/rag/reindex')
 }
 
 export const commentAiShadowApi = {

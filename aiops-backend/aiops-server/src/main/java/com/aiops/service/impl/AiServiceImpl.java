@@ -31,8 +31,12 @@ import com.aiops.vo.AiContentVO;
 import com.aiops.vo.CommentTranslationVO;
 import com.aiops.vo.NegativeReplyVO;
 import com.aiops.vo.OperationReportVO;
+import com.aiops.vo.RagReferenceVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -57,6 +61,7 @@ public class AiServiceImpl implements AiService {
     private final AiRateLimitService aiRateLimitService;
     private final PromptTemplateService promptTemplateService;
     private final AiCallLogService aiCallLogService;
+    private final ObjectMapper objectMapper;
 
     @Override
     public OperationReportVO generateProductReport(AiReportGenerateDTO generateDTO) {
@@ -178,6 +183,7 @@ public class AiServiceImpl implements AiService {
                 templateId(template), () -> pythonAiClient.generateNegativeReply(request));
         String replyContent = stringValue(response, "replyContent");
         String modelName = stringValue(response, "modelName");
+        List<RagReferenceVO> ragReferences = parseRagReferences(response.get("references"));
 
         BizNegativeReply reply = new BizNegativeReply();
         reply.setCommentId(comment.getId());
@@ -190,6 +196,8 @@ public class AiServiceImpl implements AiService {
         reply.setModelName(modelName);
         reply.setUseCount(0);
         reply.setFavoriteFlag(0);
+        reply.setRagUsed(booleanValue(response.get("ragUsed")) ? 1 : 0);
+        reply.setRagReferences(writeRagReferences(ragReferences));
         reply.setCreateTime(LocalDateTime.now());
         reply.setUpdateTime(LocalDateTime.now());
         negativeReplyMapper.insert(reply);
@@ -362,6 +370,8 @@ public class AiServiceImpl implements AiService {
                 reply.getEffectTag(),
                 Optional.ofNullable(reply.getUseCount()).orElse(0),
                 Optional.ofNullable(reply.getFavoriteFlag()).orElse(0),
+                Integer.valueOf(1).equals(reply.getRagUsed()),
+                readRagReferences(reply.getRagReferences()),
                 reply.getCreateTime(),
                 reply.getUpdateTime()
         );
@@ -457,6 +467,10 @@ public class AiServiceImpl implements AiService {
 
     private String stringValue(Map<String, Object> map, String key) {
         Object value = map.get(key);
+        return stringValue(value);
+    }
+
+    private String stringValue(Object value) {
         return value == null ? null : String.valueOf(value);
     }
 
@@ -473,6 +487,81 @@ public class AiServiceImpl implements AiService {
         }
         try {
             return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private boolean booleanValue(Object value) {
+        if (value instanceof Boolean booleanValue) {
+            return booleanValue;
+        }
+        return value != null && Boolean.parseBoolean(String.valueOf(value));
+    }
+
+    private List<RagReferenceVO> parseRagReferences(Object value) {
+        if (!(value instanceof List<?> references)) {
+            return List.of();
+        }
+        return references.stream()
+                .filter(Map.class::isInstance)
+                .map(reference -> toRagReference((Map<?, ?>) reference))
+                .flatMap(Optional::stream)
+                .toList();
+    }
+
+    private Optional<RagReferenceVO> toRagReference(Map<?, ?> reference) {
+        String sourceType = stringValue(reference.get("sourceType"));
+        if (!List.of("problem_solution", "historical_reply").contains(sourceType)) {
+            return Optional.empty();
+        }
+        Long sourceId = longValue(reference.get("sourceId"));
+        Double score = doubleValue(reference.get("score"));
+        if (sourceId == null || sourceId <= 0 || score == null || !Double.isFinite(score)) {
+            return Optional.empty();
+        }
+        String title = stringValue(reference.get("title"));
+        return Optional.of(new RagReferenceVO(sourceType, sourceId, title, score));
+    }
+
+    private String writeRagReferences(List<RagReferenceVO> references) {
+        try {
+            return objectMapper.writeValueAsString(references);
+        } catch (JsonProcessingException exception) {
+            throw new BusinessException(500, "知识来源保存失败");
+        }
+    }
+
+    private List<RagReferenceVO> readRagReferences(String rawReferences) {
+        if (rawReferences == null || rawReferences.isBlank()) {
+            return List.of();
+        }
+        try {
+            List<Map<String, Object>> references = objectMapper.readValue(rawReferences,
+                    new TypeReference<List<Map<String, Object>>>() { });
+            return parseRagReferences(references);
+        } catch (JsonProcessingException exception) {
+            return List.of();
+        }
+    }
+
+    private Long longValue(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        try {
+            return value == null ? null : Long.parseLong(String.valueOf(value));
+        } catch (NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private Double doubleValue(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        try {
+            return value == null ? null : Double.parseDouble(String.valueOf(value));
         } catch (NumberFormatException exception) {
             return null;
         }

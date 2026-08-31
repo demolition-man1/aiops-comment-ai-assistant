@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -17,6 +18,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 class PythonClientJsonBodyTest {
 
@@ -104,6 +106,27 @@ class PythonClientJsonBodyTest {
                 ));
 
         client.translateComment(Map.of("commentId", 22, "targetLanguage", "en-US"));
+
+        server.verify();
+    }
+
+    @Test
+    void aiClientUsesInternalRagStatusAndReindexEndpoints() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        PythonAiClient client = new PythonAiClient(builder.build(), properties(), new ObjectMapper());
+
+        server.expect(requestTo("http://python-service/internal/ai/rag/status"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("{\"success\":true,\"data\":{\"state\":\"ready\"}}", MediaType.APPLICATION_JSON));
+        server.expect(requestTo("http://python-service/internal/ai/rag/reindex"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withStatus(HttpStatus.ACCEPTED)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"success\":true,\"data\":{\"state\":\"building\"}}"));
+
+        client.getRagStatus();
+        client.reindexRag();
 
         server.verify();
     }

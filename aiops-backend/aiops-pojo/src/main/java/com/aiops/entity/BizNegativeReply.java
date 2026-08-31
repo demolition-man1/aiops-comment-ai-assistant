@@ -23,6 +23,8 @@ public class BizNegativeReply {
     private String effectTag;
     private Integer useCount;
     private Integer favoriteFlag;
+    private Integer ragUsed;
+    private String ragReferences;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

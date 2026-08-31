@@ -81,6 +81,24 @@ public class PythonAiClient {
                 .body(Map.class);
     }
 
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getRagStatus() {
+        return restClient.get()
+                .uri(properties.getBaseUrl() + "/internal/ai/rag/status")
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(Map.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> reindexRag() {
+        return restClient.post()
+                .uri(properties.getBaseUrl() + "/internal/ai/rag/reindex")
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(Map.class);
+    }
+
     private String jsonBody(Map<String, Object> request) {
         try {
             return objectMapper.writeValueAsString(request);

@@ -152,7 +152,14 @@ export default {
     originalMissing: '原评论内容缺失，仅识别到评分 {score} 分和问题标签 {tag}',
     replyCopied: '回复内容已复制',
     translationCopied: '翻译内容已复制',
-    tagsSaved: '标签已保存'
+    tagsSaved: '标签已保存',
+    ragReferences: '知识来源：',
+    replyHistory: '回复历史',
+    replyHistoryEmpty: '暂无已生成的差评回复',
+    ragSourceTypes: {
+      problem_solution: '方案库',
+      historical_reply: '历史回复'
+    }
   },
   tags: {
     title: '自定义标签库',
@@ -202,7 +209,20 @@ export default {
     created: '方案已创建',
     updated: '方案已更新',
     enabled: '方案已启用',
-    disabled: '方案已停用'
+    disabled: '方案已停用',
+    ragStatus: '知识索引',
+    rebuildRagIndex: '重建索引',
+    ragRebuildStarted: '知识索引已开始重建',
+    ragDocuments: '已索引 {count} 条知识',
+    ragLastReindexAt: '最近重建：{time}',
+    ragStates: {
+      disabled: '未启用',
+      empty: '待构建',
+      building: '构建中',
+      ready: '可用',
+      failed: '异常',
+      unknown: '未知'
+    }
   },
   prompts: {
     title: 'Prompt 模板管理',

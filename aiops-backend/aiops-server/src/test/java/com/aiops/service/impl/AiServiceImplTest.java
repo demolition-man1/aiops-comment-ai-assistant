@@ -23,6 +23,7 @@ import com.aiops.service.CacheService;
 import com.aiops.service.PromptTemplateService;
 import com.aiops.vo.NegativeReplyVO;
 import com.aiops.vo.CommentTranslationVO;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,6 +35,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -91,7 +93,8 @@ class AiServiceImplTest {
                 cacheService,
                 aiRateLimitService,
                 promptTemplateService,
-                aiCallLogService
+                aiCallLogService,
+                new ObjectMapper()
         );
     }
 
@@ -235,6 +238,53 @@ class AiServiceImplTest {
                 .containsEntry("commentTitle", "Entrega atrasada")
                 .containsEntry("commentContent", "produto chegou quebrado")
                 .containsEntry("problemType", "packaging");
+    }
+
+    @Test
+    void generateNegativeReplyPersistsOnlyValidRagReferences() {
+        BizComment comment = new BizComment();
+        comment.setId(22L);
+        comment.setProductId("product-a");
+        comment.setSellerId("seller-a");
+        comment.setReviewScore(1);
+        comment.setReviewContent("Delivery never arrived");
+        comment.setCleanContent("delivery never arrived");
+        comment.setProblemType("logistics");
+        when(aiRateLimitService.tryConsume(anyString(), any())).thenReturn(true);
+        when(commentMapper.selectById(22L)).thenReturn(comment);
+        when(pythonAiClient.generateNegativeReply(any())).thenReturn(Map.of(
+                "success", true,
+                "replyContent", "We are checking the delivery.",
+                "modelName", "deepseek-chat",
+                "ragUsed", true,
+                "references", List.of(
+                        Map.of("sourceType", "problem_solution", "sourceId", 9, "title", "Delivery follow-up", "score", 0.91),
+                        Map.of("sourceType", "unknown", "sourceId", 10, "title", "Ignore", "score", 0.8),
+                        Map.of("sourceType", "historical_reply", "sourceId", "bad", "title", "Ignore", "score", 0.7)
+                )
+        ));
+        when(negativeReplyMapper.insert(any(BizNegativeReply.class))).thenAnswer(invocation -> {
+            invocation.<BizNegativeReply>getArgument(0).setId(36L);
+            return 1;
+        });
+
+        NegativeReplyGenerateDTO generateDTO = new NegativeReplyGenerateDTO();
+        generateDTO.setCommentId(22L);
+
+        NegativeReplyVO result = aiService.generateNegativeReply(generateDTO);
+
+        assertThat(result.getRagUsed()).isTrue();
+        assertThat(result.getRagReferences())
+                .singleElement()
+                .satisfies(reference -> {
+                    assertThat(reference.getSourceType()).isEqualTo("problem_solution");
+                    assertThat(reference.getSourceId()).isEqualTo(9L);
+                    assertThat(reference.getTitle()).isEqualTo("Delivery follow-up");
+                });
+        ArgumentCaptor<BizNegativeReply> replyCaptor = ArgumentCaptor.forClass(BizNegativeReply.class);
+        verify(negativeReplyMapper).insert(replyCaptor.capture());
+        assertThat(replyCaptor.getValue().getRagReferences()).contains("Delivery follow-up");
+        assertThat(replyCaptor.getValue().getRagReferences()).doesNotContain("Ignore");
     }
 
     @Test

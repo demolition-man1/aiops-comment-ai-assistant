@@ -294,6 +294,8 @@ create table if not exists biz_negative_reply (
     effect_tag varchar(64) null,
     use_count int not null default 0,
     favorite_flag tinyint not null default 0,
+    rag_used tinyint not null default 0,
+    rag_references json null,
     create_time datetime not null default current_timestamp,
     update_time datetime null,
     index idx_negative_reply_comment_id (comment_id),

@@ -395,6 +395,26 @@ export interface OperationReport {
   createTime?: string
 }
 
+export interface RagReference {
+  sourceType: 'problem_solution' | 'historical_reply' | string
+  sourceId: number
+  title?: string
+  score?: number
+}
+
+export interface RagIndexStatus {
+  enabled: boolean
+  ready: boolean
+  state: 'disabled' | 'empty' | 'building' | 'ready' | 'failed' | string
+  collection?: string
+  documentCount?: number
+  problemSolutionCount?: number
+  historicalReplyCount?: number
+  embeddingModel?: string
+  lastReindexAt?: string
+  lastError?: string
+}
+
 export interface ReportArchive {
   archiveId: number
   sourceReportId: number
@@ -439,6 +459,8 @@ export interface NegativeReply {
   effectTag?: string
   useCount?: number
   favoriteFlag?: number
+  ragUsed?: boolean
+  ragReferences?: RagReference[]
   createTime?: string
   updateTime?: string
 }

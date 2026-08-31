@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -22,6 +23,8 @@ public class NegativeReplyVO {
     private String effectTag;
     private Integer useCount;
     private Integer favoriteFlag;
+    private Boolean ragUsed;
+    private List<RagReferenceVO> ragReferences;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

@@ -3,6 +3,7 @@ import { Bot, ClipboardCheck, Copy, Languages, MessageCircleReply, RefreshCw, Ta
 import { ElMessage } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 
 import { aiApi, analysisApi, commentApi, pollTask, problemSolutionApi, tagApi } from '@/api/modules'
 import type {
@@ -13,6 +14,7 @@ import type {
   NegativeReply,
   OperationReport,
   ProblemSolution,
+  RagReference,
   Task
 } from '@/api/types'
 import { resolveAnalysisProductId } from '@/utils/analysisTarget'
@@ -21,6 +23,7 @@ import { formatPercent } from '@/utils/metricFormat'
 import { useLocaleStore } from '@/stores/locale'
 
 const { t } = useI18n()
+const router = useRouter()
 const localeStore = useLocaleStore()
 const loading = ref(false)
 const taskLoading = ref(false)
@@ -33,6 +36,8 @@ const task = ref<Task>()
 const analysis = ref<AnalysisResult>()
 const report = ref<OperationReport>()
 const reply = ref<NegativeReply>()
+const replyHistory = ref<NegativeReply[]>([])
+const replyHistoryLoading = ref(false)
 const replySource = ref<Comment>()
 const replyDialogVisible = ref(false)
 const replyLoadingId = ref<number>()
@@ -89,6 +94,16 @@ const loadComments = async () => {
 
 const loadActiveTags = async () => {
   activeTags.value = await tagApi.active()
+}
+
+const loadReplyHistory = async () => {
+  replyHistoryLoading.value = true
+  try {
+    const data = await aiApi.negativeReplies({ pageNum: 1, pageSize: 8 })
+    replyHistory.value = data.records || []
+  } finally {
+    replyHistoryLoading.value = false
+  }
 }
 
 const loadRecommendations = async (row?: Comment) => {
@@ -252,6 +267,7 @@ const generateReply = async () => {
       toneType: 'professional',
       language: localeStore.locale
     })
+    void loadReplyHistory()
     replyDialogVisible.value = true
     ElMessage.success(t('comments.replyGenerated'))
   } finally {
@@ -313,6 +329,21 @@ const copyReply = async () => {
   ElMessage.success(t('comments.replyCopied'))
 }
 
+const formatRagReference = (reference: RagReference) =>
+  reference.title || `${t(`comments.ragSourceTypes.${reference.sourceType}`)} #${reference.sourceId}`
+
+const isProblemSolutionReference = (reference: RagReference) => reference.sourceType === 'problem_solution'
+
+const openSolutionReference = (reference: RagReference) => {
+  if (!isProblemSolutionReference(reference)) {
+    return
+  }
+  void router.push({
+    name: 'solutions',
+    query: { keyword: reference.title || String(reference.sourceId) }
+  })
+}
+
 const copyTranslation = async () => {
   if (!translation.value?.translatedContent) {
     return
@@ -339,7 +370,7 @@ const saveTags = async () => {
 }
 
 onMounted(async () => {
-  await Promise.all([loadComments(), loadActiveTags()])
+  await Promise.all([loadComments(), loadActiveTags(), loadReplyHistory()])
 })
 
 onBeforeUnmount(() => {
@@ -503,6 +534,21 @@ onBeforeUnmount(() => {
         <div class="insight-block">
           <strong>{{ t('comments.negativeReply') }}</strong>
           <p>{{ reply?.replyContent || t('comments.replyMissing') }}</p>
+          <div v-if="reply?.ragUsed && reply.ragReferences?.length" class="rag-reference-list">
+            <span class="rag-reference-label">{{ t('comments.ragReferences') }}</span>
+            <template v-for="reference in reply.ragReferences" :key="`${reference.sourceType}-${reference.sourceId}`">
+              <el-button
+                v-if="isProblemSolutionReference(reference)"
+                link
+                type="primary"
+                class="rag-reference-link"
+                @click="openSolutionReference(reference)"
+              >
+                {{ formatRagReference(reference) }}
+              </el-button>
+              <span v-else class="rag-reference-text">{{ formatRagReference(reference) }}</span>
+            </template>
+          </div>
         </div>
         <div class="insight-block" v-loading="solutionLoading">
           <strong>{{ t('comments.solutionRecommendations') }}</strong>
@@ -520,6 +566,37 @@ onBeforeUnmount(() => {
           <p v-else>{{ t('comments.solutionMissing') }}</p>
         </div>
       </div>
+    </div>
+
+    <div class="panel section-gap" v-loading="replyHistoryLoading">
+      <div class="panel-title">{{ t('comments.replyHistory') }}</div>
+      <el-table v-if="replyHistory.length" :data="replyHistory" size="small" max-height="300">
+        <el-table-column prop="problemType" :label="t('comments.problemTag')" width="130">
+          <template #default="{ row }">{{ displayProblemType(row.problemType) }}</template>
+        </el-table-column>
+        <el-table-column :label="t('comments.negativeReply')" min-width="360" show-overflow-tooltip>
+          <template #default="{ row }">
+            <div>{{ row.replyContent }}</div>
+            <div v-if="row.ragUsed && row.ragReferences?.length" class="rag-reference-list compact">
+              <span class="rag-reference-label">{{ t('comments.ragReferences') }}</span>
+              <template v-for="reference in row.ragReferences" :key="`${reference.sourceType}-${reference.sourceId}`">
+                <el-button
+                  v-if="isProblemSolutionReference(reference)"
+                  link
+                  type="primary"
+                  class="rag-reference-link"
+                  @click="openSolutionReference(reference)"
+                >
+                  {{ formatRagReference(reference) }}
+                </el-button>
+                <span v-else class="rag-reference-text">{{ formatRagReference(reference) }}</span>
+              </template>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" :label="t('common.createdAt')" width="180" />
+      </el-table>
+      <el-empty v-else :description="t('comments.replyHistoryEmpty')" :image-size="72" />
     </div>
 
     <el-dialog v-model="tagDialog.visible" :title="t('comments.tagDialogTitle')" width="480px">
@@ -610,6 +687,21 @@ onBeforeUnmount(() => {
           readonly
           :autosize="{ minRows: 7, maxRows: 12 }"
         />
+        <div v-if="reply?.ragUsed && reply.ragReferences?.length" class="rag-reference-list reply-dialog-references">
+          <span class="rag-reference-label">{{ t('comments.ragReferences') }}</span>
+          <template v-for="reference in reply.ragReferences" :key="`${reference.sourceType}-${reference.sourceId}`">
+            <el-button
+              v-if="isProblemSolutionReference(reference)"
+              link
+              type="primary"
+              class="rag-reference-link"
+              @click="openSolutionReference(reference)"
+            >
+              {{ formatRagReference(reference) }}
+            </el-button>
+            <span v-else class="rag-reference-text">{{ formatRagReference(reference) }}</span>
+          </template>
+        </div>
       </div>
       <template #footer>
         <el-button @click="replyDialogVisible = false">{{ t('common.close') }}</el-button>
@@ -621,3 +713,38 @@ onBeforeUnmount(() => {
     </el-dialog>
   </section>
 </template>
+
+<style scoped>
+.rag-reference-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.rag-reference-list.compact {
+  margin-top: 4px;
+}
+
+.rag-reference-label {
+  color: var(--el-text-color-secondary);
+}
+
+.rag-reference-link {
+  height: auto;
+  min-height: 20px;
+  padding: 0;
+  text-align: left;
+  white-space: normal;
+}
+
+.rag-reference-text {
+  color: var(--el-text-color-regular);
+}
+
+.reply-dialog-references {
+  margin-top: 10px;
+}
+</style>

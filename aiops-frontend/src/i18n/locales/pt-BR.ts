@@ -152,7 +152,14 @@ export default {
     originalMissing: 'O texto original da avaliação está ausente; apenas a nota {score} e a etiqueta {tag} foram identificadas',
     replyCopied: 'Resposta copiada',
     translationCopied: 'Tradução copiada',
-    tagsSaved: 'Etiquetas salvas'
+    tagsSaved: 'Etiquetas salvas',
+    ragReferences: 'Fontes de conhecimento:',
+    replyHistory: 'Histórico de respostas',
+    replyHistoryEmpty: 'Ainda não há respostas geradas para avaliações negativas',
+    ragSourceTypes: {
+      problem_solution: 'Biblioteca de soluções',
+      historical_reply: 'Resposta histórica'
+    }
   },
   tags: {
     title: 'Biblioteca de Etiquetas',
@@ -202,7 +209,20 @@ export default {
     created: 'Solução criada',
     updated: 'Solução atualizada',
     enabled: 'Solução ativada',
-    disabled: 'Solução desativada'
+    disabled: 'Solução desativada',
+    ragStatus: 'Índice de conhecimento',
+    rebuildRagIndex: 'Reconstruir índice',
+    ragRebuildStarted: 'A reconstrução do índice foi iniciada',
+    ragDocuments: '{count} itens de conhecimento indexados',
+    ragLastReindexAt: 'Última reconstrução: {time}',
+    ragStates: {
+      disabled: 'Desativado',
+      empty: 'Aguardando construção',
+      building: 'Em construção',
+      ready: 'Pronto',
+      failed: 'Indisponível',
+      unknown: 'Desconhecido'
+    }
   },
   prompts: {
     title: 'Gerenciamento de Modelos de Prompt',
