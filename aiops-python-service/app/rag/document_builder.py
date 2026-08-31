@@ -10,9 +10,15 @@ def build_knowledge_documents(
     *,
     problem_solutions: list[dict[str, Any]],
     historical_replies: list[dict[str, Any]],
+    review_evidence: list[dict[str, Any]] | None = None,
 ) -> list[Document]:
     documents = [_problem_solution_document(row) for row in problem_solutions]
     documents.extend(_historical_reply_document(row) for row in historical_replies)
+    documents.extend(
+        document
+        for row in review_evidence or []
+        if (document := _review_evidence_document(row)) is not None
+    )
     return documents
 
 
@@ -77,6 +83,46 @@ def _historical_reply_document(row: dict[str, Any]) -> Document:
     )
 
 
+def _review_evidence_document(row: dict[str, Any]) -> Document | None:
+    content = _meaningful_text(row.get("clean_content")) or _meaningful_text(row.get("review_content"))
+    if content is None:
+        return None
+    source_id = _required_id(row)
+    product_id = _text(row.get("product_id"))
+    seller_id = _text(row.get("seller_id"))
+    review_score = _integer(row.get("review_score"))
+    sentiment = _text(row.get("sentiment"))
+    problem_type = _text(row.get("problem_type"))
+    review_time = _timestamp(row.get("review_time"))
+    metadata = {
+        "sourceType": "review_evidence",
+        "sourceId": source_id,
+        "productId": product_id,
+        "sellerId": seller_id,
+        "reviewScore": review_score,
+        "sentiment": sentiment,
+        "problemType": problem_type,
+        "reviewTime": review_time,
+        "title": f"Review evidence #{source_id}",
+        "updatedAt": _timestamp(row.get("update_time")),
+    }
+    return Document(
+        id=f"review_evidence:{source_id}",
+        page_content="\n".join(
+            (
+                f"Product ID: {product_id}",
+                f"Seller ID: {seller_id}",
+                f"Review score: {review_score}",
+                f"Sentiment: {sentiment}",
+                f"Problem type: {problem_type}",
+                f"Review time: {review_time}",
+                f"Review evidence: {content}",
+            )
+        ),
+        metadata=metadata,
+    )
+
+
 def _required_id(row: dict[str, Any]) -> int:
     value = row.get("id")
     if value is None:
@@ -86,6 +132,14 @@ def _required_id(row: dict[str, Any]) -> int:
 
 def _text(value: Any) -> str:
     return "" if value is None else str(value).strip()
+
+
+def _meaningful_text(value: Any) -> str | None:
+    text = _text(value)
+    compact = "".join(text.split()).lower()
+    if not compact or compact in {"null", "none", "nan", "nannan"}:
+        return None
+    return text
 
 
 def _integer(value: Any) -> int:

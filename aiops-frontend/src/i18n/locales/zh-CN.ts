@@ -214,6 +214,7 @@ export default {
     rebuildRagIndex: '重建索引',
     ragRebuildStarted: '知识索引已开始重建',
     ragDocuments: '已索引 {count} 条知识',
+    ragReviewEvidence: '其中 {count} 条评论证据',
     ragLastReindexAt: '最近重建：{time}',
     ragStates: {
       disabled: '未启用',

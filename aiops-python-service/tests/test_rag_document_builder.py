@@ -69,3 +69,54 @@ def test_historical_reply_documents_fill_missing_optional_values_and_keep_determ
         "favoriteFlag": 0,
         "updatedAt": "",
     }
+
+
+def test_review_evidence_documents_prefer_clean_text_and_keep_target_metadata() -> None:
+    documents = build_knowledge_documents(
+        problem_solutions=[],
+        historical_replies=[],
+        review_evidence=[
+            {
+                "id": 36,
+                "product_id": "product-1",
+                "seller_id": "seller-1",
+                "review_score": 1,
+                "sentiment": "negative",
+                "problem_type": "logistics",
+                "review_time": datetime(2026, 8, 31, 9, 30, 0),
+                "clean_content": "Delivery is still delayed.",
+                "review_content": "The parcel was late.",
+            }
+        ],
+    )
+
+    assert len(documents) == 1
+    document = documents[0]
+    assert document.id == "review_evidence:36"
+    assert "Delivery is still delayed." in document.page_content
+    assert "The parcel was late." not in document.page_content
+    assert document.metadata == {
+        "sourceType": "review_evidence",
+        "sourceId": 36,
+        "productId": "product-1",
+        "sellerId": "seller-1",
+        "reviewScore": 1,
+        "sentiment": "negative",
+        "problemType": "logistics",
+        "reviewTime": "2026-08-31T09:30:00",
+        "title": "Review evidence #36",
+        "updatedAt": "",
+    }
+
+
+def test_review_evidence_documents_skip_blank_and_placeholder_text() -> None:
+    documents = build_knowledge_documents(
+        problem_solutions=[],
+        historical_replies=[],
+        review_evidence=[
+            {"id": 37, "clean_content": "  nan ", "review_content": "none"},
+            {"id": 38, "clean_content": "", "review_content": "   "},
+        ],
+    )
+
+    assert documents == []

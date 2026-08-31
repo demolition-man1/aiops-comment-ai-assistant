@@ -127,6 +127,9 @@ class Settings:
     rag_max_context_chars: int = field(
         default_factory=lambda: _bounded_int_env("RAG_MAX_CONTEXT_CHARS", 6000, 500, 12000)
     )
+    rag_review_evidence_max_documents: int = field(
+        default_factory=lambda: _bounded_int_env("RAG_REVIEW_EVIDENCE_MAX_DOCUMENTS", 2000, 0, 10000)
+    )
     rag_chroma_dir: str = field(
         default_factory=lambda: _required_string_env("RAG_CHROMA_DIR", "./data/chroma")
     )

@@ -54,6 +54,7 @@ def test_rag_status_endpoint_returns_fixed_safe_payload() -> None:
             "documentCount": 3,
             "problemSolutionCount": 2,
             "historicalReplyCount": 1,
+            "reviewEvidenceCount": 0,
             "embeddingModel": "intfloat/multilingual-e5-small",
             "lastReindexAt": "2026-08-31T10:00:00+00:00",
             "lastError": None,

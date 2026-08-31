@@ -15,6 +15,7 @@ class RagConfigTests(unittest.TestCase):
         self.assertEqual(settings.rag_top_k, 4)
         self.assertEqual(settings.rag_min_relevance_score, 0.35)
         self.assertEqual(settings.rag_max_context_chars, 6000)
+        self.assertEqual(settings.rag_review_evidence_max_documents, 2000)
         self.assertEqual(settings.rag_chroma_dir, "./data/chroma")
         self.assertEqual(settings.embedding_model, "intfloat/multilingual-e5-small")
         self.assertEqual(settings.embedding_device, "cpu")
@@ -28,6 +29,7 @@ class RagConfigTests(unittest.TestCase):
                 "RAG_TOP_K": "8",
                 "RAG_MIN_RELEVANCE_SCORE": "0.7",
                 "RAG_MAX_CONTEXT_CHARS": "9000",
+                "RAG_REVIEW_EVIDENCE_MAX_DOCUMENTS": "240",
                 "RAG_CHROMA_DIR": "./runtime/chroma",
                 "EMBEDDING_MODEL": "intfloat/multilingual-e5-small",
                 "EMBEDDING_DEVICE": "cuda",
@@ -41,6 +43,7 @@ class RagConfigTests(unittest.TestCase):
         self.assertEqual(settings.rag_top_k, 8)
         self.assertEqual(settings.rag_min_relevance_score, 0.7)
         self.assertEqual(settings.rag_max_context_chars, 9000)
+        self.assertEqual(settings.rag_review_evidence_max_documents, 240)
         self.assertEqual(settings.rag_chroma_dir, "./runtime/chroma")
         self.assertEqual(settings.embedding_device, "cuda")
 
@@ -55,6 +58,7 @@ class RagConfigTests(unittest.TestCase):
             ("RAG_MIN_RELEVANCE_SCORE", "1.1"),
             ("RAG_MAX_CONTEXT_CHARS", "100"),
             ("EMBEDDING_DEVICE", "accelerator"),
+            ("RAG_REVIEW_EVIDENCE_MAX_DOCUMENTS", "-1"),
         )
 
         for name, value in cases:
@@ -64,13 +68,21 @@ class RagConfigTests(unittest.TestCase):
                         Settings()
 
     def test_rag_rejects_values_above_the_fixed_contract_limits(self) -> None:
-        cases = (("RAG_TOP_K", "11"), ("RAG_MAX_CONTEXT_CHARS", "12001"))
+        cases = (("RAG_TOP_K", "11"), ("RAG_MAX_CONTEXT_CHARS", "12001"),
+                 ("RAG_REVIEW_EVIDENCE_MAX_DOCUMENTS", "10001"))
 
         for name, value in cases:
             with self.subTest(name=name):
                 with patch.dict(os.environ, {name: value}, clear=False):
                     with self.assertRaisesRegex(ValueError, name):
                         Settings()
+
+    def test_rag_allows_zero_review_evidence_documents_without_disabling_rag(self) -> None:
+        with patch.dict(os.environ, {"RAG_ENABLED": "true", "RAG_REVIEW_EVIDENCE_MAX_DOCUMENTS": "0"}, clear=True):
+            settings = Settings()
+
+        self.assertTrue(settings.rag_enabled)
+        self.assertEqual(settings.rag_review_evidence_max_documents, 0)
 
 
 if __name__ == "__main__":

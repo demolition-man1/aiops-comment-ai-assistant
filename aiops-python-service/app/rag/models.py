@@ -11,7 +11,7 @@ class RagRuntimeStatus:
 
 @dataclass(frozen=True)
 class RagReference:
-    source_type: Literal["problem_solution", "historical_reply"]
+    source_type: Literal["problem_solution", "historical_reply", "review_evidence"]
     source_id: int
     title: str | None
     score: float
@@ -43,6 +43,7 @@ class RagIndexStatus:
     embedding_model: str
     last_reindex_at: str | None
     last_error: str | None
+    review_evidence_count: int = 0
 
     def to_payload(self) -> dict[str, object]:
         return {
@@ -53,6 +54,7 @@ class RagIndexStatus:
             "documentCount": self.document_count,
             "problemSolutionCount": self.problem_solution_count,
             "historicalReplyCount": self.historical_reply_count,
+            "reviewEvidenceCount": self.review_evidence_count,
             "embeddingModel": self.embedding_model,
             "lastReindexAt": self.last_reindex_at,
             "lastError": self.last_error,

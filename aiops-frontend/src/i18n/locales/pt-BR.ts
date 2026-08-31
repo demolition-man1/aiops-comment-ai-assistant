@@ -214,6 +214,7 @@ export default {
     rebuildRagIndex: 'Reconstruir índice',
     ragRebuildStarted: 'A reconstrução do índice foi iniciada',
     ragDocuments: '{count} itens de conhecimento indexados',
+    ragReviewEvidence: '{count} evidências de avaliações',
     ragLastReindexAt: 'Última reconstrução: {time}',
     ragStates: {
       disabled: 'Desativado',

@@ -13,6 +13,10 @@ const categoryAnalysisView = await readFile(new URL('../src/views/CategoryAnalys
 const promptTemplateView = await readFile(new URL('../src/views/PromptTemplateView.vue', import.meta.url), 'utf8')
 const aiCallLogView = await readFile(new URL('../src/views/AiCallLogView.vue', import.meta.url), 'utf8')
 const problemSolutionView = await readFile(new URL('../src/views/ProblemSolutionView.vue', import.meta.url), 'utf8')
+const apiTypes = await readFile(new URL('../src/api/types.ts', import.meta.url), 'utf8')
+const zhLocale = await readFile(new URL('../src/i18n/locales/zh-CN.ts', import.meta.url), 'utf8')
+const enLocale = await readFile(new URL('../src/i18n/locales/en-US.ts', import.meta.url), 'utf8')
+const ptLocale = await readFile(new URL('../src/i18n/locales/pt-BR.ts', import.meta.url), 'utf8')
 const apiModules = await readFile(new URL('../src/api/modules.ts', import.meta.url), 'utf8')
 const httpClient = await readFile(new URL('../src/api/http.ts', import.meta.url), 'utf8')
 
@@ -135,6 +139,15 @@ test('solution library exposes explicit RAG knowledge index controls through pub
   assert.match(problemSolutionView, /ragKnowledgeApi\.status/)
   assert.match(problemSolutionView, /ragKnowledgeApi\.reindex/)
   assert.match(problemSolutionView, /startRagPolling/)
+})
+
+test('solution library shows the bounded review-evidence count returned by the RAG status api', () => {
+  assert.match(apiTypes, /reviewEvidenceCount\?: number/)
+  assert.match(problemSolutionView, /solutions\.ragReviewEvidence/)
+  assert.match(problemSolutionView, /reviewEvidenceCount/)
+  assert.match(zhLocale, /ragReviewEvidence/)
+  assert.match(enLocale, /ragReviewEvidence/)
+  assert.match(ptLocale, /ragReviewEvidence/)
 })
 
 test('category analytics page is routed and backed by reports api', async () => {

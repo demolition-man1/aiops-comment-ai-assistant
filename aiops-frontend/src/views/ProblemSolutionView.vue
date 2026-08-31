@@ -216,6 +216,9 @@ onBeforeUnmount(stopRagPolling)
         <span class="rag-status-label">{{ t('solutions.ragStatus') }}</span>
         <el-tag size="small" :type="ragStatusTag" effect="plain">{{ ragStatusLabel }}</el-tag>
         <span class="muted">{{ t('solutions.ragDocuments', { count: ragStatus?.documentCount ?? 0 }) }}</span>
+        <span v-if="ragStatus?.enabled" class="muted">
+          {{ t('solutions.ragReviewEvidence', { count: ragStatus.reviewEvidenceCount ?? 0 }) }}
+        </span>
         <span v-if="ragStatus?.lastReindexAt" class="muted">
           {{ t('solutions.ragLastReindexAt', { time: ragStatus.lastReindexAt }) }}
         </span>

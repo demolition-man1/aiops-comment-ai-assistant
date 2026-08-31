@@ -214,6 +214,7 @@ export default {
     rebuildRagIndex: 'Rebuild Index',
     ragRebuildStarted: 'Knowledge index rebuild started',
     ragDocuments: '{count} knowledge items indexed',
+    ragReviewEvidence: '{count} review evidence items',
     ragLastReindexAt: 'Last rebuild: {time}',
     ragStates: {
       disabled: 'Disabled',

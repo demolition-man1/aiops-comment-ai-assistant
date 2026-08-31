@@ -61,6 +61,7 @@ public class RagKnowledgeServiceImpl implements RagKnowledgeService {
                 intValue(data.get("documentCount")),
                 intValue(data.get("problemSolutionCount")),
                 intValue(data.get("historicalReplyCount")),
+                intValue(data.get("reviewEvidenceCount")),
                 stringValue(data.get("embeddingModel")),
                 stringValue(data.get("lastReindexAt")),
                 stringValue(data.get("lastError"))

@@ -31,12 +31,19 @@ class FakeVectorStore:
 
 
 class FakeRuntime:
-    def __init__(self, directory: Path, store: FakeVectorStore, enabled: bool = True) -> None:
+    def __init__(
+        self,
+        directory: Path,
+        store: FakeVectorStore,
+        enabled: bool = True,
+        review_evidence_limit: int = 0,
+    ) -> None:
         self._settings = SimpleNamespace(
             rag_enabled=enabled,
             rag_collection="aiops_knowledge_v1",
             rag_chroma_dir=str(directory),
             embedding_model="intfloat/multilingual-e5-small",
+            rag_review_evidence_max_documents=review_evidence_limit,
         )
         self.store = store
         self.client_calls = 0
@@ -86,6 +93,22 @@ def _historical_reply_rows() -> list[dict[str, object]]:
             "effect_tag": "resolved",
             "favorite_flag": 0,
             "update_time": "2026-08-30T10:05:00",
+        }
+    ]
+
+
+def _review_evidence_rows() -> list[dict[str, object]]:
+    return [
+        {
+            "id": 36,
+            "product_id": "product-a",
+            "seller_id": "seller-a",
+            "review_score": 1,
+            "sentiment": "negative",
+            "problem_type": "logistics",
+            "review_time": "2026-08-31T09:30:00",
+            "clean_content": "Delivery is delayed.",
+            "review_content": "Delivery is delayed.",
         }
     ]
 
@@ -236,3 +259,23 @@ def test_real_chroma_sync_works_with_fake_embeddings_and_temporary_storage(tmp_p
     assert status.state == "ready"
     assert status.document_count == 1
     assert (tmp_path / "chroma" / "index-state.json").exists()
+
+
+def test_reindex_tracks_review_evidence_and_removes_stale_evidence_ids(tmp_path: Path) -> None:
+    store = FakeVectorStore(initial_ids=["review_evidence:99", "unrelated:1"])
+    service = RagIndexService(
+        runtime=FakeRuntime(tmp_path, store, review_evidence_limit=2000),
+        connection_factory=_connection,
+        problem_solution_loader=lambda conn: _problem_solution_rows(),
+        historical_reply_loader=lambda conn: _historical_reply_rows(),
+        review_evidence_loader=lambda conn, limit: _review_evidence_rows(),
+    )
+
+    status = service.reindex()
+
+    assert status.document_count == 3
+    assert status.review_evidence_count == 1
+    assert store.added[0][1] == ["problem_solution:14", "historical_reply:25", "review_evidence:36"]
+    assert store.deleted == [["review_evidence:99"]]
+    state = json.loads((tmp_path / "index-state.json").read_text(encoding="utf-8"))
+    assert state["reviewEvidenceCount"] == 1

@@ -410,6 +410,7 @@ export interface RagIndexStatus {
   documentCount?: number
   problemSolutionCount?: number
   historicalReplyCount?: number
+  reviewEvidenceCount?: number
   embeddingModel?: string
   lastReindexAt?: string
   lastError?: string

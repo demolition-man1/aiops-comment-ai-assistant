@@ -15,6 +15,7 @@ public class RagIndexStatusVO {
     private Integer documentCount;
     private Integer problemSolutionCount;
     private Integer historicalReplyCount;
+    private Integer reviewEvidenceCount;
     private String embeddingModel;
     private String lastReindexAt;
     private String lastError;

@@ -34,6 +34,7 @@ class RagKnowledgeServiceImplTest {
                         "documentCount", 12,
                         "problemSolutionCount", 7,
                         "historicalReplyCount", 5,
+                        "reviewEvidenceCount", 31,
                         "embeddingModel", "local-model"
                 )
         ));
@@ -43,6 +44,7 @@ class RagKnowledgeServiceImplTest {
         assertThat(status.getState()).isEqualTo("ready");
         assertThat(status.getDocumentCount()).isEqualTo(12);
         assertThat(status.getHistoricalReplyCount()).isEqualTo(5);
+        assertThat(status.getReviewEvidenceCount()).isEqualTo(31);
     }
 
     @Test

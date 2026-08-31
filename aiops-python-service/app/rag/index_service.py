@@ -15,6 +15,7 @@ from app.rag.models import RagIndexStatus
 from app.rag.runtime import RagRuntime, rag_runtime
 from app.repositories.negative_reply_repository import list_eligible_historical_replies
 from app.repositories.problem_solution_repository import list_enabled_problem_solutions
+from app.repositories.review_evidence_repository import list_review_evidence
 
 
 class RagReindexInProgressError(RuntimeError):
@@ -27,6 +28,7 @@ class RagDisabledError(RuntimeError):
 
 ConnectionFactory = Callable[[], AbstractContextManager[Any]]
 SourceLoader = Callable[[Any], list[dict[str, Any]]]
+ReviewEvidenceLoader = Callable[[Any, int], list[dict[str, Any]]]
 
 
 class RagIndexService:
@@ -37,11 +39,13 @@ class RagIndexService:
         connection_factory: ConnectionFactory = get_conn,
         problem_solution_loader: SourceLoader = list_enabled_problem_solutions,
         historical_reply_loader: SourceLoader = list_eligible_historical_replies,
+        review_evidence_loader: ReviewEvidenceLoader = list_review_evidence,
     ) -> None:
         self._runtime = runtime
         self._connection_factory = connection_factory
         self._problem_solution_loader = problem_solution_loader
         self._historical_reply_loader = historical_reply_loader
+        self._review_evidence_loader = review_evidence_loader
         self._state_lock = RLock()
         self._building = False
         self._background_thread: Thread | None = None
@@ -111,9 +115,11 @@ class RagIndexService:
             with self._connection_factory() as conn:
                 problem_solutions = self._problem_solution_loader(conn)
                 historical_replies = self._historical_reply_loader(conn)
+                review_evidence = self._review_evidence_loader(conn, limit=self._review_evidence_limit)
             documents = build_knowledge_documents(
                 problem_solutions=problem_solutions,
                 historical_replies=historical_replies,
+                review_evidence=review_evidence,
             )
             document_ids = [str(document.id) for document in documents]
             vector_store = self._runtime.get_vector_store()
@@ -132,6 +138,7 @@ class RagIndexService:
                 document_count=len(documents),
                 problem_solution_count=len(problem_solutions),
                 historical_reply_count=len(historical_replies),
+                review_evidence_count=len(review_evidence),
                 last_reindex_at=datetime.now(timezone.utc).isoformat(),
             )
             self._write_state(status)
@@ -155,6 +162,10 @@ class RagIndexService:
     def _state_path(self) -> Path:
         return Path(self._settings.rag_chroma_dir) / "index-state.json"
 
+    @property
+    def _review_evidence_limit(self) -> int:
+        return max(0, int(getattr(self._settings, "rag_review_evidence_max_documents", 0)))
+
     def _collection_count(self) -> int:
         client = self._runtime.get_chroma_client()
         for collection in client.list_collections():
@@ -168,7 +179,7 @@ class RagIndexService:
         return {
             str(value)
             for value in result.get("ids", [])
-            if str(value).startswith(("problem_solution:", "historical_reply:"))
+            if str(value).startswith(("problem_solution:", "historical_reply:", "review_evidence:"))
         }
 
     def _status(
@@ -178,6 +189,7 @@ class RagIndexService:
         document_count: int | None = None,
         problem_solution_count: int | None = None,
         historical_reply_count: int | None = None,
+        review_evidence_count: int | None = None,
         last_reindex_at: str | None = None,
         last_error: str | None = None,
         persisted: dict[str, Any] | None = None,
@@ -199,6 +211,11 @@ class RagIndexService:
                 historical_reply_count
                 if historical_reply_count is not None
                 else _as_int(persisted.get("historicalReplyCount"))
+            ),
+            review_evidence_count=(
+                review_evidence_count
+                if review_evidence_count is not None
+                else _as_int(persisted.get("reviewEvidenceCount"))
             ),
             embedding_model=self._settings.embedding_model,
             last_reindex_at=(
