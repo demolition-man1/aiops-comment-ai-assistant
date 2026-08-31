@@ -76,6 +76,7 @@ public class CommentServiceImpl implements CommentService {
         String productId = blankToNull(queryDTO.getProductId());
         String sellerId = blankToNull(queryDTO.getSellerId());
         LambdaQueryWrapper<BizComment> wrapper = new LambdaQueryWrapper<BizComment>()
+                .eq(queryDTO.getCommentId() != null, BizComment::getId, queryDTO.getCommentId())
                 .eq(blankToNull(queryDTO.getSentiment()) != null, BizComment::getSentiment, blankToNull(queryDTO.getSentiment()))
                 .eq(queryDTO.getIsNegative() != null, BizComment::getIsNegative, queryDTO.getIsNegative())
                 .ge(queryDTO.getMinScore() != null, BizComment::getReviewScore, queryDTO.getMinScore())

@@ -44,16 +44,18 @@ class RagRepositoryTests(unittest.TestCase):
         self.assertNotIn("select *", sql)
         self.assertIsNone(params)
 
-    def test_negative_reply_repository_selects_only_approved_knowledge_rows(self) -> None:
-        conn = FakeConn([{"id": 25, "effect_tag": "resolved", "favorite_flag": 0}])
+    def test_negative_reply_repository_selects_auditable_knowledge_rows(self) -> None:
+        conn = FakeConn([{"id": 25, "effect_tag": "resolved", "favorite_flag": 0, "use_count": 4}])
 
         rows = list_eligible_historical_replies(conn)
 
-        self.assertEqual(rows, [{"id": 25, "effect_tag": "resolved", "favorite_flag": 0}])
+        self.assertEqual(rows, [{"id": 25, "effect_tag": "resolved", "favorite_flag": 0, "use_count": 4}])
         _, sql, params = conn.cursor_instance.calls[0]
         self.assertIn("from biz_negative_reply", sql)
         self.assertIn("favorite_flag = 1", sql)
         self.assertIn("effect_tag in ('resolved', 'positive_followup')", sql)
+        self.assertIn("coalesce(use_count, 0) >= 3", sql)
+        self.assertIn("use_count", sql)
         self.assertIn("reply_content is not null", sql)
         self.assertNotIn("select *", sql)
         self.assertIsNone(params)

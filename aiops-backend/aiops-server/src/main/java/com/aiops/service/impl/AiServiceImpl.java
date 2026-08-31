@@ -14,6 +14,7 @@ import com.aiops.entity.BizComment;
 import com.aiops.entity.BizCommentAnalysisResult;
 import com.aiops.entity.BizNegativeReply;
 import com.aiops.entity.BizOperationReport;
+import com.aiops.entity.BizOperationReportEvidence;
 import com.aiops.entity.SysPromptTemplate;
 import com.aiops.exception.BusinessException;
 import com.aiops.mapper.BizAiContentRecordMapper;
@@ -21,6 +22,7 @@ import com.aiops.mapper.BizCommentAnalysisResultMapper;
 import com.aiops.mapper.BizCommentMapper;
 import com.aiops.mapper.BizNegativeReplyMapper;
 import com.aiops.mapper.BizOperationReportMapper;
+import com.aiops.mapper.BizOperationReportEvidenceMapper;
 import com.aiops.service.AiCallLogService;
 import com.aiops.service.AiRateLimitService;
 import com.aiops.service.CacheService;
@@ -32,6 +34,7 @@ import com.aiops.vo.CommentTranslationVO;
 import com.aiops.vo.NegativeReplyVO;
 import com.aiops.vo.OperationReportVO;
 import com.aiops.vo.RagReferenceVO;
+import com.aiops.vo.ReportEvidenceVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -54,6 +57,7 @@ public class AiServiceImpl implements AiService {
     private final PythonAiClient pythonAiClient;
     private final BizCommentAnalysisResultMapper analysisResultMapper;
     private final BizOperationReportMapper operationReportMapper;
+    private final BizOperationReportEvidenceMapper operationReportEvidenceMapper;
     private final BizAiContentRecordMapper aiContentRecordMapper;
     private final BizCommentMapper commentMapper;
     private final BizNegativeReplyMapper negativeReplyMapper;
@@ -335,6 +339,7 @@ public class AiServiceImpl implements AiService {
         report.setModelName(stringValue(data, "modelName"));
         report.setCreateTime(LocalDateTime.now());
         operationReportMapper.insert(report);
+        persistReportEvidence(report.getId(), parseReportEvidenceReferences(data.get("references")));
         OperationReportVO vo = toReportVO(report);
         cacheService.set(cacheKey, vo, Duration.ofHours(12));
         return vo;
@@ -345,7 +350,7 @@ public class AiServiceImpl implements AiService {
                 report.getReportTitle(), report.getConsumerPainPoints(),
                 report.getProductAdvantages(), report.getProductDisadvantages(), report.getOperationSuggestions(),
                 report.getCopywritingSuggestions(), report.getServiceSuggestions(), report.getFullReport(),
-                report.getModelName(), report.getCreateTime());
+                report.getModelName(), report.getCreateTime(), reportEvidence(report.getId()));
     }
 
     private BizNegativeReply getNegativeReply(Long replyId) {
@@ -522,6 +527,62 @@ public class AiServiceImpl implements AiService {
         }
         String title = stringValue(reference.get("title"));
         return Optional.of(new RagReferenceVO(sourceType, sourceId, title, score));
+    }
+
+    private List<ReportEvidenceVO> parseReportEvidenceReferences(Object value) {
+        if (!(value instanceof List<?> references)) {
+            return List.of();
+        }
+        return references.stream()
+                .filter(Map.class::isInstance)
+                .map(reference -> toReportEvidenceReference((Map<?, ?>) reference))
+                .flatMap(Optional::stream)
+                .toList();
+    }
+
+    private Optional<ReportEvidenceVO> toReportEvidenceReference(Map<?, ?> reference) {
+        String sourceType = stringValue(reference.get("sourceType"));
+        if (!List.of("review_evidence", "problem_solution").contains(sourceType)) {
+            return Optional.empty();
+        }
+        Long sourceId = longValue(reference.get("sourceId"));
+        Double score = doubleValue(reference.get("score"));
+        if (sourceId == null || sourceId <= 0 || score == null || !Double.isFinite(score)) {
+            return Optional.empty();
+        }
+        return Optional.of(new ReportEvidenceVO(sourceType, sourceId, stringValue(reference.get("title")), score,
+                "review-evidence-v1"));
+    }
+
+    private void persistReportEvidence(Long reportId, List<ReportEvidenceVO> evidence) {
+        if (reportId == null) {
+            return;
+        }
+        evidence.forEach(reference -> {
+            BizOperationReportEvidence entity = new BizOperationReportEvidence();
+            entity.setReportId(reportId);
+            entity.setSourceType(reference.getSourceType());
+            entity.setSourceId(reference.getSourceId());
+            entity.setSourceTitle(reference.getTitle());
+            entity.setRelevanceScore(reference.getScore());
+            entity.setRetrievalVersion(reference.getRetrievalVersion());
+            entity.setCreateTime(LocalDateTime.now());
+            operationReportEvidenceMapper.insert(entity);
+        });
+    }
+
+    private List<ReportEvidenceVO> reportEvidence(Long reportId) {
+        if (reportId == null) {
+            return List.of();
+        }
+        List<BizOperationReportEvidence> records = operationReportEvidenceMapper.selectByReportId(reportId);
+        if (records == null) {
+            return List.of();
+        }
+        return records.stream()
+                .map(record -> new ReportEvidenceVO(record.getSourceType(), record.getSourceId(),
+                        record.getSourceTitle(), record.getRelevanceScore(), record.getRetrievalVersion()))
+                .toList();
     }
 
     private String writeRagReferences(List<RagReferenceVO> references) {

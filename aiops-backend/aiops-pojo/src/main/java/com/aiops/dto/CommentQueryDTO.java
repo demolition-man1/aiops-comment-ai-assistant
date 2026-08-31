@@ -6,6 +6,7 @@ import lombok.Data;
 public class CommentQueryDTO {
     private Integer pageNum = 1;
     private Integer pageSize = 10;
+    private Long commentId;
     private String productId;
     private String sellerId;
     private String sentiment;

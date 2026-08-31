@@ -5,13 +5,16 @@ import com.aiops.dto.ReportArchiveCreateDTO;
 import com.aiops.dto.ReportArchiveQueryDTO;
 import com.aiops.dto.ReportArchiveStatusDTO;
 import com.aiops.entity.BizOperationReport;
+import com.aiops.entity.BizOperationReportEvidence;
 import com.aiops.entity.BizReportArchive;
 import com.aiops.exception.BusinessException;
 import com.aiops.mapper.BizOperationReportMapper;
+import com.aiops.mapper.BizOperationReportEvidenceMapper;
 import com.aiops.mapper.BizReportArchiveMapper;
 import com.aiops.result.PageResult;
 import com.aiops.service.ReportArchiveService;
 import com.aiops.vo.ReportArchiveVO;
+import com.aiops.vo.ReportEvidenceVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +40,7 @@ public class ReportArchiveServiceImpl implements ReportArchiveService {
 
     private final BizReportArchiveMapper reportArchiveMapper;
     private final BizOperationReportMapper operationReportMapper;
+    private final BizOperationReportEvidenceMapper operationReportEvidenceMapper;
 
     @Override
     public PageResult<ReportArchiveVO> pageArchives(ReportArchiveQueryDTO queryDTO) {
@@ -181,7 +185,21 @@ public class ReportArchiveServiceImpl implements ReportArchiveService {
                 archive.getOperationSuggestions(), archive.getCopywritingSuggestions(), archive.getServiceSuggestions(),
                 archive.getRiskTips(), archive.getFullReport(), archive.getModelName(), archive.getReportCreateTime(),
                 archive.getArchiveStatus(), archive.getArchiveRemark(), archive.getArchivedBy(), archive.getArchiveTime(),
-                archive.getCreateTime(), archive.getUpdateTime());
+                archive.getCreateTime(), archive.getUpdateTime(), reportEvidence(archive.getSourceReportId()));
+    }
+
+    private List<ReportEvidenceVO> reportEvidence(Long reportId) {
+        if (reportId == null) {
+            return List.of();
+        }
+        List<BizOperationReportEvidence> records = operationReportEvidenceMapper.selectByReportId(reportId);
+        if (records == null) {
+            return List.of();
+        }
+        return records.stream()
+                .map(record -> new ReportEvidenceVO(record.getSourceType(), record.getSourceId(),
+                        record.getSourceTitle(), record.getRelevanceScore(), record.getRetrievalVersion()))
+                .toList();
     }
 
     private String normalizeOptionalStatus(String value) {

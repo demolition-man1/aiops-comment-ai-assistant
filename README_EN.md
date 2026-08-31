@@ -174,7 +174,7 @@ docker compose up -d --force-recreate python-service
 ```
 
 3. Sign in, open **Solution Library**, review the knowledge-index status, and click **Rebuild Index**. Rebuild starts only from this explicit command.
-4. After the state becomes `ready`, generate a negative-review reply from **Comment Analytics**. The page shows each referenced solution or eligible historical reply.
+4. After the state becomes `ready`, generate a negative-review reply from **Comment Analytics**. The page shows each referenced solution or eligible historical reply. Regenerate an operations report, then open the report or archive detail in **Data Reports** to inspect and follow its review-evidence and solution references.
 
 The first rebuild downloads the `intfloat/multilingual-e5-small` embedding model and needs network access; download time depends on the network. The model cache and Chroma index live in Docker's `rag-data` named volume, so recreating `python-service` does not require rebuilding the index. No Chroma port is exposed.
 
@@ -285,7 +285,7 @@ Default frontend URL:
 
 If the port is occupied, Vite automatically switches to the next available port, such as `5174`.
 
-After logging in, open the Data Import page and click "Import Sample Data" to quickly create demo data. For single CSV upload, the page previews field mapping, estimated rows, and the first 20 rows before upload. OSS upload and task creation happen only after clicking "Start Import". After import, maintain business tags in "Tag Library", maintain handling playbooks in "Solution Library", and customize AI instructions in "Prompt Templates". In "Review Analytics", run analysis only or click "Analyze and Generate Report" to complete analysis and localized report generation in one flow. Archive the report and open "Data Reports" to export a PDF in the active Chinese, English, or Portuguese locale. Use "AI Call Logs" to review call volume, success rate, tokens, and estimated cost. In "Comment AI Evaluation", complete sampling, manual annotation, and evaluation; only a run that passes every gate can explicitly activate independent Hybrid issue-label decisions.
+After logging in, open the Data Import page and click "Import Sample Data" to quickly create demo data. For single CSV upload, the page previews field mapping, estimated rows, and the first 20 rows before upload. OSS upload and task creation happen only after clicking "Start Import". After import, maintain business tags in "Tag Library", maintain handling playbooks in "Solution Library", and customize AI instructions in "Prompt Templates". In "Review Analytics", run analysis only or click "Analyze and Generate Report" to complete analysis and localized report generation in one flow. Once RAG is enabled and the index is rebuilt, new reports retain review-evidence and solution references for the current product or seller; open a report or archive detail in "Data Reports" to follow those references. Archive the report to export a PDF in the active Chinese, English, or Portuguese locale. Use "AI Call Logs" to review call volume, success rate, tokens, and estimated cost. In "Comment AI Evaluation", complete sampling, manual annotation, and evaluation; only a run that passes every gate can explicitly activate independent Hybrid issue-label decisions.
 
 ## Configuration
 
@@ -317,13 +317,15 @@ After logging in, open the Data Import page and click "Import Sample Data" to qu
 | `RAG_TOP_K` | Maximum knowledge entries per request; range `1` to `10`, default `4` |
 | `RAG_MIN_RELEVANCE_SCORE` | Minimum relevance threshold; range `0.0` to `1.0`, default `0.35` |
 | `RAG_MAX_CONTEXT_CHARS` | Maximum knowledge-context length passed to the reply model; range `500` to `12000`, default `6000` |
+| `RAG_REVIEW_EVIDENCE_MAX_DOCUMENTS` | Maximum review-evidence documents per rebuild; range `0` to `10000`, default `2000`; `0` disables review evidence only |
 | `RAG_CHROMA_DIR` | Local index directory for native Python runs; Docker uses a persistent-volume directory automatically |
 | `EMBEDDING_MODEL` / `EMBEDDING_DEVICE` | Local embedding model and device; Docker defaults to `intfloat/multilingual-e5-small` / `cpu` |
 | `CRAWLER_ENABLED` | Whether to enable the real crawler adapter |
 
 ### RAG Index Scope and Safety Boundaries
 
-- Only enabled solution-library records and historical replies that are favorite, `resolved`, or `positive_followup` are indexed.
+- Only enabled solution-library records, valid review evidence, and historical replies that are favorite, marked `resolved` / `positive_followup`, or used at least three times are indexed. Historical-reply documents retain their eligibility reason and retrieval version.
+- Reports retrieve review evidence only for their current product or seller. Application code persists the report references, and the UI links to the review workspace or solution library for verification.
 - The current review always takes precedence over retrieved operating guidance; historical events must not be represented as completed facts for the current order.
 - Reply references are built by application code from index metadata. The model cannot invent source IDs.
 - If RAG is unavailable, the index is empty, or retrieval returns no result, negative replies fall back to the existing structured LangChain flow and are marked as not using RAG.

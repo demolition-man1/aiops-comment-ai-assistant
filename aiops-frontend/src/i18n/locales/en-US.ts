@@ -465,6 +465,12 @@ export default {
     copywritingSuggestions: 'Copywriting Suggestions',
     serviceSuggestions: 'Service Suggestions',
     fullReport: 'Full Report',
+    evidenceTitle: 'Report Sources',
+    evidenceTypes: {
+      review_evidence: 'Review Evidence',
+      problem_solution: 'Solution Guidance',
+      unknown: 'Source'
+    },
     archiveStatuses: {
       archived: 'Archived',
       restored: 'Restored'

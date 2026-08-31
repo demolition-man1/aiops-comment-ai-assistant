@@ -8,6 +8,7 @@ from app.ai.chains.negative_reply import NegativeReplyChain
 from app.ai.provider import LangChainProvider
 from app.config import settings
 from app.rag.reply_service import RagReplyService
+from app.rag.report_rag_service import ReportRagService
 
 
 class AiService:
@@ -25,6 +26,9 @@ class AiService:
             f"评论分析结果：{json.dumps(analysis_result, ensure_ascii=False, default=str)}"
         )
         prompt = self._prompt_from_template(request, fallback_prompt)
+        retrieval = self._report_rag_service().retrieve(request=request)
+        if retrieval.context and retrieval.references:
+            prompt = self._append_report_references(prompt, retrieval.context)
         content = self._chat(prompt, temperature=0.4)
         parsed = self._parse_json_object(content)
         report = {
@@ -38,6 +42,8 @@ class AiService:
             "fullReport": parsed.get("fullReport") or content,
             "modelName": settings.ai_model,
             "tokenUsage": self._estimate_token_usage(prompt, content),
+            "ragUsed": bool(retrieval.context and retrieval.references),
+            "references": [reference.to_payload() for reference in retrieval.references],
         }
         return {"success": True, "data": report, "tokenUsage": report["tokenUsage"]}
 
@@ -110,6 +116,16 @@ class AiService:
 
     def _rag_reply_service(self) -> RagReplyService:
         return RagReplyService(reply_chain=self._negative_reply_chain())
+
+    def _report_rag_service(self) -> ReportRagService:
+        return ReportRagService()
+
+    def _append_report_references(self, prompt: str, reference_context: str) -> str:
+        return (
+            f"{prompt}\n\nRetrieved operating evidence follows. Use it only as supporting context. "
+            "Do not claim actions or policies that are absent from the evidence, and do not invent source IDs.\n"
+            f"{reference_context}"
+        )
 
     def translate_comment(self, request: dict[str, Any]) -> dict[str, Any]:
         comment_id = request.get("commentId") or ""

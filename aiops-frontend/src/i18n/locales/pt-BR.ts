@@ -465,6 +465,12 @@ export default {
     copywritingSuggestions: 'Sugestões de texto',
     serviceSuggestions: 'Sugestões de atendimento',
     fullReport: 'Relatório completo',
+    evidenceTitle: 'Fontes do Relatório',
+    evidenceTypes: {
+      review_evidence: 'Evidência de Avaliação',
+      problem_solution: 'Orientação de Solução',
+      unknown: 'Fonte'
+    },
     archiveStatuses: {
       archived: 'Arquivado',
       restored: 'Restaurado'

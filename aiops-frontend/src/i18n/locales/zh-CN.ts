@@ -465,6 +465,12 @@ export default {
     copywritingSuggestions: '文案建议',
     serviceSuggestions: '客服建议',
     fullReport: '完整报告',
+    evidenceTitle: '报告来源',
+    evidenceTypes: {
+      review_evidence: '评论证据',
+      problem_solution: '解决方案',
+      unknown: '来源'
+    },
     archiveStatuses: {
       archived: '已归档',
       restored: '已恢复'

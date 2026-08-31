@@ -5,9 +5,11 @@ import com.aiops.dto.ReportArchiveCreateDTO;
 import com.aiops.dto.ReportArchiveQueryDTO;
 import com.aiops.dto.ReportArchiveStatusDTO;
 import com.aiops.entity.BizOperationReport;
+import com.aiops.entity.BizOperationReportEvidence;
 import com.aiops.entity.BizReportArchive;
 import com.aiops.exception.BusinessException;
 import com.aiops.mapper.BizOperationReportMapper;
+import com.aiops.mapper.BizOperationReportEvidenceMapper;
 import com.aiops.mapper.BizReportArchiveMapper;
 import com.aiops.result.PageResult;
 import com.aiops.vo.ReportArchiveVO;
@@ -45,12 +47,16 @@ class ReportArchiveServiceImplTest {
     @Mock
     private BizOperationReportMapper operationReportMapper;
 
+    @Mock
+    private BizOperationReportEvidenceMapper operationReportEvidenceMapper;
+
     private ReportArchiveServiceImpl reportArchiveService;
 
     @BeforeEach
     void setUp() {
         TableInfoHelper.initTableInfo(new MapperBuilderAssistant(new Configuration(), ""), BizReportArchive.class);
-        reportArchiveService = new ReportArchiveServiceImpl(reportArchiveMapper, operationReportMapper);
+        reportArchiveService = new ReportArchiveServiceImpl(reportArchiveMapper, operationReportMapper,
+                operationReportEvidenceMapper);
     }
 
     @AfterEach
@@ -104,6 +110,25 @@ class ReportArchiveServiceImplTest {
         verify(operationReportMapper, never()).selectById(any());
         verify(reportArchiveMapper, never()).insert(any(BizReportArchive.class));
         verify(reportArchiveMapper, never()).updateById(any(BizReportArchive.class));
+    }
+
+    @Test
+    void archiveDetailReadsOptionalEvidenceFromItsSourceReport() {
+        BizOperationReportEvidence evidence = new BizOperationReportEvidence();
+        evidence.setSourceType("review_evidence");
+        evidence.setSourceId(31L);
+        evidence.setSourceTitle("Review #31");
+        evidence.setRelevanceScore(0.91);
+        evidence.setRetrievalVersion("review-evidence-v1");
+        when(reportArchiveMapper.selectById(101L)).thenReturn(archivedReport());
+        when(operationReportEvidenceMapper.selectByReportId(41L)).thenReturn(List.of(evidence));
+
+        ReportArchiveVO result = reportArchiveService.getArchive(101L);
+
+        assertThat(result.getEvidence()).singleElement().satisfies(item -> {
+            assertThat(item.getSourceType()).isEqualTo("review_evidence");
+            assertThat(item.getSourceId()).isEqualTo(31L);
+        });
     }
 
     @Test

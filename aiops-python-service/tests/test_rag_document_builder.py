@@ -50,6 +50,7 @@ def test_historical_reply_documents_fill_missing_optional_values_and_keep_determ
                 "reply_content": "Pedimos desculpas e vamos acompanhar a entrega.",
                 "effect_tag": None,
                 "favorite_flag": None,
+                "use_count": None,
                 "update_time": None,
             }
         ],
@@ -67,8 +68,33 @@ def test_historical_reply_documents_fill_missing_optional_values_and_keep_determ
         "title": "已确认有效的历史回复",
         "effectTag": "",
         "favoriteFlag": 0,
+        "useCount": 0,
+        "eligibilityReason": "unknown",
+        "retrievalVersion": "historical-reply-v1",
         "updatedAt": "",
     }
+
+
+def test_historical_reply_documents_expose_the_selected_eligibility_reason() -> None:
+    documents = build_knowledge_documents(
+        problem_solutions=[],
+        historical_replies=[
+            {
+                "id": 26,
+                "problem_type": "logistics",
+                "comment_content": "Where is my order?",
+                "reply_content": "We will confirm the shipping status today.",
+                "effect_tag": "no_feedback",
+                "favorite_flag": 0,
+                "use_count": 3,
+                "update_time": None,
+            }
+        ],
+    )
+
+    assert documents[0].metadata["useCount"] == 3
+    assert documents[0].metadata["eligibilityReason"] == "repeat_use"
+    assert documents[0].metadata["retrievalVersion"] == "historical-reply-v1"
 
 
 def test_review_evidence_documents_prefer_clean_text_and_keep_target_metadata() -> None:

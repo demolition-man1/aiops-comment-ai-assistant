@@ -3,7 +3,7 @@ import { Bot, ClipboardCheck, Copy, Languages, MessageCircleReply, RefreshCw, Ta
 import { ElMessage } from 'element-plus'
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import { aiApi, analysisApi, commentApi, pollTask, problemSolutionApi, tagApi } from '@/api/modules'
 import type {
@@ -15,6 +15,7 @@ import type {
   OperationReport,
   ProblemSolution,
   RagReference,
+  ReportEvidence,
   Task
 } from '@/api/types'
 import { resolveAnalysisProductId } from '@/utils/analysisTarget'
@@ -24,6 +25,7 @@ import { useLocaleStore } from '@/stores/locale'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const localeStore = useLocaleStore()
 const loading = ref(false)
 const taskLoading = ref(false)
@@ -57,6 +59,7 @@ const query = reactive({
   pageNum: 1,
   pageSize: 10,
   productId: '',
+  commentId: '',
   sentiment: '',
   isNegative: ''
 })
@@ -83,6 +86,7 @@ const loadComments = async () => {
   try {
     const data = await commentApi.page({
       ...query,
+      commentId: query.commentId ? Number(query.commentId) : undefined,
       isNegative: query.isNegative === '' ? undefined : Number(query.isNegative)
     })
     comments.value = data.records || []
@@ -344,6 +348,19 @@ const openSolutionReference = (reference: RagReference) => {
   })
 }
 
+const formatReportEvidence = (reference: ReportEvidence) =>
+  reference.title || `${t(`reports.evidenceTypes.${reference.sourceType}`)} #${reference.sourceId}`
+
+const openReportEvidence = (reference: ReportEvidence) => {
+  if (reference.sourceType === 'review_evidence') {
+    void router.push({ name: 'comments', query: { commentId: String(reference.sourceId) } })
+    return
+  }
+  if (reference.sourceType === 'problem_solution') {
+    void router.push({ name: 'solutions', query: { keyword: reference.title || String(reference.sourceId) } })
+  }
+}
+
 const copyTranslation = async () => {
   if (!translation.value?.translatedContent) {
     return
@@ -370,6 +387,10 @@ const saveTags = async () => {
 }
 
 onMounted(async () => {
+  const commentId = typeof route.query.commentId === 'string' ? route.query.commentId : ''
+  if (commentId) {
+    query.commentId = commentId
+  }
   await Promise.all([loadComments(), loadActiveTags(), loadReplyHistory()])
 })
 
@@ -530,6 +551,19 @@ onBeforeUnmount(() => {
         <div class="insight-block">
           <strong>{{ t('comments.operationReport') }}</strong>
           <p>{{ report?.operationSuggestions || report?.fullReport || t('comments.reportMissing') }}</p>
+          <div v-if="report?.evidence?.length" class="rag-reference-list">
+            <span class="rag-reference-label">{{ t('reports.evidenceTitle') }}</span>
+            <el-button
+              v-for="reference in report.evidence"
+              :key="`${reference.sourceType}-${reference.sourceId}`"
+              link
+              type="primary"
+              class="rag-reference-link"
+              @click="openReportEvidence(reference)"
+            >
+              {{ formatReportEvidence(reference) }}
+            </el-button>
+          </div>
         </div>
         <div class="insight-block">
           <strong>{{ t('comments.negativeReply') }}</strong>

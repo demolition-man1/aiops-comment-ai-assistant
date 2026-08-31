@@ -11,12 +11,15 @@ import com.aiops.entity.BizComment;
 import com.aiops.entity.BizCommentAnalysisResult;
 import com.aiops.entity.BizNegativeReply;
 import com.aiops.entity.BizOperationReport;
+import com.aiops.entity.BizOperationReportEvidence;
 import com.aiops.exception.BusinessException;
 import com.aiops.mapper.BizAiContentRecordMapper;
 import com.aiops.mapper.BizCommentAnalysisResultMapper;
 import com.aiops.mapper.BizCommentMapper;
 import com.aiops.mapper.BizNegativeReplyMapper;
 import com.aiops.mapper.BizOperationReportMapper;
+import com.aiops.mapper.BizOperationReportEvidenceMapper;
+import com.aiops.vo.ReportEvidenceVO;
 import com.aiops.service.AiCallLogService;
 import com.aiops.service.AiRateLimitService;
 import com.aiops.service.CacheService;
@@ -59,6 +62,9 @@ class AiServiceImplTest {
     private BizOperationReportMapper operationReportMapper;
 
     @Mock
+    private BizOperationReportEvidenceMapper operationReportEvidenceMapper;
+
+    @Mock
     private BizAiContentRecordMapper aiContentRecordMapper;
 
     @Mock
@@ -87,6 +93,7 @@ class AiServiceImplTest {
                 pythonAiClient,
                 analysisResultMapper,
                 operationReportMapper,
+                operationReportEvidenceMapper,
                 aiContentRecordMapper,
                 commentMapper,
                 negativeReplyMapper,
@@ -238,6 +245,55 @@ class AiServiceImplTest {
                 .containsEntry("commentTitle", "Entrega atrasada")
                 .containsEntry("commentContent", "produto chegou quebrado")
                 .containsEntry("problemType", "packaging");
+    }
+
+    @Test
+    void generateProductReportPersistsValidatedEvidenceReferences() {
+        when(aiRateLimitService.tryConsume(anyString(), any())).thenReturn(true);
+        when(cacheService.get(eq("ai:report:product:product-a:en-US"), eq(com.aiops.vo.OperationReportVO.class)))
+                .thenReturn(Optional.empty());
+        when(analysisResultMapper.selectOne(any())).thenReturn(analysisResult());
+        when(pythonAiClient.generateReport(any())).thenReturn(Map.of(
+                "success", true,
+                "data", Map.of(
+                        "reportTitle", "Evidence report",
+                        "modelName", "deepseek-chat",
+                        "references", List.of(
+                                Map.of("sourceType", "review_evidence", "sourceId", 31, "title", "Review #31", "score", 0.91),
+                                Map.of("sourceType", "problem_solution", "sourceId", 8, "title", "Delivery guide", "score", 0.88),
+                                Map.of("sourceType", "historical_reply", "sourceId", 6, "title", "Ignore", "score", 0.90)
+                        )
+                )
+        ));
+        when(operationReportMapper.insert(any(BizOperationReport.class))).thenAnswer(invocation -> {
+            invocation.<BizOperationReport>getArgument(0).setId(51L);
+            return 1;
+        });
+        BizOperationReportEvidence reviewEvidence = reportEvidence(
+                "review_evidence", 31L, "Review #31", 0.91);
+        BizOperationReportEvidence solutionEvidence = reportEvidence(
+                "problem_solution", 8L, "Delivery guide", 0.88);
+        when(operationReportEvidenceMapper.selectByReportId(51L)).thenReturn(List.of(reviewEvidence, solutionEvidence));
+
+        com.aiops.dto.AiReportGenerateDTO generateDTO = new com.aiops.dto.AiReportGenerateDTO();
+        generateDTO.setProductId("product-a");
+        generateDTO.setLanguage("en-US");
+
+        var result = aiService.generateProductReport(generateDTO);
+
+        assertThat(result.getEvidence()).extracting(ReportEvidenceVO::getSourceType)
+                .containsExactly("review_evidence", "problem_solution");
+        verify(operationReportEvidenceMapper, org.mockito.Mockito.times(2)).insert(any(BizOperationReportEvidence.class));
+    }
+
+    private BizOperationReportEvidence reportEvidence(String sourceType, Long sourceId, String title, double score) {
+        BizOperationReportEvidence evidence = new BizOperationReportEvidence();
+        evidence.setSourceType(sourceType);
+        evidence.setSourceId(sourceId);
+        evidence.setSourceTitle(title);
+        evidence.setRelevanceScore(score);
+        evidence.setRetrievalVersion("review-evidence-v1");
+        return evidence;
     }
 
     @Test

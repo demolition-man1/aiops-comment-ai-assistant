@@ -60,13 +60,22 @@ def _historical_reply_document(row: dict[str, Any]) -> Document:
     customer_issue = _text(row.get("comment_content"))
     approved_reply = _text(row.get("reply_content"))
     effect_tag = _text(row.get("effect_tag"))
+    favorite_flag = _integer(row.get("favorite_flag"))
+    use_count = _integer(row.get("use_count"))
     metadata = {
         "sourceType": "historical_reply",
         "sourceId": source_id,
         "problemType": problem_type,
         "title": "已确认有效的历史回复",
         "effectTag": effect_tag,
-        "favoriteFlag": _integer(row.get("favorite_flag")),
+        "favoriteFlag": favorite_flag,
+        "useCount": use_count,
+        "eligibilityReason": _historical_reply_eligibility_reason(
+            favorite_flag=favorite_flag,
+            effect_tag=effect_tag,
+            use_count=use_count,
+        ),
+        "retrievalVersion": "historical-reply-v1",
         "updatedAt": _timestamp(row.get("update_time")),
     }
     return Document(
@@ -144,6 +153,16 @@ def _meaningful_text(value: Any) -> str | None:
 
 def _integer(value: Any) -> int:
     return 0 if value is None else int(value)
+
+
+def _historical_reply_eligibility_reason(*, favorite_flag: int, effect_tag: str, use_count: int) -> str:
+    if favorite_flag == 1:
+        return "favorite"
+    if effect_tag in {"resolved", "positive_followup"}:
+        return "verified_outcome"
+    if use_count >= 3:
+        return "repeat_use"
+    return "unknown"
 
 
 def _timestamp(value: Any) -> str:

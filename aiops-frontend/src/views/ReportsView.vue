@@ -3,10 +3,11 @@ import type { EChartsOption } from 'echarts'
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { Archive, ArchiveRestore, BarChart3, Download, Eye, FileText, MessageSquareWarning, RefreshCw, Search, ShoppingBag, Star } from 'lucide-vue-next'
 
 import { aiApi, reportApi, reportArchiveApi } from '@/api/modules'
-import type { DashboardData, OperationReport, ProductRank, ReportArchive, ReportOverview } from '@/api/types'
+import type { DashboardData, OperationReport, ProductRank, ReportArchive, ReportEvidence, ReportOverview } from '@/api/types'
 import ChartPanel from '@/components/ChartPanel.vue'
 import MetricCard from '@/components/MetricCard.vue'
 import { useLocaleStore } from '@/stores/locale'
@@ -14,6 +15,7 @@ import { saveBlob } from '@/utils/download'
 import { formatPercent } from '@/utils/metricFormat'
 
 const { t } = useI18n()
+const router = useRouter()
 const localeStore = useLocaleStore()
 const loading = ref(false)
 const exporting = ref(false)
@@ -99,6 +101,21 @@ const displayTargetType = (value?: string) => {
 const displayArchiveStatus = (value?: string) => {
   const key = value?.trim()
   return key && archiveStatuses.has(key) ? t(`reports.archiveStatuses.${key}`) : key || t('common.unknown')
+}
+
+const displayEvidenceType = (value?: string) => t(`reports.evidenceTypes.${value || 'unknown'}`)
+
+const formatEvidenceReference = (reference: ReportEvidence) =>
+  reference.title || `${displayEvidenceType(reference.sourceType)} #${reference.sourceId}`
+
+const openEvidenceReference = (reference: ReportEvidence) => {
+  if (reference.sourceType === 'review_evidence') {
+    void router.push({ name: 'comments', query: { commentId: String(reference.sourceId) } })
+    return
+  }
+  if (reference.sourceType === 'problem_solution') {
+    void router.push({ name: 'solutions', query: { keyword: reference.title || String(reference.sourceId) } })
+  }
 }
 
 const formatDateTime = (value?: string) => {
@@ -583,6 +600,23 @@ onMounted(() => {
           <strong>{{ t('reports.fullReport') }}</strong>
           <p>{{ selectedArchive.fullReport }}</p>
         </div>
+
+        <div v-if="selectedArchive?.evidence?.length" class="insight-block report-evidence">
+          <strong>{{ t('reports.evidenceTitle') }}</strong>
+          <div class="evidence-list">
+            <el-button
+              v-for="reference in selectedArchive.evidence"
+              :key="`${reference.sourceType}-${reference.sourceId}`"
+              link
+              type="primary"
+              class="evidence-link"
+              @click="openEvidenceReference(reference)"
+            >
+              <span>{{ displayEvidenceType(reference.sourceType) }}</span>
+              <span>{{ formatEvidenceReference(reference) }}</span>
+            </el-button>
+          </div>
+        </div>
       </div>
       <template #footer>
         <el-button
@@ -733,6 +767,20 @@ onMounted(() => {
 .source-dialog-hint {
   margin: 0 0 14px;
   color: #64748b;
+}
+
+.evidence-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 8px;
+}
+
+.evidence-link {
+  height: auto;
+  padding: 0;
+  white-space: normal;
+  text-align: left;
 }
 
 @media (max-width: 900px) {

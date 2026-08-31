@@ -393,6 +393,15 @@ export interface OperationReport {
   fullReport: string
   modelName: string
   createTime?: string
+  evidence?: ReportEvidence[]
+}
+
+export interface ReportEvidence {
+  sourceType: 'review_evidence' | 'problem_solution' | string
+  sourceId: number
+  title?: string
+  score?: number
+  retrievalVersion?: string
 }
 
 export interface RagReference {
@@ -439,6 +448,7 @@ export interface ReportArchive {
   archiveTime?: string
   createTime?: string
   updateTime?: string
+  evidence?: ReportEvidence[]
 }
 
 export interface AiContent {

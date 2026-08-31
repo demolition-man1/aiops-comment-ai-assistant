@@ -28,6 +28,7 @@ class KnowledgeRetriever:
         review_score: int | None,
         problem_type: str | None,
         language: str,
+        source_types: set[str] | None = None,
     ) -> RagRetrievalResult:
         if not self._runtime.settings.rag_enabled:
             return _empty_result()
@@ -40,6 +41,7 @@ class KnowledgeRetriever:
             return _empty_result()
 
         normalized_problem_type = _known_problem_type(problem_type)
+        allowed_source_types = source_types or {"problem_solution", "historical_reply"}
         matches = self._runtime.get_vector_store().similarity_search_with_relevance_scores(
             _query_text(
                 review_text=review_text,
@@ -48,12 +50,13 @@ class KnowledgeRetriever:
                 language=language,
             ),
             k=self._runtime.settings.rag_top_k,
-            filter={"problemType": normalized_problem_type} if normalized_problem_type else None,
+            filter=_metadata_filter(normalized_problem_type, allowed_source_types),
         )
         knowledge = _valid_matches(
             matches,
             minimum_score=self._runtime.settings.rag_min_relevance_score,
             problem_type=normalized_problem_type,
+            allowed_source_types=allowed_source_types,
         )
         knowledge.sort(key=lambda item: item.reference.score, reverse=True)
         return format_reference_context(
@@ -67,6 +70,7 @@ def _valid_matches(
     *,
     minimum_score: float,
     problem_type: str | None,
+    allowed_source_types: set[str],
 ) -> list[RetrievedKnowledge]:
     valid: list[RetrievedKnowledge] = []
     for document, score in matches:
@@ -77,7 +81,7 @@ def _valid_matches(
             or score < minimum_score
         ):
             continue
-        reference = _reference_from_metadata(document.metadata, float(score))
+        reference = _reference_from_metadata(document.metadata, float(score), allowed_source_types)
         if reference is None:
             continue
         document_problem_type = _known_problem_type(document.metadata.get("problemType"))
@@ -87,9 +91,13 @@ def _valid_matches(
     return valid
 
 
-def _reference_from_metadata(metadata: dict[str, Any], score: float) -> RagReference | None:
+def _reference_from_metadata(
+    metadata: dict[str, Any],
+    score: float,
+    allowed_source_types: set[str],
+) -> RagReference | None:
     source_type = metadata.get("sourceType")
-    if source_type not in {"problem_solution", "historical_reply"}:
+    if source_type not in allowed_source_types:
         return None
     try:
         source_id = int(metadata.get("sourceId"))
@@ -121,6 +129,21 @@ def _query_text(
             f"Current customer review: {review_text.strip()}",
         )
     )
+
+
+def _metadata_filter(problem_type: str | None, source_types: set[str]) -> dict[str, Any] | None:
+    default_source_types = {"problem_solution", "historical_reply"}
+    conditions: list[dict[str, Any]] = []
+    if source_types != default_source_types:
+        if len(source_types) == 1:
+            conditions.append({"sourceType": next(iter(source_types))})
+        else:
+            conditions.append({"sourceType": {"$in": sorted(source_types)}})
+    if problem_type:
+        conditions.append({"problemType": problem_type})
+    if not conditions:
+        return None
+    return conditions[0] if len(conditions) == 1 else {"$and": conditions}
 
 
 def _empty_result() -> RagRetrievalResult:
