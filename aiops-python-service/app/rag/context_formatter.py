@@ -47,7 +47,8 @@ def format_reference_context(
 
 def _context_block(match: RetrievedKnowledge) -> str:
     title = match.reference.title or "Untitled guidance"
+    source_label = "Review evidence" if match.reference.source_type == "review_evidence" else "Operating guidance"
     return (
         f"Source: {match.reference.source_type} #{match.reference.source_id} - {title}\n"
-        f"Operating guidance: {match.document.page_content.strip()}"
+        f"{source_label}: {match.document.page_content.strip()}"
     )
