@@ -23,6 +23,8 @@ application-prod.yml
 aiops-python-service/.env
 work/tools/
 data/
+aiops-python-service/.cache/huggingface/
+aiops-python-service/rag-acceptance/
 *.rdb
 node_modules/
 dist/

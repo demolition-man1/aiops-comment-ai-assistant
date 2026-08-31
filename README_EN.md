@@ -160,7 +160,25 @@ docker compose logs -f backend python-service
 docker compose down
 ```
 
-MySQL and Redis use named volumes, so a regular `docker compose down` keeps business data.
+MySQL, Redis, and local RAG index data use named volumes, so a regular `docker compose down` keeps business data and downloaded embedding-model caches.
+
+### Optional: Enable the Local RAG Knowledge Base
+
+RAG is disabled by default. When enabled, the service builds a local Chroma index from enabled solution-library entries and eligible historical negative-review replies, then uses it to produce traceable negative-review replies. MySQL remains the only business source of truth.
+
+1. Set `RAG_ENABLED=true` in the root local `.env` file.
+2. Recreate the Python service:
+
+```powershell
+docker compose up -d --force-recreate python-service
+```
+
+3. Sign in, open **Solution Library**, review the knowledge-index status, and click **Rebuild Index**. Rebuild starts only from this explicit command.
+4. After the state becomes `ready`, generate a negative-review reply from **Comment Analytics**. The page shows each referenced solution or eligible historical reply.
+
+The first rebuild downloads the `intfloat/multilingual-e5-small` embedding model and needs network access; download time depends on the network. The model cache and Chroma index live in Docker's `rag-data` named volume, so recreating `python-service` does not require rebuilding the index. No Chroma port is exposed.
+
+To return to the existing non-RAG reply path, set `RAG_ENABLED=false` in `.env` and run `docker compose up -d --force-recreate python-service` again. This does not delete MySQL solution-library data, historical replies, or saved reply history.
 
 ### Manual Development Setup
 
@@ -294,7 +312,21 @@ After logging in, open the Data Import page and click "Import Sample Data" to qu
 | `AI_MODEL` | Model name |
 | `AI_NEGATIVE_REPLY_ENGINE` | Negative-reply engine: `langchain`; temporarily use `legacy` for rollback during troubleshooting |
 | `AI_MAX_RETRIES` | Maximum retries for temporary AI provider failures; defaults to `2` |
+| `RAG_ENABLED` | Enables local knowledge retrieval; defaults to `false` |
+| `RAG_COLLECTION` | Chroma collection name; defaults to `aiops_knowledge_v1` |
+| `RAG_TOP_K` | Maximum knowledge entries per request; range `1` to `10`, default `4` |
+| `RAG_MIN_RELEVANCE_SCORE` | Minimum relevance threshold; range `0.0` to `1.0`, default `0.35` |
+| `RAG_MAX_CONTEXT_CHARS` | Maximum knowledge-context length passed to the reply model; range `500` to `12000`, default `6000` |
+| `RAG_CHROMA_DIR` | Local index directory for native Python runs; Docker uses a persistent-volume directory automatically |
+| `EMBEDDING_MODEL` / `EMBEDDING_DEVICE` | Local embedding model and device; Docker defaults to `intfloat/multilingual-e5-small` / `cpu` |
 | `CRAWLER_ENABLED` | Whether to enable the real crawler adapter |
+
+### RAG Index Scope and Safety Boundaries
+
+- Only enabled solution-library records and historical replies that are favorite, `resolved`, or `positive_followup` are indexed.
+- The current review always takes precedence over retrieved operating guidance; historical events must not be represented as completed facts for the current order.
+- Reply references are built by application code from index metadata. The model cannot invent source IDs.
+- If RAG is unavailable, the index is empty, or retrieval returns no result, negative replies fall back to the existing structured LangChain flow and are marked as not using RAG.
 
 ### Comment AI Hybrid Gate Configuration
 
@@ -333,6 +365,13 @@ Python service:
 ```powershell
 cd aiops-python-service
 pytest
+```
+
+RAG persistence and offline multilingual acceptance:
+
+```powershell
+cd aiops-python-service
+.\.venv\Scripts\python.exe -m pytest tests/test_rag_acceptance.py -q
 ```
 
 The Python test suite also verifies the deployment-file contract. With Docker installed, validate Compose interpolation with:

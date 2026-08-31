@@ -72,13 +72,15 @@ services:
       RAG_TOP_K: ${RAG_TOP_K:-4}
       RAG_MIN_RELEVANCE_SCORE: ${RAG_MIN_RELEVANCE_SCORE:-0.35}
       RAG_MAX_CONTEXT_CHARS: ${RAG_MAX_CONTEXT_CHARS:-6000}
-      RAG_CHROMA_DIR: ${RAG_CHROMA_DIR:-./data/chroma}
+      RAG_CHROMA_DIR: /data/rag/chroma
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-intfloat/multilingual-e5-small}
       EMBEDDING_DEVICE: ${EMBEDDING_DEVICE:-cpu}
+      HF_HOME: /data/rag/huggingface
       LOCAL_IMPORT_HOST_PATH: ${AIOPS_LOCAL_IMPORT_HOST_PATH:-}
       LOCAL_IMPORT_CONTAINER_PATH: /data/local-import
       CRAWLER_ENABLED: ${CRAWLER_ENABLED:-false}
     volumes:
+      - rag-data:/data/rag
       - type: bind
         source: ${AIOPS_LOCAL_IMPORT_HOST_PATH:-./data}
         target: /data/local-import
@@ -159,3 +161,4 @@ services:
 volumes:
   mysql-data:
   redis-data:
+  rag-data:

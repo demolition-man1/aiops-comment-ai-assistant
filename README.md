@@ -160,7 +160,25 @@ docker compose logs -f backend python-service
 docker compose down
 ```
 
-MySQL 与 Redis 数据保存在命名卷中，普通 `docker compose down` 不会删除业务数据。
+MySQL、Redis 与 RAG 本地索引数据均保存在命名卷中，普通 `docker compose down` 不会删除业务数据或已下载的嵌入模型缓存。
+
+### 可选：启用本地 RAG 知识库
+
+RAG 默认关闭。开启后，系统会把已启用的问题解决方案和符合条件的历史差评回复构建为本地 Chroma 索引，用于生成可追溯来源的差评回复；业务事实仍只保存在 MySQL。
+
+1. 在根目录本地 `.env` 中设置 `RAG_ENABLED=true`。
+2. 重建 Python 服务：
+
+```powershell
+docker compose up -d --force-recreate python-service
+```
+
+3. 登录 Web 管理端，在“问题解决方案库”查看知识索引状态并点击“重建索引”。只有这次明确点击才会启动重建。
+4. 状态变为 `ready` 后，在“评论分析”生成差评回复；页面会展示本次回复引用的解决方案或合格历史回复。
+
+首次重建会下载 `intfloat/multilingual-e5-small` 嵌入模型，需有网络连接，下载时间取决于网络环境。模型缓存和 Chroma 索引保存于 Docker 的 `rag-data` 命名卷；重建 `python-service` 不需要再次建立索引。系统不会新增 Chroma 对外端口。
+
+如需回退到原有非 RAG 回复流程，将 `.env` 中的 `RAG_ENABLED` 改回 `false`，然后再次执行 `docker compose up -d --force-recreate python-service`。该操作不会删除 MySQL 中的方案库、历史回复或已保存的回复记录。
 
 ### 手动启动
 
@@ -294,7 +312,21 @@ npm run dev
 | `AI_MODEL` | 模型名称 |
 | `AI_NEGATIVE_REPLY_ENGINE` | 差评回复引擎：`langchain`，异常排查时可临时切换为 `legacy` |
 | `AI_MAX_RETRIES` | AI provider 临时错误的最大重试次数，默认 `2` |
+| `RAG_ENABLED` | 是否启用本地知识检索，默认 `false` |
+| `RAG_COLLECTION` | Chroma 集合名称，默认 `aiops_knowledge_v1` |
+| `RAG_TOP_K` | 单次最多使用的知识条数，范围 `1` 至 `10`，默认 `4` |
+| `RAG_MIN_RELEVANCE_SCORE` | 最低相关度阈值，范围 `0.0` 至 `1.0`，默认 `0.35` |
+| `RAG_MAX_CONTEXT_CHARS` | 送入回复模型的知识上下文最大长度，范围 `500` 至 `12000`，默认 `6000` |
+| `RAG_CHROMA_DIR` | 原生 Python 运行时的本地索引目录；Docker 自动使用持久卷内目录 |
+| `EMBEDDING_MODEL` / `EMBEDDING_DEVICE` | 本地嵌入模型与运行设备，Docker 默认 `intfloat/multilingual-e5-small` / `cpu` |
 | `CRAWLER_ENABLED` | 是否启用真实爬虫适配器 |
+
+### RAG 索引范围与安全边界
+
+- 仅索引已启用的问题解决方案，以及被收藏或标记为 `resolved`、`positive_followup` 的历史回复。
+- 当前评论内容始终高于检索出的运营建议；模型不会把历史记录描述为当前订单已完成的事实。
+- 回复来源由应用代码根据索引元数据生成，模型不能自行编造来源 ID。
+- RAG 不可用、索引为空或检索无结果时，差评回复自动使用既有 LangChain 结构化回复流程，并标记为未使用 RAG。
 
 ### 评论 AI Hybrid 准入配置
 
@@ -333,6 +365,13 @@ Python 服务：
 ```powershell
 cd aiops-python-service
 pytest
+```
+
+RAG 持久化和离线多语言验收：
+
+```powershell
+cd aiops-python-service
+.\.venv\Scripts\python.exe -m pytest tests/test_rag_acceptance.py -q
 ```
 
 部署文件静态契约也包含在 Python 测试中。安装 Docker 后还可执行：

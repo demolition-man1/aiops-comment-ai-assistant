@@ -1,4 +1,5 @@
 from pathlib import Path
+import subprocess
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -59,6 +60,16 @@ def test_compose_passes_lazy_rag_runtime_configuration() -> None:
     assert "RAG_ENABLED=false" in python_environment
 
 
+def test_compose_persists_rag_runtime_data_without_exposing_chroma() -> None:
+    compose = (REPOSITORY_ROOT / "compose.yml").read_text(encoding="utf-8")
+
+    assert "rag-data:/data/rag" in compose
+    assert "RAG_CHROMA_DIR: /data/rag/chroma" in compose
+    assert "HF_HOME: /data/rag/huggingface" in compose
+    assert "  rag-data:" in compose
+    assert "chroma:" not in compose
+
+
 def test_images_and_nginx_proxy_are_declared() -> None:
     backend_dockerfile = (REPOSITORY_ROOT / "aiops-backend" / "Dockerfile").read_text(encoding="utf-8")
     python_dockerfile = (REPOSITORY_ROOT / "aiops-python-service" / "Dockerfile").read_text(encoding="utf-8")
@@ -102,3 +113,18 @@ def test_example_environment_contains_placeholders_only() -> None:
     ):
         assert f"{name}=" in environment
     assert "replace-with-" in environment
+
+
+def test_git_ignores_local_rag_runtime_artifacts() -> None:
+    for relative_path in (
+        "aiops-python-service/data/chroma/index-state.json",
+        "aiops-python-service/.cache/huggingface/hub/model.safetensors",
+        "aiops-python-service/rag-acceptance/multilingual-results.json",
+    ):
+        result = subprocess.run(
+            ["git", "check-ignore", "--quiet", "--no-index", relative_path],
+            cwd=REPOSITORY_ROOT,
+            check=False,
+        )
+
+        assert result.returncode == 0, relative_path
