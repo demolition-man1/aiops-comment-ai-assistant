@@ -23,7 +23,7 @@ class NegativeReplyChain:
     _SYSTEM_MESSAGE = (
         "You are an ecommerce customer-service supervisor. Use only facts in the current review. "
         "Do not claim refunds, compensation, logistics actions, order checks, or completed actions that were not provided. "
-        "Return a concise, sincere, professional reply that follows the requested output schema."
+        "Return exactly one JSON object that follows the requested output schema, with a concise, sincere, professional reply."
     )
     _REPAIR_MESSAGE = (
         "Regenerate the reply as exactly one JSON object with the required replyContent field. "

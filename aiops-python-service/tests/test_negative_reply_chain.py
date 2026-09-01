@@ -56,6 +56,16 @@ def test_negative_reply_chain_returns_validated_reply_content() -> None:
     assert len(provider.text_prompts) == 0
 
 
+def test_negative_reply_chain_includes_json_instruction_for_structured_provider() -> None:
+    provider = FakeProvider(structured_result=result_for("We will verify the delivery issue."))
+    chain = NegativeReplyChain(provider)
+
+    chain.generate("customer review prompt")
+
+    messages = provider.structured_prompts[0]
+    assert "json" in "\n".join(message.content for message in messages).lower()
+
+
 def test_negative_reply_chain_adds_operating_guidance_as_a_separate_system_message() -> None:
     provider = FakeProvider(structured_result=result_for("We will verify the delivery issue."))
     chain = NegativeReplyChain(provider)
