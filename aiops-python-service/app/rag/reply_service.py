@@ -7,6 +7,7 @@ from app.ai.chains.negative_reply import NegativeReplyChain
 from app.ai.provider import LangChainProvider
 from app.ai.results import AiInvocationResult
 from app.ai.schemas import NegativeReplyOutput
+from app.config import settings
 from app.rag.knowledge_retriever import KnowledgeRetriever, knowledge_retriever
 from app.rag.models import RagReference, RagRetrievalResult
 
@@ -24,9 +25,13 @@ class RagReplyService:
         *,
         retriever: KnowledgeRetriever | Any = knowledge_retriever,
         reply_chain: NegativeReplyChain | Any | None = None,
+        reply_top_k: int | None = None,
+        reply_max_context_chars: int | None = None,
     ) -> None:
         self._retriever = retriever
         self._reply_chain = reply_chain or NegativeReplyChain(LangChainProvider())
+        self._reply_top_k = reply_top_k or settings.rag_reply_top_k
+        self._reply_max_context_chars = reply_max_context_chars or settings.rag_reply_max_context_chars
 
     def generate(self, *, request: dict[str, Any], rendered_prompt: str) -> RagReplyResult:
         retrieval = self._retrieve_or_empty(request)
@@ -48,6 +53,8 @@ class RagReplyService:
                 review_score=_review_score(request.get("reviewScore")),
                 problem_type=_optional_text(request.get("problemType")),
                 language=_optional_text(request.get("language")) or "zh-CN",
+                top_k=self._reply_top_k,
+                max_context_chars=self._reply_max_context_chars,
             )
         except Exception:
             return RagRetrievalResult(context="", references=[])

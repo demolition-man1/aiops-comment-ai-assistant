@@ -11,8 +11,10 @@ class FakeRetriever:
     def __init__(self, result=None, error: Exception | None = None) -> None:
         self.result = result or RagRetrievalResult(context="", references=[])
         self.error = error
+        self.calls: list[dict[str, object]] = []
 
-    def retrieve(self, **_kwargs):
+    def retrieve(self, **kwargs):
+        self.calls.append(kwargs)
         if self.error is not None:
             raise self.error
         return self.result
@@ -49,9 +51,12 @@ def _request() -> dict[str, object]:
 def test_reply_service_passes_retrieved_context_and_returns_programmatic_references() -> None:
     reference = RagReference("problem_solution", 14, "Delivery guide", 0.91)
     chain = FakeChain()
+    retriever = FakeRetriever(RagRetrievalResult(context="Delivery guidance", references=[reference]))
     service = RagReplyService(
-        retriever=FakeRetriever(RagRetrievalResult(context="Delivery guidance", references=[reference])),
+        retriever=retriever,
         reply_chain=chain,
+        reply_top_k=2,
+        reply_max_context_chars=1800,
     )
 
     result = service.generate(request=_request(), rendered_prompt="reply prompt")
@@ -60,6 +65,16 @@ def test_reply_service_passes_retrieved_context_and_returns_programmatic_referen
     assert result.references == [reference]
     assert chain.reference_contexts == ["Delivery guidance"]
     assert result.invocation.total_tokens == 18
+    assert retriever.calls == [
+        {
+            "review_text": "The delivery was late.",
+            "review_score": 1,
+            "problem_type": "logistics",
+            "language": "en-US",
+            "top_k": 2,
+            "max_context_chars": 1800,
+        }
+    ]
 
 
 def test_reply_service_falls_back_when_retrieval_fails_but_preserves_provider_errors() -> None:

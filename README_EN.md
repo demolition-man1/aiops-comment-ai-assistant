@@ -256,6 +256,8 @@ AI_CHAT_PATH=/v1/chat/completions
 AI_API_KEY=your-ai-api-key
 AI_MODEL=deepseek-v4-flash
 AI_NEGATIVE_REPLY_ENGINE=langchain
+AI_NEGATIVE_REPLY_THINKING_ENABLED=false
+AI_NEGATIVE_REPLY_MAX_TOKENS=320
 AI_MAX_RETRIES=2
 ```
 
@@ -311,12 +313,16 @@ After logging in, open the Data Import page and click "Import Sample Data" to qu
 | `AI_API_KEY` | LLM API key |
 | `AI_MODEL` | Model name |
 | `AI_NEGATIVE_REPLY_ENGINE` | Negative-reply engine: `langchain`; temporarily use `legacy` for rollback during troubleshooting |
+| `AI_NEGATIVE_REPLY_THINKING_ENABLED` | Enables model thinking for negative replies; defaults to `false` to reduce short-reply latency |
+| `AI_NEGATIVE_REPLY_MAX_TOKENS` | Maximum output tokens for a negative reply; range `64` to `1024`, default `320` |
 | `AI_MAX_RETRIES` | Maximum retries for temporary AI provider failures; defaults to `2` |
 | `RAG_ENABLED` | Enables local knowledge retrieval; defaults to `false` |
 | `RAG_COLLECTION` | Chroma collection name; defaults to `aiops_knowledge_v1` |
 | `RAG_TOP_K` | Maximum knowledge entries per request; range `1` to `10`, default `4` |
 | `RAG_MIN_RELEVANCE_SCORE` | Minimum relevance threshold; range `0.0` to `1.0`, default `0.35` |
 | `RAG_MAX_CONTEXT_CHARS` | Maximum knowledge-context length passed to the reply model; range `500` to `12000`, default `6000` |
+| `RAG_REPLY_TOP_K` | Maximum knowledge entries for a negative reply; defaults to `2` and does not change report retrieval |
+| `RAG_REPLY_MAX_CONTEXT_CHARS` | Maximum knowledge-context length for a negative reply; defaults to `1800` and does not change report context budgets |
 | `RAG_REVIEW_EVIDENCE_MAX_DOCUMENTS` | Maximum review-evidence documents per rebuild; range `0` to `10000`, default `2000`; `0` disables review evidence only |
 | `RAG_CHROMA_DIR` | Local index directory for native Python runs; Docker uses a persistent-volume directory automatically |
 | `EMBEDDING_MODEL` / `EMBEDDING_DEVICE` | Local embedding model and device; Docker defaults to `intfloat/multilingual-e5-small` / `cpu` |

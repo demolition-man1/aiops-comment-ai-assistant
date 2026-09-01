@@ -256,6 +256,8 @@ AI_CHAT_PATH=/v1/chat/completions
 AI_API_KEY=your-ai-api-key
 AI_MODEL=deepseek-v4-flash
 AI_NEGATIVE_REPLY_ENGINE=langchain
+AI_NEGATIVE_REPLY_THINKING_ENABLED=false
+AI_NEGATIVE_REPLY_MAX_TOKENS=320
 AI_MAX_RETRIES=2
 ```
 
@@ -311,12 +313,16 @@ npm run dev
 | `AI_API_KEY` | 大模型 API Key |
 | `AI_MODEL` | 模型名称 |
 | `AI_NEGATIVE_REPLY_ENGINE` | 差评回复引擎：`langchain`，异常排查时可临时切换为 `legacy` |
+| `AI_NEGATIVE_REPLY_THINKING_ENABLED` | 差评回复是否启用模型思考模式，默认 `false`，关闭可缩短短回复生成耗时 |
+| `AI_NEGATIVE_REPLY_MAX_TOKENS` | 差评回复最大输出 Token，范围 `64` 至 `1024`，默认 `320` |
 | `AI_MAX_RETRIES` | AI provider 临时错误的最大重试次数，默认 `2` |
 | `RAG_ENABLED` | 是否启用本地知识检索，默认 `false` |
 | `RAG_COLLECTION` | Chroma 集合名称，默认 `aiops_knowledge_v1` |
 | `RAG_TOP_K` | 单次最多使用的知识条数，范围 `1` 至 `10`，默认 `4` |
 | `RAG_MIN_RELEVANCE_SCORE` | 最低相关度阈值，范围 `0.0` 至 `1.0`，默认 `0.35` |
 | `RAG_MAX_CONTEXT_CHARS` | 送入回复模型的知识上下文最大长度，范围 `500` 至 `12000`，默认 `6000` |
+| `RAG_REPLY_TOP_K` | 差评回复最多使用的知识条数，默认 `2`，不影响报告检索范围 |
+| `RAG_REPLY_MAX_CONTEXT_CHARS` | 差评回复知识上下文最大长度，默认 `1800`，不影响报告上下文预算 |
 | `RAG_REVIEW_EVIDENCE_MAX_DOCUMENTS` | 每次重建最多索引的评论证据数，范围 `0` 至 `10000`，默认 `2000`；`0` 只关闭评论证据 |
 | `RAG_CHROMA_DIR` | 原生 Python 运行时的本地索引目录；Docker 自动使用持久卷内目录 |
 | `EMBEDDING_MODEL` / `EMBEDDING_DEVICE` | 本地嵌入模型与运行设备，Docker 默认 `intfloat/multilingual-e5-small` / `cpu` |

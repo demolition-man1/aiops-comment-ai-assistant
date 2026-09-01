@@ -29,6 +29,8 @@ class KnowledgeRetriever:
         problem_type: str | None,
         language: str,
         source_types: set[str] | None = None,
+        top_k: int | None = None,
+        max_context_chars: int | None = None,
     ) -> RagRetrievalResult:
         if not self._runtime.settings.rag_enabled:
             return _empty_result()
@@ -42,6 +44,8 @@ class KnowledgeRetriever:
 
         normalized_problem_type = _known_problem_type(problem_type)
         allowed_source_types = source_types or {"problem_solution", "historical_reply"}
+        result_limit = top_k or self._runtime.settings.rag_top_k
+        context_limit = max_context_chars or self._runtime.settings.rag_max_context_chars
         matches = self._runtime.get_vector_store().similarity_search_with_relevance_scores(
             _query_text(
                 review_text=review_text,
@@ -49,7 +53,7 @@ class KnowledgeRetriever:
                 problem_type=normalized_problem_type,
                 language=language,
             ),
-            k=self._runtime.settings.rag_top_k,
+            k=result_limit,
             filter=_metadata_filter(normalized_problem_type, allowed_source_types),
         )
         knowledge = _valid_matches(
@@ -60,8 +64,8 @@ class KnowledgeRetriever:
         )
         knowledge.sort(key=lambda item: item.reference.score, reverse=True)
         return format_reference_context(
-            knowledge[: self._runtime.settings.rag_top_k],
-            max_context_chars=self._runtime.settings.rag_max_context_chars,
+            knowledge[:result_limit],
+            max_context_chars=context_limit,
         )
 
 

@@ -97,6 +97,12 @@ class Settings:
             "AI_NEGATIVE_REPLY_ENGINE", "langchain", {"langchain", "legacy"}
         )
     )
+    ai_negative_reply_thinking_enabled: bool = field(
+        default_factory=lambda: _bool_env("AI_NEGATIVE_REPLY_THINKING_ENABLED", False)
+    )
+    ai_negative_reply_max_tokens: int = field(
+        default_factory=lambda: _bounded_int_env("AI_NEGATIVE_REPLY_MAX_TOKENS", 320, 64, 1024)
+    )
     ai_max_retries: int = field(default_factory=lambda: _non_negative_int_env("AI_MAX_RETRIES", 2))
     comment_ai_shadow_default_sample_size: int = field(
         default_factory=lambda: _bounded_int_env("COMMENT_AI_SHADOW_DEFAULT_SAMPLE_SIZE", 60, 1, 100)
@@ -126,6 +132,12 @@ class Settings:
     )
     rag_max_context_chars: int = field(
         default_factory=lambda: _bounded_int_env("RAG_MAX_CONTEXT_CHARS", 6000, 500, 12000)
+    )
+    rag_reply_top_k: int = field(
+        default_factory=lambda: _bounded_int_env("RAG_REPLY_TOP_K", 2, 1, 10)
+    )
+    rag_reply_max_context_chars: int = field(
+        default_factory=lambda: _bounded_int_env("RAG_REPLY_MAX_CONTEXT_CHARS", 1800, 500, 12000)
     )
     rag_review_evidence_max_documents: int = field(
         default_factory=lambda: _bounded_int_env("RAG_REVIEW_EVIDENCE_MAX_DOCUMENTS", 2000, 0, 10000)

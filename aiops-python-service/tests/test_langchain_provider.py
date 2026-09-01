@@ -216,3 +216,27 @@ def test_provider_returns_text_with_usage_metadata() -> None:
     assert result.value == "Please contact our support team."
     assert result.total_tokens == 16
     assert result.token_usage_estimated is False
+
+
+def test_provider_passes_fast_reply_options_when_creating_deepseek_model(monkeypatch) -> None:
+    created: dict[str, object] = {}
+    expected_model = object()
+
+    def create_model(**kwargs: object) -> object:
+        created.update(kwargs)
+        return expected_model
+
+    provider_settings = settings_for_test()
+    provider_settings.ai_api_key = "test-api-key"
+    provider = LangChainProvider(
+        provider_settings,
+        model_options={
+            "max_tokens": 320,
+            "extra_body": {"thinking": {"type": "disabled"}},
+        },
+    )
+    monkeypatch.setattr("app.ai.provider.ChatDeepSeek", create_model)
+
+    assert provider._model() is expected_model
+    assert created["max_tokens"] == 320
+    assert created["extra_body"] == {"thinking": {"type": "disabled"}}

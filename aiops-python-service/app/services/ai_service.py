@@ -112,7 +112,18 @@ class AiService:
         }
 
     def _negative_reply_chain(self) -> NegativeReplyChain:
-        return NegativeReplyChain(LangChainProvider())
+        return NegativeReplyChain(
+            LangChainProvider(
+                model_options={
+                    "max_tokens": settings.ai_negative_reply_max_tokens,
+                    "extra_body": {
+                        "thinking": {
+                            "type": "enabled" if settings.ai_negative_reply_thinking_enabled else "disabled"
+                        }
+                    },
+                }
+            )
+        )
 
     def _rag_reply_service(self) -> RagReplyService:
         return RagReplyService(reply_chain=self._negative_reply_chain())

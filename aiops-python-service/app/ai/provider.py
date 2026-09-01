@@ -30,11 +30,13 @@ class LangChainProvider:
         self,
         provider_settings: Settings | Any = settings,
         chat_model: Any | None = None,
+        model_options: dict[str, Any] | None = None,
         sleep: Callable[[float], None] = time.sleep,
         jitter: Callable[[float, float], float] = random.uniform,
     ) -> None:
         self._settings = provider_settings
         self._chat_model = chat_model
+        self._model_options = dict(model_options or {})
         self._sleep = sleep
         self._jitter = jitter
 
@@ -96,6 +98,7 @@ class LangChainProvider:
             base_url=self._settings.ai_base_url,
             timeout=self._settings.ai_timeout,
             max_retries=0,
+            **self._model_options,
         )
         return self._chat_model
 
