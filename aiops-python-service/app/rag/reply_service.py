@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.ai.chains.negative_reply import NegativeReplyChain
+from app.ai.context import AiInvocationContext
 from app.ai.provider import LangChainProvider
 from app.ai.results import AiInvocationResult
 from app.ai.schemas import NegativeReplyOutput
@@ -33,13 +34,26 @@ class RagReplyService:
         self._reply_top_k = reply_top_k or settings.rag_reply_top_k
         self._reply_max_context_chars = reply_max_context_chars or settings.rag_reply_max_context_chars
 
-    def generate(self, *, request: dict[str, Any], rendered_prompt: str) -> RagReplyResult:
+    def generate(
+        self,
+        *,
+        request: dict[str, Any],
+        rendered_prompt: str,
+        context: AiInvocationContext | None = None,
+    ) -> RagReplyResult:
         retrieval = self._retrieve_or_empty(request)
         use_rag = bool(retrieval.context and retrieval.references)
-        invocation = self._reply_chain.generate(
-            rendered_prompt,
-            reference_context=retrieval.context if use_rag else None,
-        )
+        if context is None:
+            invocation = self._reply_chain.generate(
+                rendered_prompt,
+                reference_context=retrieval.context if use_rag else None,
+            )
+        else:
+            invocation = self._reply_chain.generate(
+                rendered_prompt,
+                reference_context=retrieval.context if use_rag else None,
+                context=context,
+            )
         return RagReplyResult(
             invocation=invocation,
             rag_used=use_rag,

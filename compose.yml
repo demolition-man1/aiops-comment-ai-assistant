@@ -53,6 +53,10 @@ services:
       MYSQL_DATABASE: ${AIOPS_MYSQL_DATABASE:-aiops}
       MYSQL_USER: root
       MYSQL_PASSWORD: ${AIOPS_MYSQL_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DATABASE: ${REDIS_DATABASE:-0}
+      REDIS_PASSWORD: ${AIOPS_REDIS_PASSWORD:-}
       AI_PROVIDER: ${AI_PROVIDER:-deepseek}
       AI_BASE_URL: ${AI_BASE_URL:-https://api.deepseek.com}
       AI_CHAT_PATH: ${AI_CHAT_PATH:-/v1/chat/completions}

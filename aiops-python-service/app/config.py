@@ -86,6 +86,11 @@ class Settings:
     mysql_user: str = os.getenv("MYSQL_USER", "root")
     mysql_password: str = os.getenv("MYSQL_PASSWORD", "")
 
+    redis_host: str = os.getenv("REDIS_HOST", "localhost")
+    redis_port: int = _int_env("REDIS_PORT", 6379)
+    redis_database: int = _non_negative_int_env("REDIS_DATABASE", 0)
+    redis_password: str = os.getenv("REDIS_PASSWORD", "")
+
     ai_provider: str = os.getenv("AI_PROVIDER", "deepseek")
     ai_base_url: str = os.getenv("AI_BASE_URL", "https://api.deepseek.com")
     ai_chat_path: str = os.getenv("AI_CHAT_PATH", "/v1/chat/completions")

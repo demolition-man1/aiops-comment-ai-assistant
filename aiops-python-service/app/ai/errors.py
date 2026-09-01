@@ -30,6 +30,10 @@ class AiProviderRequestError(AiServiceError):
     status_code = 502
 
 
+class AiJobCancelledError(AiServiceError):
+    status_code = 409
+
+
 class AiOutputValidationError(AiServiceError):
     status_code = 502
 

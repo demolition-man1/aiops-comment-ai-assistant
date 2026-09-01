@@ -8,3 +8,4 @@ class AiInvocationContext:
     job_type: str
     target_reference: str | None = None
     callbacks: tuple[Any, ...] = ()
+    progress_publisher: Any | None = None

@@ -2,7 +2,10 @@ import json
 import re
 from typing import Any
 
+from app.ai.context import AiInvocationContext
+from app.ai.errors import AiJobCancelledError
 from app.ai.chains.negative_reply import NegativeReplyChain
+from app.ai.progress import AiJobProgressPublisher
 from app.ai.chains.report import ReportChain
 from app.ai.provider import LangChainProvider
 from app.ai.registry import AiChainRegistry
@@ -13,7 +16,11 @@ from app.rag.report_rag_service import ReportRagService
 
 
 class AiService:
+    def __init__(self, progress_publisher: AiJobProgressPublisher | None = None) -> None:
+        self._progress_publisher = progress_publisher or AiJobProgressPublisher()
+
     def generate_report(self, request: dict[str, Any]) -> dict[str, Any]:
+        context = self._start_job(request)
         target_type = request.get("targetType") or "product"
         target_id = request.get("targetId") or ""
         language = request.get("language") or "zh-CN"
@@ -29,11 +36,16 @@ class AiService:
             f"评论分析结果：{json.dumps(analysis_result, ensure_ascii=False, default=str)}"
         )
         prompt = self._prompt_from_template(request, fallback_prompt)
+        self._publish(context, "retrieving", 30)
         retrieval = self._report_rag_service().retrieve(request=request)
-        result = self._report_chain().generate(
+        self._ensure_not_cancelled(context)
+        self._publish(context, "generating", 55)
+        result = self._generate_report_chain(
             prompt,
             reference_context=retrieval.context if retrieval.context and retrieval.references else None,
+            context=context,
         )
+        self._publish(context, "validating", 85)
         report_output = result.value
         report = {
             "reportTitle": self._safe_report_title(report_output.report_title, target_type, target_id, language),
@@ -51,6 +63,7 @@ class AiService:
         return {"success": True, "data": report, **self._invocation_metadata(result)}
 
     def generate_content(self, request: dict[str, Any]) -> dict[str, Any]:
+        context = self._start_job(request)
         content_type = request.get("contentType") or "商品文案"
         style_type = request.get("styleType") or "简洁专业"
         language = request.get("language") or "zh-CN"
@@ -64,7 +77,9 @@ class AiService:
             "输出正文即可，不要解释生成过程。"
         )
         prompt = self._prompt_from_template(request, fallback_prompt)
-        result = self._content_generation_chain().generate(prompt)
+        self._publish(context, "generating", 55)
+        result = self._generate_content_chain(prompt, context)
+        self._publish(context, "validating", 85)
         return {
             "success": True,
             "generatedContent": result.value.generated_content,
@@ -72,6 +87,7 @@ class AiService:
         }
 
     def generate_negative_reply(self, request: dict[str, Any]) -> dict[str, Any]:
+        context = self._start_job(request)
         comment_id = request.get("commentId") or ""
         review_id = request.get("reviewId") or ""
         product_id = request.get("productId") or ""
@@ -94,7 +110,9 @@ class AiService:
         )
         prompt = self._prompt_from_template(request, fallback_prompt)
         if settings.ai_negative_reply_engine == "langchain":
-            result = self._rag_reply_service().generate(request=request, rendered_prompt=prompt)
+            self._publish(context, "retrieving", 30)
+            result = self._rag_reply_service().generate(request=request, rendered_prompt=prompt, context=context)
+            self._publish(context, "validating", 85)
             invocation = result.invocation
             return {
                 "success": True,
@@ -103,7 +121,9 @@ class AiService:
                 "references": [reference.to_payload() for reference in result.references],
                 **self._invocation_metadata(invocation),
             }
-        invocation = self._negative_reply_chain().generate(prompt)
+        self._publish(context, "generating", 55)
+        invocation = self._generate_negative_reply_chain(prompt, context)
+        self._publish(context, "validating", 85)
         return {
             "success": True,
             "replyContent": invocation.value.reply_content,
@@ -165,6 +185,7 @@ class AiService:
         return "Seller Operations Report" if target_type == "seller" else "Product Operations Report"
 
     def translate_comment(self, request: dict[str, Any]) -> dict[str, Any]:
+        context = self._start_job(request)
         comment_id = request.get("commentId") or ""
         review_id = request.get("reviewId") or ""
         product_id = request.get("productId") or ""
@@ -182,7 +203,9 @@ class AiService:
             f"reviewScore: {review_score}. title: {comment_title}. review: {comment_content}."
         )
         prompt = self._prompt_from_template(request, fallback_prompt)
-        result = self._comment_translation_chain().generate(prompt)
+        self._publish(context, "generating", 55)
+        result = self._generate_translation_chain(prompt, context)
+        self._publish(context, "validating", 85)
         return {
             "success": True,
             "data": {
@@ -194,6 +217,7 @@ class AiService:
         }
 
     def generate_product_compare(self, request: dict[str, Any]) -> dict[str, Any]:
+        context = self._start_job(request)
         left_product_id = request.get("leftProductId") or ""
         right_product_id = request.get("rightProductId") or ""
         language = request.get("language") or "zh-CN"
@@ -209,7 +233,9 @@ class AiService:
             f"右侧商品分析结果：{json.dumps(right_analysis, ensure_ascii=False, default=str)}"
         )
         prompt = self._prompt_from_template(request, fallback_prompt)
-        result = self._product_compare_chain().generate(prompt)
+        self._publish(context, "generating", 55)
+        result = self._generate_product_compare_chain(prompt, context)
+        self._publish(context, "validating", 85)
         report = {
             "compareSummary": result.value.compare_summary,
             "advantageAnalysis": result.value.advantage_analysis,
@@ -227,6 +253,60 @@ class AiService:
         if not isinstance(variables, dict):
             variables = request
         return self._render_template(template, variables)
+
+    def _generate_report_chain(
+        self,
+        prompt: str,
+        *,
+        reference_context: str | None,
+        context: AiInvocationContext | None,
+    ) -> Any:
+        chain = self._report_chain()
+        if context is None:
+            return chain.generate(prompt, reference_context=reference_context)
+        return chain.generate(prompt, reference_context=reference_context, context=context)
+
+    def _generate_content_chain(self, prompt: str, context: AiInvocationContext | None) -> Any:
+        chain = self._content_generation_chain()
+        return chain.generate(prompt) if context is None else chain.generate(prompt, context=context)
+
+    def _generate_negative_reply_chain(self, prompt: str, context: AiInvocationContext | None) -> Any:
+        chain = self._negative_reply_chain()
+        return chain.generate(prompt) if context is None else chain.generate(prompt, context=context)
+
+    def _generate_translation_chain(self, prompt: str, context: AiInvocationContext | None) -> Any:
+        chain = self._comment_translation_chain()
+        return chain.generate(prompt) if context is None else chain.generate(prompt, context=context)
+
+    def _generate_product_compare_chain(self, prompt: str, context: AiInvocationContext | None) -> Any:
+        chain = self._product_compare_chain()
+        return chain.generate(prompt) if context is None else chain.generate(prompt, context=context)
+
+    def _start_job(self, request: dict[str, Any]) -> AiInvocationContext | None:
+        job_id = request.get("jobId")
+        if not isinstance(job_id, int) or isinstance(job_id, bool) or job_id <= 0:
+            return None
+        job_type = str(request.get("jobType") or "").strip()
+        if not job_type:
+            return None
+        context = AiInvocationContext(
+            job_id=job_id,
+            job_type=job_type,
+            target_reference=str(request.get("targetReference") or "").strip() or None,
+            progress_publisher=self._progress_publisher,
+        )
+        self._ensure_not_cancelled(context)
+        self._publish(context, "preparing", 10)
+        return context
+
+    def _publish(self, context: AiInvocationContext | None, stage: str, progress: int) -> None:
+        self._progress_publisher.publish(context, stage, progress)
+
+    @staticmethod
+    def _ensure_not_cancelled(context: AiInvocationContext | None) -> None:
+        publisher = getattr(context, "progress_publisher", None)
+        if context is not None and publisher is not None and publisher.is_cancel_requested(context.job_id):
+            raise AiJobCancelledError("AI job was cancelled")
 
     def _render_template(self, template: str, variables: dict[str, Any]) -> str:
         def replace(match: re.Match[str]) -> str:

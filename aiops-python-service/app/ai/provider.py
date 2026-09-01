@@ -12,6 +12,7 @@ from app.ai.context import AiInvocationContext
 from app.ai.errors import (
     AiAuthenticationError,
     AiConfigurationError,
+    AiJobCancelledError,
     AiOutputValidationError,
     AiProviderRequestError,
     AiProviderTemporaryError,
@@ -141,10 +142,17 @@ class LangChainProvider:
 
     @staticmethod
     def _invoke_runnable(runnable: Any, prompt: Any, context: AiInvocationContext | None) -> Any:
+        LangChainProvider._ensure_not_cancelled(context)
         config = LangChainProvider._runnable_config(context)
-        if config is None:
-            return runnable.invoke(prompt)
-        return runnable.invoke(prompt, config=config)
+        response = runnable.invoke(prompt) if config is None else runnable.invoke(prompt, config=config)
+        LangChainProvider._ensure_not_cancelled(context)
+        return response
+
+    @staticmethod
+    def _ensure_not_cancelled(context: AiInvocationContext | None) -> None:
+        publisher = getattr(context, "progress_publisher", None)
+        if context is not None and publisher is not None and publisher.is_cancel_requested(context.job_id):
+            raise AiJobCancelledError("AI job was cancelled")
 
     @staticmethod
     def _runnable_config(context: AiInvocationContext | None) -> dict[str, Any] | None:
