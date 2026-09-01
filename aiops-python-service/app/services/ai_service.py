@@ -5,6 +5,7 @@ from typing import Any
 import requests
 
 from app.ai.chains.negative_reply import NegativeReplyChain
+from app.ai.chains.report import ReportChain
 from app.ai.provider import LangChainProvider
 from app.config import settings
 from app.rag.reply_service import RagReplyService
@@ -19,6 +20,8 @@ class AiService:
         analysis_result = request.get("analysisResult") or {}
         fallback_prompt = (
             "你是中小电商商家的AI运营顾问。请基于评论分析结果生成一份运营报告。"
+            "报告标题应为可读的业务标题，不得包含内部商品、商家或目标 ID。"
+            "退款、换货、时效和店铺政策只能写成建议或以实际店铺政策为准，不能描述为既有承诺或已完成动作。"
             "必须只输出JSON，不要输出Markdown。JSON字段必须包含："
             "reportTitle, consumerPainPoints, productAdvantages, productDisadvantages, "
             "operationSuggestions, copywritingSuggestions, serviceSuggestions, fullReport。"
@@ -27,21 +30,22 @@ class AiService:
         )
         prompt = self._prompt_from_template(request, fallback_prompt)
         retrieval = self._report_rag_service().retrieve(request=request)
-        if retrieval.context and retrieval.references:
-            prompt = self._append_report_references(prompt, retrieval.context)
-        content = self._chat(prompt, temperature=0.4)
-        parsed = self._parse_json_object(content)
+        result = self._report_chain().generate(
+            prompt,
+            reference_context=retrieval.context if retrieval.context and retrieval.references else None,
+        )
+        report_output = result.value
         report = {
-            "reportTitle": parsed.get("reportTitle") or "评论驱动型运营分析报告",
-            "consumerPainPoints": parsed.get("consumerPainPoints") or "",
-            "productAdvantages": parsed.get("productAdvantages") or "",
-            "productDisadvantages": parsed.get("productDisadvantages") or "",
-            "operationSuggestions": parsed.get("operationSuggestions") or "",
-            "copywritingSuggestions": parsed.get("copywritingSuggestions") or "",
-            "serviceSuggestions": parsed.get("serviceSuggestions") or "",
-            "fullReport": parsed.get("fullReport") or content,
-            "modelName": settings.ai_model,
-            "tokenUsage": self._estimate_token_usage(prompt, content),
+            "reportTitle": self._safe_report_title(report_output.report_title, target_type, target_id, language),
+            "consumerPainPoints": report_output.consumer_pain_points,
+            "productAdvantages": report_output.product_advantages,
+            "productDisadvantages": report_output.product_disadvantages,
+            "operationSuggestions": report_output.operation_suggestions,
+            "copywritingSuggestions": report_output.copywriting_suggestions,
+            "serviceSuggestions": report_output.service_suggestions,
+            "fullReport": report_output.full_report,
+            "modelName": result.model_name,
+            "tokenUsage": result.total_tokens,
             "ragUsed": bool(retrieval.context and retrieval.references),
             "references": [reference.to_payload() for reference in retrieval.references],
         }
@@ -128,15 +132,26 @@ class AiService:
     def _rag_reply_service(self) -> RagReplyService:
         return RagReplyService(reply_chain=self._negative_reply_chain())
 
+    def _report_chain(self) -> ReportChain:
+        return ReportChain(LangChainProvider())
+
     def _report_rag_service(self) -> ReportRagService:
         return ReportRagService()
 
-    def _append_report_references(self, prompt: str, reference_context: str) -> str:
-        return (
-            f"{prompt}\n\nRetrieved operating evidence follows. Use it only as supporting context. "
-            "Do not claim actions or policies that are absent from the evidence, and do not invent source IDs.\n"
-            f"{reference_context}"
-        )
+    @staticmethod
+    def _safe_report_title(title: str, target_type: str, target_id: str, language: str) -> str:
+        normalized_title = title.strip()
+        if target_id and target_id.casefold() in normalized_title.casefold():
+            return AiService._default_report_title(target_type, language)
+        return normalized_title
+
+    @staticmethod
+    def _default_report_title(target_type: str, language: str) -> str:
+        if language.startswith("zh"):
+            return "商家运营分析报告" if target_type == "seller" else "商品运营分析报告"
+        if language.startswith("pt"):
+            return "Relatório Operacional do Vendedor" if target_type == "seller" else "Relatório Operacional do Produto"
+        return "Seller Operations Report" if target_type == "seller" else "Product Operations Report"
 
     def translate_comment(self, request: dict[str, Any]) -> dict[str, Any]:
         comment_id = request.get("commentId") or ""

@@ -1,6 +1,7 @@
 from app.rag.models import RagReference, RagRetrievalResult
 from app.rag.report_rag_service import ReportRagService
 from app.services.ai_service import AiService
+from app.ai.results import AiInvocationResult
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -23,6 +24,32 @@ class FakeSolutionRetriever:
     def retrieve(self, **kwargs):
         self.calls.append(kwargs)
         return self.result
+
+
+class FakeReportChain:
+    def __init__(self, report_title: str = "Product Operations Report") -> None:
+        self.calls: list[tuple[str, str | None]] = []
+        self.report_title = report_title
+
+    def generate(self, prompt: str, *, reference_context: str | None = None) -> AiInvocationResult[SimpleNamespace]:
+        self.calls.append((prompt, reference_context))
+        return AiInvocationResult(
+            value=SimpleNamespace(
+                report_title=self.report_title,
+                consumer_pain_points="Quality feedback requires attention.",
+                product_advantages="Core customer satisfaction is stable.",
+                product_disadvantages="Surface defects affect trust.",
+                operation_suggestions="Improve inspection and packaging.",
+                copywriting_suggestions="Describe quality controls without promising unverified policies.",
+                service_suggestions="Offer support according to the store's actual policy.",
+                full_report="A validated report body.",
+            ),
+            model_name="deepseek-v4-flash",
+            input_tokens=120,
+            output_tokens=80,
+            total_tokens=200,
+            token_usage_estimated=False,
+        )
 
 
 def _request() -> dict[str, object]:
@@ -97,10 +124,12 @@ def test_report_rag_respects_context_budget_without_orphaning_references() -> No
     assert result.references == [evidence_reference]
 
 
-def test_report_response_exposes_only_programmatic_references() -> None:
+def test_report_response_uses_validated_report_chain_and_exposes_programmatic_references() -> None:
     reference = RagReference("review_evidence", 31, "Review evidence #31", 0.93)
     service = AiService()
-    service._chat = lambda _prompt, temperature: '{"reportTitle":"Evidence report"}'
+    report_chain = FakeReportChain()
+    service._chat = lambda _prompt, temperature: '{"reportTitle":"Legacy report"}'
+    service._report_chain = lambda: report_chain
     service._report_rag_service = lambda: type(
         "FakeReportRagService",
         (),
@@ -110,5 +139,24 @@ def test_report_response_exposes_only_programmatic_references() -> None:
     with patch("app.services.ai_service.settings", SimpleNamespace(ai_model="deepseek-chat")):
         result = service.generate_report(_request())
 
+    assert result["data"]["reportTitle"] == "Product Operations Report"
+    assert result["data"]["fullReport"] == "A validated report body."
+    assert result["data"]["tokenUsage"] == 200
     assert result["data"]["ragUsed"] is True
     assert result["data"]["references"] == [reference.to_payload()]
+    assert report_chain.calls[0][1] == "Evidence context"
+
+
+def test_report_response_replaces_internal_target_id_in_report_title() -> None:
+    service = AiService()
+    service._report_chain = lambda: FakeReportChain("product-a Operations Report")
+    service._report_rag_service = lambda: type(
+        "FakeReportRagService",
+        (),
+        {"retrieve": lambda _self, **_kwargs: RagRetrievalResult("", [])},
+    )()
+
+    with patch("app.services.ai_service.settings", SimpleNamespace(ai_model="deepseek-chat")):
+        result = service.generate_report(_request())
+
+    assert result["data"]["reportTitle"] == "Product Operations Report"
