@@ -740,10 +740,15 @@ export default {
       comment_analysis: 'Análise de avaliações',
       scheduled_sync: 'Sincronização',
       operation_report: 'Relatório operacional',
-      product_compare: 'Comparação de produtos'
+      product_compare: 'Comparação de produtos',
+      negative_reply: 'Resposta a avaliação negativa',
+      content: 'Conteúdo de IA'
     }
   },
   jobs: {
-    created: 'A tarefa de IA #{jobId} foi enviada. Acompanhe o progresso na Central de tarefas.'
+    created: 'A tarefa de IA #{jobId} foi enviada. Acompanhe o progresso na Central de tarefas.',
+    progress: 'Progresso da tarefa de IA', live: 'Ao vivo', reconnecting: 'Reconectando',
+    cancellationRequested: 'Cancelamento solicitado', resultReady: 'Resultado pronto', cancel: 'Cancelar tarefa', retry: 'Tentar novamente', openResult: 'Abrir resultado',
+    stages: { preparing: 'Preparando', retrieving: 'Buscando contexto', generating: 'Gerando', validating: 'Validando', persisting: 'Salvando resultado' }
   }
 }

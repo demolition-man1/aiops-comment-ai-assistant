@@ -2,6 +2,7 @@ package com.aiops.controller;
 
 import com.aiops.dto.AiReportGenerateDTO;
 import com.aiops.service.AiJobService;
+import com.aiops.service.AiJobEventService;
 import com.aiops.vo.AiJobCreatedVO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,12 +19,15 @@ class AiJobControllerTest {
     @Mock
     private AiJobService aiJobService;
 
+    @Mock
+    private AiJobEventService aiJobEventService;
+
     @Test
     void reportSubmissionRequiresIdempotencyKey() {
         AiReportGenerateDTO dto = new AiReportGenerateDTO();
         dto.setProductId("product-1");
 
-        var response = new AiJobController(aiJobService).createReportJob(null, dto);
+        var response = new AiJobController(aiJobService, aiJobEventService).createReportJob(null, dto);
 
         assertThat(response.getCode()).isEqualTo(400);
         assertThat(response.getMsg()).contains("Idempotency-Key");
@@ -36,7 +40,7 @@ class AiJobControllerTest {
         when(aiJobService.createReportJob(dto, "request-1"))
                 .thenReturn(new AiJobCreatedVO(42L, "pending", false));
 
-        var response = new AiJobController(aiJobService).createReportJob("request-1", dto);
+        var response = new AiJobController(aiJobService, aiJobEventService).createReportJob("request-1", dto);
 
         assertThat(response.getData().jobId()).isEqualTo(42L);
         verify(aiJobService).createReportJob(dto, "request-1");

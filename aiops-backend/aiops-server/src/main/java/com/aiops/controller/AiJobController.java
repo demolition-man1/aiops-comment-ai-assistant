@@ -1,10 +1,13 @@
 package com.aiops.controller;
 
 import com.aiops.dto.AiReportGenerateDTO;
+import com.aiops.dto.AiContentGenerateDTO;
+import com.aiops.dto.NegativeReplyGenerateDTO;
 import com.aiops.dto.ProductCompareDTO;
 import com.aiops.result.PageResult;
 import com.aiops.result.Result;
 import com.aiops.service.AiJobService;
+import com.aiops.service.AiJobEventService;
 import com.aiops.vo.AiJobCreatedVO;
 import com.aiops.vo.AiJobVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,6 +22,10 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/api/ai/jobs")
@@ -27,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AiJobController {
 
     private final AiJobService aiJobService;
+    private final AiJobEventService aiJobEventService;
 
     @PostMapping("/reports")
     @Operation(summary = "提交运营报告任务")
@@ -50,10 +58,56 @@ public class AiJobController {
         return Result.success(aiJobService.createProductCompareJob(dto, idempotencyKey));
     }
 
+    @PostMapping("/negative-replies")
+    @Operation(summary = "提交差评回复任务")
+    public Result<AiJobCreatedVO> createNegativeReplyJob(
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestBody NegativeReplyGenerateDTO dto) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            return Result.error(400, "Idempotency-Key 不能为空");
+        }
+        return Result.success(aiJobService.createNegativeReplyJob(dto, idempotencyKey));
+    }
+
+    @PostMapping("/content")
+    @Operation(summary = "提交 AI 文案任务")
+    public Result<AiJobCreatedVO> createContentJob(
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @RequestBody AiContentGenerateDTO dto) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            return Result.error(400, "Idempotency-Key 不能为空");
+        }
+        return Result.success(aiJobService.createContentJob(dto, idempotencyKey));
+    }
+
     @GetMapping("/{jobId}")
     @Operation(summary = "查询 AI 任务")
     public Result<AiJobVO> getJob(@Parameter(description = "AI 任务 ID") @PathVariable Long jobId) {
         return Result.success(aiJobService.getOwnedJob(jobId));
+    }
+
+    @GetMapping(value = "/{jobId}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "订阅 AI 任务进度")
+    public ResponseEntity<SseEmitter> streamEvents(
+            @Parameter(description = "AI 任务 ID") @PathVariable Long jobId,
+            @RequestHeader(value = "Last-Event-ID", required = false) Long lastEventId) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .header("X-Accel-Buffering", "no")
+                .contentType(MediaType.TEXT_EVENT_STREAM)
+                .body(aiJobEventService.subscribe(jobId, lastEventId));
+    }
+
+    @PostMapping("/{jobId}/cancel")
+    @Operation(summary = "取消 AI 任务")
+    public Result<AiJobVO> cancelJob(@Parameter(description = "AI 任务 ID") @PathVariable Long jobId) {
+        return Result.success(aiJobService.cancelOwnedJob(jobId));
+    }
+
+    @PostMapping("/{jobId}/retry")
+    @Operation(summary = "重试 AI 任务")
+    public Result<AiJobCreatedVO> retryJob(@Parameter(description = "AI 任务 ID") @PathVariable Long jobId) {
+        return Result.success(aiJobService.retryOwnedJob(jobId));
     }
 
     @GetMapping

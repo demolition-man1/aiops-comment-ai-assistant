@@ -8,6 +8,8 @@ import com.aiops.exception.BusinessException;
 import com.aiops.mapper.BizAiExecutionDetailMapper;
 import com.aiops.mapper.BizAnalysisTaskMapper;
 import com.aiops.service.AiJobExecutionService;
+import com.aiops.service.AiJobEventService;
+import com.aiops.service.CacheService;
 import com.aiops.vo.AiJobCreatedVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +40,12 @@ class AiJobServiceImplTest {
 
     @Mock
     private AiJobExecutionService executionService;
+
+    @Mock
+    private CacheService cacheService;
+
+    @Mock
+    private AiJobEventService eventService;
 
     @AfterEach
     void tearDown() {
@@ -108,7 +116,8 @@ class AiJobServiceImplTest {
     }
 
     private AiJobServiceImpl service() {
-        return new AiJobServiceImpl(taskMapper, executionDetailMapper, executionService, new ObjectMapper());
+        return new AiJobServiceImpl(taskMapper, executionDetailMapper, executionService, cacheService, eventService,
+                new ObjectMapper());
     }
 
     private AiReportGenerateDTO productReport(String productId) {

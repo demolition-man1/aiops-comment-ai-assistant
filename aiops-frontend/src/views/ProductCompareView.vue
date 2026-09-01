@@ -3,19 +3,19 @@ import { GitCompareArrows, RefreshCw, Sparkles } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
 
+import AiJobProgressPanel from '@/components/AiJobProgressPanel.vue'
 import { aiJobApi, analysisApi, productApi } from '@/api/modules'
-import type { Product, ProductCompareReport } from '@/api/types'
+import type { AiJob, Product, ProductCompareReport } from '@/api/types'
 import { useLocaleStore } from '@/stores/locale'
 
 const { t } = useI18n()
-const router = useRouter()
 const localeStore = useLocaleStore()
 const loading = ref(false)
 const products = ref<Product[]>([])
 const reports = ref<ProductCompareReport[]>([])
 const currentReport = ref<ProductCompareReport>()
+const currentJob = ref<AiJob>()
 const form = reactive({
   leftProductId: '',
   rightProductId: '',
@@ -50,11 +50,17 @@ const compare = async () => {
       language: localeStore.locale,
       forceRefresh: form.forceRefresh
     }, crypto.randomUUID())
+    currentJob.value = await aiJobApi.job(job.jobId)
     ElMessage.success(t('jobs.created', { jobId: job.jobId }))
-    await router.push('/tasks')
   } finally {
     loading.value = false
   }
+}
+
+const openCompareResult = async (job: AiJob) => {
+  if (job.resultType !== 'product_compare' || !job.resultId) return
+  await loadReports()
+  currentReport.value = reports.value.find(item => item.reportId === job.resultId)
 }
 
 onMounted(async () => {
@@ -107,6 +113,7 @@ onMounted(async () => {
           </el-button>
         </el-form-item>
       </el-form>
+      <AiJobProgressPanel v-if="currentJob" class="section-gap" :job="currentJob" @result="openCompareResult" />
     </div>
 
     <div class="grid two section-gap">

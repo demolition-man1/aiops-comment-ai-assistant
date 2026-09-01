@@ -4,8 +4,9 @@ import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { taskCenterApi } from '@/api/modules'
-import type { TaskRecord } from '@/api/types'
+import AiJobProgressPanel from '@/components/AiJobProgressPanel.vue'
+import { aiJobApi, taskCenterApi } from '@/api/modules'
+import type { AiJob, TaskRecord } from '@/api/types'
 import { saveBlob } from '@/utils/download'
 
 const { t } = useI18n()
@@ -15,6 +16,7 @@ const retryingKey = ref('')
 const drawerVisible = ref(false)
 const selectedTask = ref<TaskRecord>()
 const tasks = ref<TaskRecord[]>([])
+const aiJobs = ref<Record<number, AiJob>>({})
 
 const filters = reactive({
   taskType: '',
@@ -28,7 +30,7 @@ const page = reactive({
   total: 0
 })
 
-const taskTypes = ['csv_import', 'crawler_import', 'comment_analysis', 'scheduled_sync', 'operation_report', 'product_compare']
+const taskTypes = ['csv_import', 'crawler_import', 'comment_analysis', 'scheduled_sync', 'operation_report', 'product_compare', 'negative_reply', 'content']
 const taskStatuses = ['pending', 'processing', 'success', 'failed', 'timed_out', 'cancelled']
 
 const statusTagType = (status?: string) => {
@@ -58,6 +60,9 @@ const loadTasks = async () => {
     })
     tasks.value = result.records || []
     page.total = result.total || 0
+    const aiRows = tasks.value.filter(row => ['operation_report', 'product_compare', 'negative_reply', 'content'].includes(row.taskType))
+    const resolved = await Promise.all(aiRows.map(async row => [row.sourceId, await aiJobApi.job(row.sourceId)] as const))
+    aiJobs.value = Object.fromEntries(resolved)
   } finally {
     loading.value = false
   }
@@ -86,6 +91,8 @@ const retryTask = async (row: TaskRecord) => {
     retryingKey.value = ''
   }
 }
+
+const handleAiResult = () => void loadTasks()
 
 const exportTasks = async () => {
   exporting.value = true
@@ -165,9 +172,10 @@ onMounted(loadTasks)
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.progress')" width="180">
+        <el-table-column :label="t('common.progress')" width="220">
           <template #default="{ row }">
-            <el-progress :percentage="Number(row.progress || 0)" :stroke-width="8" />
+            <AiJobProgressPanel v-if="aiJobs[row.sourceId]" :job="aiJobs[row.sourceId]" @result="handleAiResult" />
+            <el-progress v-else :percentage="Number(row.progress || 0)" :stroke-width="8" />
           </template>
         </el-table-column>
         <el-table-column prop="targetId" :label="t('tasks.target')" min-width="180" show-overflow-tooltip />

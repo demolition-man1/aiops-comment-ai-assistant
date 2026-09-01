@@ -740,10 +740,15 @@ export default {
       comment_analysis: '评论分析',
       scheduled_sync: '定时同步',
       operation_report: '运营报告',
-      product_compare: '商品对比'
+      product_compare: '商品对比',
+      negative_reply: '差评回复',
+      content: 'AI 文案'
     }
   },
   jobs: {
-    created: 'AI 任务 #{jobId} 已提交，可在任务中心查看进度'
+    created: 'AI 任务 #{jobId} 已提交，可在任务中心查看进度',
+    progress: 'AI 任务进度', live: '实时连接中', reconnecting: '正在恢复连接',
+    cancellationRequested: '已请求取消', resultReady: '结果已生成', cancel: '取消任务', retry: '重试任务', openResult: '打开结果',
+    stages: { preparing: '准备中', retrieving: '检索上下文', generating: '生成中', validating: '校验结果', persisting: '保存结果' }
   }
 }

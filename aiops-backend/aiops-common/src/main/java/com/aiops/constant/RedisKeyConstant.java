@@ -13,6 +13,8 @@ public final class RedisKeyConstant {
     public static final String AI_CONTENT = "ai:content:%s";
     public static final String AI_COMMENT_TRANSLATION = "ai:translation:comment:%s:%s";
     public static final String AI_PRODUCT_COMPARE = "ai:compare:product:%s:%s";
+    public static final String AI_JOB_EVENT_CHANNEL = "aiops:ai-job-events";
+    public static final String AI_JOB_CANCEL = "aiops:ai-job-cancel:%s";
     public static final String AI_RATE_LIMIT = "rate:ai:user:%s";
     public static final String HOT_PRODUCT_KEYWORDS = "hot:keywords:product:%s";
 

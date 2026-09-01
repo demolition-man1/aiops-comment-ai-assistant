@@ -7,9 +7,11 @@ import com.aiops.mapper.BizCrawlTaskMapper;
 import com.aiops.mapper.BizSyncConfigMapper;
 import com.aiops.mapper.BizSyncExecutionMapper;
 import com.aiops.service.AnalysisService;
+import com.aiops.service.AiJobService;
 import com.aiops.service.CommentAiShadowService;
 import com.aiops.service.DataImportService;
 import com.aiops.service.SyncConfigService;
+import com.aiops.vo.AiJobCreatedVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +26,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class TaskCenterServiceImplExportTest {
@@ -52,6 +55,9 @@ class TaskCenterServiceImplExportTest {
     @Mock
     private SyncConfigService syncConfigService;
 
+    @Mock
+    private AiJobService aiJobService;
+
     private TaskCenterServiceImpl taskCenterService;
 
     @BeforeEach
@@ -65,6 +71,7 @@ class TaskCenterServiceImplExportTest {
                 analysisService,
                 commentAiShadowService,
                 syncConfigService,
+                aiJobService,
                 new ObjectMapper()
         );
     }
@@ -112,6 +119,25 @@ class TaskCenterServiceImplExportTest {
         assertThat(page.getRecords()).isEmpty();
         assertThatThrownBy(() -> taskCenterService.getTask("analysis:8"))
                 .hasMessageContaining("不存在");
+        BaseContext.removeCurrentId();
+    }
+
+    @Test
+    void retriesAiJobsThroughTheDurableAiJobService() {
+        BizAnalysisTask task = new BizAnalysisTask();
+        task.setId(7L);
+        task.setUserId(9L);
+        task.setTaskType("operation_report");
+        task.setTaskStatus("failed");
+        when(analysisTaskMapper.selectById(7L)).thenReturn(task);
+        when(aiJobService.retryOwnedJob(7L)).thenReturn(new AiJobCreatedVO(8L, "pending", false));
+        BaseContext.setCurrentId(9L);
+
+        var retry = taskCenterService.retryTask("analysis:7");
+
+        assertThat(retry.getTaskId()).isEqualTo(8L);
+        assertThat(retry.getImportType()).isEqualTo("operation_report");
+        verify(aiJobService).retryOwnedJob(7L);
         BaseContext.removeCurrentId();
     }
 }

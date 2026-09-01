@@ -4,8 +4,9 @@ import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { aiApi, productApi } from '@/api/modules'
-import type { AiContent, Product } from '@/api/types'
+import AiJobProgressPanel from '@/components/AiJobProgressPanel.vue'
+import { aiApi, aiJobApi, productApi } from '@/api/modules'
+import type { AiContent, AiJob, Product } from '@/api/types'
 import { useLocaleStore } from '@/stores/locale'
 
 const { t } = useI18n()
@@ -14,6 +15,7 @@ const loading = ref(false)
 const products = ref<Product[]>([])
 const history = ref<AiContent[]>([])
 const current = ref<AiContent>()
+const currentJob = ref<AiJob>()
 const form = reactive({
   targetType: 'product',
   targetId: '',
@@ -46,9 +48,9 @@ const generate = async () => {
   }
   loading.value = true
   try {
-    current.value = await aiApi.content({ ...form, language: localeStore.locale })
-    ElMessage.success(t('aiContent.generated'))
-    await loadHistory()
+    const created = await aiJobApi.createContent({ ...form, language: localeStore.locale }, crypto.randomUUID())
+    currentJob.value = await aiJobApi.job(created.jobId)
+    ElMessage.success(t('jobs.created', { jobId: created.jobId }))
   } finally {
     loading.value = false
   }
@@ -60,6 +62,12 @@ const copyContent = async (text?: string) => {
   }
   await navigator.clipboard.writeText(text)
   ElMessage.success(t('common.copied'))
+}
+
+const openContentResult = async (job: AiJob) => {
+  if (job.resultType !== 'ai_content' || !job.resultId) return
+  await loadHistory()
+  current.value = history.value.find(item => item.recordId === job.resultId)
 }
 
 onMounted(async () => {
@@ -128,6 +136,7 @@ onMounted(async () => {
             {{ t('aiContent.generate') }}
           </el-button>
         </el-form>
+        <AiJobProgressPanel v-if="currentJob" class="section-gap" :job="currentJob" @result="openContentResult" />
       </div>
 
       <div class="panel">

@@ -16,6 +16,7 @@ import com.aiops.mapper.BizSyncConfigMapper;
 import com.aiops.mapper.BizSyncExecutionMapper;
 import com.aiops.result.PageResult;
 import com.aiops.service.AnalysisService;
+import com.aiops.service.AiJobService;
 import com.aiops.service.CommentAiShadowService;
 import com.aiops.service.DataImportService;
 import com.aiops.service.SyncConfigService;
@@ -52,6 +53,7 @@ public class TaskCenterServiceImpl implements TaskCenterService {
     private final AnalysisService analysisService;
     private final CommentAiShadowService commentAiShadowService;
     private final SyncConfigService syncConfigService;
+    private final AiJobService aiJobService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -131,6 +133,12 @@ public class TaskCenterServiceImpl implements TaskCenterService {
         BizAnalysisTask task = analysisTaskMapper.selectById(taskId);
         if (task == null || !canRead(task)) {
             throw new BusinessException(404, "分析任务不存在");
+        }
+        if ("operation_report".equals(task.getTaskType()) || "product_compare".equals(task.getTaskType())
+                || "negative_reply".equals(task.getTaskType()) || "content".equals(task.getTaskType())) {
+            var retry = aiJobService.retryOwnedJob(taskId);
+            return new TaskVO(retry.jobId(), retry.taskStatus(), task.getTaskType(), 0,
+                    null, null, null, null);
         }
         if ("csv_import".equals(task.getTaskType())) {
             CsvImportDTO dto = parseJson(task.getRequestParam(), CsvImportDTO.class, "CSV 导入任务参数不可重试");
@@ -236,6 +244,12 @@ public class TaskCenterServiceImpl implements TaskCenterService {
         }
         if ("product_compare".equals(taskType)) {
             return "AI 商品对比任务";
+        }
+        if ("negative_reply".equals(taskType)) {
+            return "AI 差评回复任务";
+        }
+        if ("content".equals(taskType)) {
+            return "AI 文案任务";
         }
         return defaultIfBlank(taskType, "后台任务");
     }

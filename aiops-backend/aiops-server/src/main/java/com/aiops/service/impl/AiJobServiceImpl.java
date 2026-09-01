@@ -1,7 +1,10 @@
 package com.aiops.service.impl;
 
 import com.aiops.context.BaseContext;
+import com.aiops.constant.RedisKeyConstant;
+import com.aiops.dto.AiContentGenerateDTO;
 import com.aiops.dto.AiReportGenerateDTO;
+import com.aiops.dto.NegativeReplyGenerateDTO;
 import com.aiops.dto.ProductCompareDTO;
 import com.aiops.entity.BizAiExecutionDetail;
 import com.aiops.entity.BizAnalysisTask;
@@ -10,7 +13,9 @@ import com.aiops.mapper.BizAiExecutionDetailMapper;
 import com.aiops.mapper.BizAnalysisTaskMapper;
 import com.aiops.result.PageResult;
 import com.aiops.service.AiJobExecutionService;
+import com.aiops.service.AiJobEventService;
 import com.aiops.service.AiJobService;
+import com.aiops.service.CacheService;
 import com.aiops.vo.AiJobCreatedVO;
 import com.aiops.vo.AiJobVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -29,18 +34,23 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AiJobServiceImpl implements AiJobService {
 
-    private static final List<String> SUPPORTED_JOB_TYPES = List.of("operation_report", "product_compare");
+    private static final List<String> SUPPORTED_JOB_TYPES = List.of(
+            "operation_report", "product_compare", "negative_reply", "content");
 
     private final BizAnalysisTaskMapper taskMapper;
     private final BizAiExecutionDetailMapper executionDetailMapper;
     private final AiJobExecutionService executionService;
+    private final CacheService cacheService;
+    private final AiJobEventService eventService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -80,6 +90,100 @@ public class AiJobServiceImpl implements AiJobService {
         dto.setRightProductId(rightProductId);
         dto.setLanguage(defaultLanguage(dto.getLanguage()));
         return createJob("product_compare", "product_pair", leftProductId + ":" + rightProductId, dto, idempotencyKey);
+    }
+
+    @Override
+    @Transactional
+    public AiJobCreatedVO createNegativeReplyJob(NegativeReplyGenerateDTO dto, String idempotencyKey) {
+        if (dto == null || dto.getCommentId() == null || dto.getCommentId() <= 0) {
+            throw new BusinessException(400, "评论 ID 不能为空");
+        }
+        dto.setToneType(trimToNull(dto.getToneType()) == null ? "sincere" : dto.getToneType().trim());
+        dto.setLanguage(defaultLanguage(dto.getLanguage()));
+        return createJob("negative_reply", "comment", String.valueOf(dto.getCommentId()), dto, idempotencyKey);
+    }
+
+    @Override
+    @Transactional
+    public AiJobCreatedVO createContentJob(AiContentGenerateDTO dto, String idempotencyKey) {
+        if (dto == null || trimToNull(dto.getTargetType()) == null || trimToNull(dto.getTargetId()) == null
+                || trimToNull(dto.getContentType()) == null) {
+            throw new BusinessException(400, "AI 文案任务参数不能为空");
+        }
+        dto.setTargetType(dto.getTargetType().trim());
+        dto.setTargetId(dto.getTargetId().trim());
+        dto.setContentType(dto.getContentType().trim());
+        dto.setStyleType(trimToNull(dto.getStyleType()) == null ? "simple" : dto.getStyleType().trim());
+        dto.setLanguage(defaultLanguage(dto.getLanguage()));
+        return createJob("content", dto.getTargetType(), dto.getTargetId(), dto, idempotencyKey);
+    }
+
+    @Override
+    @Transactional
+    public AiJobVO cancelOwnedJob(Long jobId) {
+        BizAnalysisTask task = requireOwnedJob(jobId);
+        BizAiExecutionDetail detail = executionDetailMapper.selectById(jobId);
+        if (detail == null) {
+            throw new BusinessException(404, "AI 任务不存在");
+        }
+        if (isTerminal(task.getTaskStatus())) {
+            throw new BusinessException(409, "已结束的 AI 任务不能取消");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        cacheService.set(String.format(RedisKeyConstant.AI_JOB_CANCEL, jobId), "1", Duration.ofMinutes(30));
+        detail.setCancelRequested(1);
+        detail.setVersion(defaultVersion(detail.getVersion()) + 1);
+        detail.setUpdateTime(now);
+        executionDetailMapper.updateById(detail);
+        if ("pending".equals(task.getTaskStatus())) {
+            task.setTaskStatus("cancelled");
+            task.setProgress(100);
+            task.setEndTime(now);
+            task.setUpdateTime(now);
+            taskMapper.updateById(task);
+            publishTerminalAfterCommit(jobId);
+        }
+        return toJobVO(task, detail);
+    }
+
+    @Override
+    @Transactional
+    public AiJobCreatedVO retryOwnedJob(Long jobId) {
+        BizAnalysisTask sourceTask = requireOwnedJob(jobId);
+        BizAiExecutionDetail sourceDetail = executionDetailMapper.selectById(jobId);
+        if (sourceDetail == null) {
+            throw new BusinessException(404, "AI 任务不存在");
+        }
+        if (!isRetryable(sourceTask.getTaskStatus())) {
+            throw new BusinessException(409, "AI 任务执行中，暂不能重试");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        BizAnalysisTask retryTask = new BizAnalysisTask();
+        retryTask.setUserId(sourceTask.getUserId());
+        retryTask.setTargetType(sourceTask.getTargetType());
+        retryTask.setTargetId(sourceTask.getTargetId());
+        retryTask.setTaskType(sourceTask.getTaskType());
+        retryTask.setTaskStatus("pending");
+        retryTask.setProgress(0);
+        retryTask.setRequestParam(sourceTask.getRequestParam());
+        retryTask.setCreateTime(now);
+        retryTask.setUpdateTime(now);
+        taskMapper.insert(retryTask);
+        BizAiExecutionDetail retryDetail = new BizAiExecutionDetail();
+        retryDetail.setTaskId(retryTask.getId());
+        retryDetail.setBusinessKey(sourceDetail.getBusinessKey());
+        retryDetail.setIdempotencyHash(sha256("retry|" + sourceTask.getUserId() + "|" + jobId + "|" + UUID.randomUUID()));
+        retryDetail.setRequestHash(sourceDetail.getRequestHash());
+        retryDetail.setJobStage("preparing");
+        retryDetail.setAttemptCount(defaultAttemptCount(sourceDetail.getAttemptCount()) + 1);
+        retryDetail.setParentTaskId(sourceTask.getId());
+        retryDetail.setCancelRequested(0);
+        retryDetail.setVersion(0);
+        retryDetail.setCreateTime(now);
+        retryDetail.setUpdateTime(now);
+        executionDetailMapper.insert(retryDetail);
+        submitAfterCommit(retryTask.getId());
+        return new AiJobCreatedVO(retryTask.getId(), "pending", false);
     }
 
     @Override
@@ -194,6 +298,19 @@ public class AiJobServiceImpl implements AiJobService {
         executionService.submit(taskId);
     }
 
+    private void publishTerminalAfterCommit(Long taskId) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    eventService.publishTerminal(taskId);
+                }
+            });
+            return;
+        }
+        eventService.publishTerminal(taskId);
+    }
+
     private BizAnalysisTask requireOwnedJob(Long jobId) {
         if (jobId == null) {
             throw new BusinessException(400, "AI 任务 ID 不能为空");
@@ -267,6 +384,23 @@ public class AiJobServiceImpl implements AiJobService {
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 不可用", exception);
         }
+    }
+
+    private boolean isTerminal(String status) {
+        return "success".equals(status) || "failed".equals(status) || "timed_out".equals(status)
+                || "cancelled".equals(status);
+    }
+
+    private boolean isRetryable(String status) {
+        return "failed".equals(status) || "timed_out".equals(status) || "cancelled".equals(status);
+    }
+
+    private int defaultVersion(Integer version) {
+        return version == null ? 0 : version;
+    }
+
+    private int defaultAttemptCount(Integer attemptCount) {
+        return attemptCount == null ? 1 : attemptCount;
     }
 
     private String defaultLanguage(String language) {

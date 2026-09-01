@@ -1,12 +1,15 @@
 package com.aiops.service.impl;
 
 import com.aiops.context.AiJobContext;
+import com.aiops.constant.RedisKeyConstant;
 import com.aiops.context.BaseContext;
 import com.aiops.entity.BizAiExecutionDetail;
 import com.aiops.entity.BizAnalysisTask;
 import com.aiops.mapper.BizAiExecutionDetailMapper;
 import com.aiops.mapper.BizAnalysisTaskMapper;
 import com.aiops.service.AiJobExecutionService;
+import com.aiops.service.AiJobEventService;
+import com.aiops.service.CacheService;
 import com.aiops.service.aijob.AiJobCompletionService;
 import com.aiops.service.aijob.AiJobExecutionResult;
 import com.aiops.service.aijob.AiJobHandlerRegistry;
@@ -30,6 +33,8 @@ public class AiJobExecutionServiceImpl implements AiJobExecutionService {
     private final TaskExecutor aiJobExecutor;
     private final AiJobHandlerRegistry handlerRegistry;
     private final AiJobCompletionService completionService;
+    private final AiJobEventService eventService;
+    private final CacheService cacheService;
     private final ObjectProvider<AiJobExecutionService> selfProvider;
 
     @Autowired
@@ -38,19 +43,23 @@ public class AiJobExecutionServiceImpl implements AiJobExecutionService {
                                      @Qualifier("aiJobExecutor") TaskExecutor aiJobExecutor,
                                      AiJobHandlerRegistry handlerRegistry,
                                      AiJobCompletionService completionService,
+                                     AiJobEventService eventService,
+                                     CacheService cacheService,
                                      ObjectProvider<AiJobExecutionService> selfProvider) {
         this.taskMapper = taskMapper;
         this.executionDetailMapper = executionDetailMapper;
         this.aiJobExecutor = aiJobExecutor;
         this.handlerRegistry = handlerRegistry;
         this.completionService = completionService;
+        this.eventService = eventService;
+        this.cacheService = cacheService;
         this.selfProvider = selfProvider;
     }
 
     AiJobExecutionServiceImpl(BizAnalysisTaskMapper taskMapper,
                               BizAiExecutionDetailMapper executionDetailMapper,
                               TaskExecutor aiJobExecutor) {
-        this(taskMapper, executionDetailMapper, aiJobExecutor, null, null, null);
+        this(taskMapper, executionDetailMapper, aiJobExecutor, null, null, null, null, null);
     }
 
     @Override
@@ -88,11 +97,12 @@ public class AiJobExecutionServiceImpl implements AiJobExecutionService {
             AiJobContext.set(task.getId(), task.getTaskType());
             AiJobExecutionResult result = completionService.complete(task.getId(),
                     () -> handlerRegistry.require(task.getTaskType()).execute(task));
-            if (result == null) {
-                return;
+            if (result != null) {
+                publishTerminal(task.getId());
             }
         } catch (Exception exception) {
             markFailed(task.getId(), exception);
+            publishTerminal(task.getId());
         } finally {
             AiJobContext.remove();
             BaseContext.removeCurrentId();
@@ -101,22 +111,41 @@ public class AiJobExecutionServiceImpl implements AiJobExecutionService {
 
     private void markFailed(Long taskId, Exception exception) {
         BizAnalysisTask task = taskMapper.selectById(taskId);
+        BizAiExecutionDetail detail = executionDetailMapper.selectById(taskId);
         if (task == null || "cancelled".equals(task.getTaskStatus())) {
             return;
         }
         LocalDateTime now = LocalDateTime.now();
+        if ((detail != null && Integer.valueOf(1).equals(detail.getCancelRequested())) || isCancellationSignalled(taskId)) {
+            task.setTaskStatus("cancelled");
+            task.setProgress(100);
+            task.setEndTime(now);
+            task.setUpdateTime(now);
+            taskMapper.updateById(task);
+            return;
+        }
         task.setTaskStatus("failed");
         task.setProgress(100);
         task.setErrorMessage(publicErrorMessage(exception));
         task.setEndTime(now);
         task.setUpdateTime(now);
         taskMapper.updateById(task);
-        BizAiExecutionDetail detail = executionDetailMapper.selectById(taskId);
         if (detail != null) {
             detail.setErrorCode("internal");
             detail.setUpdateTime(now);
             executionDetailMapper.updateById(detail);
         }
+    }
+
+    private void publishTerminal(Long taskId) {
+        if (eventService != null) {
+            eventService.publishTerminal(taskId);
+        }
+    }
+
+    private boolean isCancellationSignalled(Long taskId) {
+        return cacheService != null && cacheService.get(String.format(RedisKeyConstant.AI_JOB_CANCEL, taskId), String.class)
+                .isPresent();
     }
 
     private String publicErrorMessage(Exception exception) {

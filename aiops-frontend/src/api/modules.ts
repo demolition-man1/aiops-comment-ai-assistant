@@ -199,7 +199,17 @@ export const aiJobApi = {
     http.post<AiJobCreated, AiJobCreated>('/ai/jobs/product-comparisons', payload, {
       headers: { 'Idempotency-Key': idempotencyKey }
     }),
+  createNegativeReply: (payload: { commentId: number; toneType?: string; language?: string }, idempotencyKey: string) =>
+    http.post<AiJobCreated, AiJobCreated>('/ai/jobs/negative-replies', payload, {
+      headers: { 'Idempotency-Key': idempotencyKey }
+    }),
+  createContent: (payload: { targetType: string; targetId: string; contentType: string; styleType?: string; language?: string; extraRequirement?: string }, idempotencyKey: string) =>
+    http.post<AiJobCreated, AiJobCreated>('/ai/jobs/content', payload, {
+      headers: { 'Idempotency-Key': idempotencyKey }
+    }),
   job: (jobId: number) => http.get<AiJob, AiJob>(`/ai/jobs/${jobId}`),
+  cancel: (jobId: number) => http.post<AiJob, AiJob>(`/ai/jobs/${jobId}/cancel`),
+  retry: (jobId: number) => http.post<AiJobCreated, AiJobCreated>(`/ai/jobs/${jobId}/retry`),
   page: (params: Record<string, unknown>) => http.get<PageResult<AiJob>, PageResult<AiJob>>('/ai/jobs', { params })
 }
 

@@ -740,10 +740,15 @@ export default {
       comment_analysis: 'Review Analysis',
       scheduled_sync: 'Scheduled Sync',
       operation_report: 'Operations report',
-      product_compare: 'Product comparison'
+      product_compare: 'Product comparison',
+      negative_reply: 'Negative review reply',
+      content: 'AI content'
     }
   },
   jobs: {
-    created: 'AI job #{jobId} was submitted. Track its progress in Task Center.'
+    created: 'AI job #{jobId} was submitted. Track its progress in Task Center.',
+    progress: 'AI job progress', live: 'Live', reconnecting: 'Reconnecting',
+    cancellationRequested: 'Cancellation requested', resultReady: 'Result ready', cancel: 'Cancel job', retry: 'Retry job', openResult: 'Open result',
+    stages: { preparing: 'Preparing', retrieving: 'Retrieving context', generating: 'Generating', validating: 'Validating', persisting: 'Saving result' }
   }
 }

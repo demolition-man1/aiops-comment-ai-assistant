@@ -5,9 +5,11 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
+import AiJobProgressPanel from '@/components/AiJobProgressPanel.vue'
 import { aiApi, aiJobApi, analysisApi, commentApi, pollTask, problemSolutionApi, tagApi } from '@/api/modules'
 import type {
   AnalysisResult,
+  AiJob,
   Comment,
   CommentTranslation,
   CustomTag,
@@ -37,7 +39,9 @@ const selected = ref<Comment>()
 const task = ref<Task>()
 const analysis = ref<AnalysisResult>()
 const report = ref<OperationReport>()
+const reportJob = ref<AiJob>()
 const reply = ref<NegativeReply>()
+const replyJob = ref<AiJob>()
 const replyHistory = ref<NegativeReply[]>([])
 const replyHistoryLoading = ref(false)
 const replySource = ref<Comment>()
@@ -251,11 +255,16 @@ const generateReport = async () => {
   reportLoading.value = true
   try {
     const job = await aiJobApi.createReport({ productId, language: localeStore.locale }, crypto.randomUUID())
+    reportJob.value = await aiJobApi.job(job.jobId)
     ElMessage.success(t('jobs.created', { jobId: job.jobId }))
-    await router.push('/tasks')
   } finally {
     reportLoading.value = false
   }
+}
+
+const openReportJobResult = async (job: AiJob) => {
+  if (job.resultType !== 'operation_report' || !job.resultId) return
+  report.value = await aiApi.report(job.resultId)
 }
 
 const generateReply = async () => {
@@ -267,12 +276,14 @@ const generateReply = async () => {
   replyLoadingId.value = target.id
   try {
     replySource.value = target
-    reply.value = await aiApi.negativeReply({
+    const created = await aiJobApi.createNegativeReply({
       commentId: target.id,
       toneType: 'professional',
       language: localeStore.locale
-    })
-    void loadReplyHistory()
+    }, crypto.randomUUID())
+    replyJob.value = await aiJobApi.job(created.jobId)
+    replyDialogVisible.value = true
+    ElMessage.success(t('jobs.created', { jobId: created.jobId }))
     replyDialogVisible.value = true
     ElMessage.success(t('comments.replyGenerated'))
   } finally {
@@ -283,6 +294,12 @@ const generateReply = async () => {
 const generateReplyFor = async (row: Comment) => {
   selectComment(row)
   await generateReply()
+}
+
+const openReplyResult = async (job: AiJob) => {
+  if (job.resultType !== 'negative_reply' || !job.resultId) return
+  await loadReplyHistory()
+  reply.value = replyHistory.value.find(item => item.replyId === job.resultId)
 }
 
 const translateCommentFor = async (row: Comment) => {
@@ -542,6 +559,7 @@ onBeforeUnmount(() => {
             {{ analysis?.negativeRate == null ? t('common.dash') : formatPercent(analysis.negativeRate) }}
           </el-descriptions-item>
         </el-descriptions>
+        <AiJobProgressPanel v-if="reportJob" class="section-gap" :job="reportJob" @result="openReportJobResult" />
         <div class="insight-block section-gap">
           {{ analysis?.summary || t('comments.noAnalysisSummary') }}
         </div>
@@ -716,6 +734,7 @@ onBeforeUnmount(() => {
           </div>
           <p>{{ displayCommentContent(replySource) }}</p>
         </div>
+        <AiJobProgressPanel v-if="replyJob" :job="replyJob" @result="openReplyResult" />
         <el-input
           :model-value="reply?.replyContent || ''"
           type="textarea"

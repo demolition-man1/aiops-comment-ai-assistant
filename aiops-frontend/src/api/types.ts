@@ -128,7 +128,7 @@ export interface AiJobCreated {
 
 export interface AiJob {
   jobId: number
-  jobType: 'operation_report' | 'product_compare' | string
+  jobType: 'operation_report' | 'product_compare' | 'negative_reply' | 'content' | string
   targetType: string
   targetId: string
   taskStatus: 'pending' | 'processing' | 'success' | 'failed' | 'timed_out' | 'cancelled' | string
@@ -147,6 +147,19 @@ export interface AiJob {
   endTime?: string
   createTime?: string
   updateTime?: string
+}
+
+export interface AiJobEvent {
+  eventId?: number
+  eventType: 'snapshot' | 'stage' | 'completed' | 'failed' | 'timed_out' | 'cancelled' | string
+  jobId: number
+  jobType: AiJob['jobType']
+  taskStatus: AiJob['taskStatus']
+  jobStage?: AiJob['jobStage']
+  progress?: number
+  resultType?: string
+  resultId?: number
+  occurredAt?: string
 }
 
 export interface CommentAiShadowTask {
