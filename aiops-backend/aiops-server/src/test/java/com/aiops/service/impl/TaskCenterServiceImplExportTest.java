@@ -1,5 +1,6 @@
 package com.aiops.service.impl;
 
+import com.aiops.context.BaseContext;
 import com.aiops.entity.BizAnalysisTask;
 import com.aiops.mapper.BizAnalysisTaskMapper;
 import com.aiops.mapper.BizCrawlTaskMapper;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -88,5 +90,28 @@ class TaskCenterServiceImplExportTest {
         assertThat(content).contains("recordKey,taskName,taskType,taskStatus,progress,targetType,targetId");
         assertThat(content).contains("analysis:7");
         assertThat(content).contains("product-1");
+    }
+
+    @Test
+    void excludesOwnerBackedAiTasksFromAnotherUser() {
+        BizAnalysisTask foreignTask = new BizAnalysisTask();
+        foreignTask.setId(8L);
+        foreignTask.setUserId(99L);
+        foreignTask.setTaskType("operation_report");
+        foreignTask.setTaskStatus("pending");
+        foreignTask.setTargetType("product");
+        foreignTask.setTargetId("product-2");
+        foreignTask.setCreateTime(LocalDateTime.now());
+        when(analysisTaskMapper.selectList(org.mockito.ArgumentMatchers.any())).thenReturn(List.of(foreignTask));
+        when(crawlTaskMapper.selectList(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
+        when(syncExecutionMapper.selectList(org.mockito.ArgumentMatchers.any())).thenReturn(List.of());
+        BaseContext.setCurrentId(9L);
+
+        var page = taskCenterService.pageTasks(1, 10, null, null, null);
+
+        assertThat(page.getRecords()).isEmpty();
+        assertThatThrownBy(() -> taskCenterService.getTask("analysis:8"))
+                .hasMessageContaining("不存在");
+        BaseContext.removeCurrentId();
     }
 }

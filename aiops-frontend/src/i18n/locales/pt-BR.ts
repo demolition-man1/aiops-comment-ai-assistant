@@ -730,13 +730,20 @@ export default {
       pending: 'Pendente',
       processing: 'Processando',
       success: 'Sucesso',
-      failed: 'Falhou'
+      failed: 'Falhou',
+      timed_out: 'Tempo esgotado',
+      cancelled: 'Cancelado'
     },
     taskType: {
       csv_import: 'Importação CSV',
       crawler_import: 'Importação por crawler',
       comment_analysis: 'Análise de avaliações',
-      scheduled_sync: 'Sincronização'
+      scheduled_sync: 'Sincronização',
+      operation_report: 'Relatório operacional',
+      product_compare: 'Comparação de produtos'
     }
+  },
+  jobs: {
+    created: 'A tarefa de IA #{jobId} foi enviada. Acompanhe o progresso na Central de tarefas.'
   }
 }

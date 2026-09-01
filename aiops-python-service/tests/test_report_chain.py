@@ -1,5 +1,6 @@
 import pytest
 
+from app.ai.context import AiInvocationContext
 from app.ai.chains.report import ReportChain
 from app.ai.errors import AiOutputValidationError
 from app.ai.results import AiInvocationResult
@@ -65,3 +66,36 @@ def test_report_chain_repairs_invalid_structured_response_once() -> None:
     assert result.value.report_title == "Product Operations Report"
     assert result.total_tokens == 34
     assert provider.repair_prompts[0][1] == 0
+
+
+class ContextAwareProvider:
+    def __init__(self) -> None:
+        self.contexts: list[AiInvocationContext | None] = []
+
+    def invoke_structured(
+        self,
+        _prompt: object,
+        _schema: type[OperationReportOutput],
+        *,
+        context: AiInvocationContext | None = None,
+    ) -> AiInvocationResult[OperationReportOutput]:
+        self.contexts.append(context)
+        return AiInvocationResult(
+            value=OperationReportOutput.model_validate(_payload()),
+            model_name="deepseek-chat",
+            input_tokens=12,
+            output_tokens=8,
+            total_tokens=20,
+            token_usage_estimated=False,
+            latency_ms=7,
+        )
+
+
+def test_report_chain_forwards_invocation_context() -> None:
+    provider = ContextAwareProvider()
+    context = AiInvocationContext(job_id=11, job_type="operation_report", target_reference="product:9")
+
+    result = ReportChain(provider).generate("Generate a JSON report.", context=context)
+
+    assert provider.contexts == [context]
+    assert result.latency_ms == 7

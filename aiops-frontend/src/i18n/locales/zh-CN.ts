@@ -730,13 +730,20 @@ export default {
       pending: '等待中',
       processing: '处理中',
       success: '成功',
-      failed: '失败'
+      failed: '失败',
+      timed_out: '超时',
+      cancelled: '已取消'
     },
     taskType: {
       csv_import: 'CSV 导入',
       crawler_import: '爬虫导入',
       comment_analysis: '评论分析',
-      scheduled_sync: '定时同步'
+      scheduled_sync: '定时同步',
+      operation_report: '运营报告',
+      product_compare: '商品对比'
     }
+  },
+  jobs: {
+    created: 'AI 任务 #{jobId} 已提交，可在任务中心查看进度'
   }
 }

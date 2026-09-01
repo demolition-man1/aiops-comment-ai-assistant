@@ -62,3 +62,25 @@ class CommentAnalysisOutput(BaseModel):
         if self.primary_problem is not None and self.primary_problem not in {problem.type for problem in self.problems}:
             raise ValueError("primaryProblem must match one of the provided problems")
         return self
+
+
+class ProductCompareOutput(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
+
+    compare_summary: str = Field(alias="compareSummary", min_length=1, max_length=8_000)
+    advantage_analysis: str = Field(alias="advantageAnalysis", min_length=1, max_length=8_000)
+    risk_analysis: str = Field(alias="riskAnalysis", min_length=1, max_length=8_000)
+    operation_suggestions: str = Field(alias="operationSuggestions", min_length=1, max_length=8_000)
+
+
+class ContentGenerationOutput(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
+
+    generated_content: str = Field(alias="generatedContent", min_length=1, max_length=16_000)
+
+
+class CommentTranslationOutput(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, str_strip_whitespace=True)
+
+    translated_content: str = Field(alias="translatedContent", min_length=1, max_length=8_000)
+    source_language: str = Field(alias="sourceLanguage", min_length=1, max_length=64)

@@ -3,12 +3,14 @@ import { GitCompareArrows, RefreshCw, Sparkles } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 
-import { analysisApi, productApi } from '@/api/modules'
+import { aiJobApi, analysisApi, productApi } from '@/api/modules'
 import type { Product, ProductCompareReport } from '@/api/types'
 import { useLocaleStore } from '@/stores/locale'
 
 const { t } = useI18n()
+const router = useRouter()
 const localeStore = useLocaleStore()
 const loading = ref(false)
 const products = ref<Product[]>([])
@@ -42,14 +44,14 @@ const compare = async () => {
 
   loading.value = true
   try {
-    currentReport.value = await analysisApi.compare({
+    const job = await aiJobApi.createProductCompare({
       leftProductId: form.leftProductId,
       rightProductId: form.rightProductId,
       language: localeStore.locale,
       forceRefresh: form.forceRefresh
-    })
-    ElMessage.success(t('compare.generated'))
-    await loadReports()
+    }, crypto.randomUUID())
+    ElMessage.success(t('jobs.created', { jobId: job.jobId }))
+    await router.push('/tasks')
   } finally {
     loading.value = false
   }

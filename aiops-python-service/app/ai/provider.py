@@ -8,6 +8,7 @@ import httpx
 from langchain_deepseek import ChatDeepSeek
 from pydantic import BaseModel, ValidationError
 
+from app.ai.context import AiInvocationContext
 from app.ai.errors import (
     AiAuthenticationError,
     AiConfigurationError,
@@ -46,9 +47,15 @@ class LangChainProvider:
         schema: type[T],
         *,
         max_retries: int | None = None,
+        context: AiInvocationContext | None = None,
     ) -> AiInvocationResult[T]:
         runnable = self._model().with_structured_output(schema, method="json_mode", include_raw=True)
-        response = self._invoke_with_retry(lambda: runnable.invoke(prompt), max_retries=max_retries)
+        started_at = time.monotonic_ns()
+        response = self._invoke_with_retry(
+            lambda: self._invoke_runnable(runnable, prompt, context),
+            max_retries=max_retries,
+        )
+        latency_ms = self._elapsed_ms(started_at)
         try:
             value, raw = self._structured_value(response, schema)
         except AiOutputValidationError as exception:
@@ -61,6 +68,7 @@ class LangChainProvider:
                 output_tokens=output_tokens,
                 total_tokens=total_tokens,
                 token_usage_estimated=estimated,
+                latency_ms=latency_ms,
             ) from exception
         input_tokens, output_tokens, total_tokens, estimated = self._token_usage(prompt, value, raw)
         return AiInvocationResult(
@@ -70,10 +78,22 @@ class LangChainProvider:
             output_tokens=output_tokens,
             total_tokens=total_tokens,
             token_usage_estimated=estimated,
+            latency_ms=latency_ms,
         )
 
-    def invoke_text(self, prompt: Any, *, max_retries: int | None = None) -> AiInvocationResult[str]:
-        raw = self._invoke_with_retry(lambda: self._model().invoke(prompt), max_retries=max_retries)
+    def invoke_text(
+        self,
+        prompt: Any,
+        *,
+        max_retries: int | None = None,
+        context: AiInvocationContext | None = None,
+    ) -> AiInvocationResult[str]:
+        started_at = time.monotonic_ns()
+        raw = self._invoke_with_retry(
+            lambda: self._invoke_runnable(self._model(), prompt, context),
+            max_retries=max_retries,
+        )
+        latency_ms = self._elapsed_ms(started_at)
         content = self._content_text(getattr(raw, "content", raw))
         if not content:
             raise AiOutputValidationError("AI provider returned an empty response")
@@ -85,6 +105,7 @@ class LangChainProvider:
             output_tokens=output_tokens,
             total_tokens=total_tokens,
             token_usage_estimated=estimated,
+            latency_ms=latency_ms,
         )
 
     def _model(self) -> Any:
@@ -117,6 +138,31 @@ class LangChainProvider:
                 delay = min(0.5 * (2**attempt), 2.0) + self._jitter(0.0, 0.25)
                 self._sleep(delay)
         raise AiProviderTemporaryError("AI provider is temporarily unavailable")
+
+    @staticmethod
+    def _invoke_runnable(runnable: Any, prompt: Any, context: AiInvocationContext | None) -> Any:
+        config = LangChainProvider._runnable_config(context)
+        if config is None:
+            return runnable.invoke(prompt)
+        return runnable.invoke(prompt, config=config)
+
+    @staticmethod
+    def _runnable_config(context: AiInvocationContext | None) -> dict[str, Any] | None:
+        if context is None:
+            return None
+        metadata: dict[str, Any] = {"jobType": context.job_type}
+        if context.job_id is not None:
+            metadata["jobId"] = context.job_id
+        if context.target_reference:
+            metadata["targetReference"] = context.target_reference
+        config: dict[str, Any] = {"metadata": metadata}
+        if context.callbacks:
+            config["callbacks"] = list(context.callbacks)
+        return config
+
+    @staticmethod
+    def _elapsed_ms(started_at: int) -> int:
+        return max(0, (time.monotonic_ns() - started_at) // 1_000_000)
 
     def _structured_value(self, response: Any, schema: type[T]) -> tuple[T, Any]:
         if isinstance(response, dict):

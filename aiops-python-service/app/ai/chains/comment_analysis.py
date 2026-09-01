@@ -4,6 +4,7 @@ from typing import Any, Protocol
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import ValidationError
 
+from app.ai.context import AiInvocationContext
 from app.ai.errors import AiOutputValidationError
 from app.ai.results import AiInvocationResult
 from app.ai.schemas import CommentAnalysisOutput
@@ -14,9 +15,17 @@ class CommentAnalysisProvider(Protocol):
         self,
         prompt: Any,
         schema: type[CommentAnalysisOutput],
+        *,
+        context: AiInvocationContext | None = None,
     ) -> AiInvocationResult[CommentAnalysisOutput]: ...
 
-    def invoke_text(self, prompt: Any, *, max_retries: int | None = None) -> AiInvocationResult[str]: ...
+    def invoke_text(
+        self,
+        prompt: Any,
+        *,
+        max_retries: int | None = None,
+        context: AiInvocationContext | None = None,
+    ) -> AiInvocationResult[str]: ...
 
 
 class CommentAnalysisChain:
@@ -38,19 +47,21 @@ class CommentAnalysisChain:
         review_text: str,
         review_score: int,
         rendered_prompt: str,
+        *,
+        context: AiInvocationContext | None = None,
     ) -> AiInvocationResult[CommentAnalysisOutput]:
         if not isinstance(review_text, str) or not review_text.strip():
             raise ValueError("review_text must not be blank")
 
         messages = self._messages(review_text, review_score, rendered_prompt)
         try:
-            result = self._provider.invoke_structured(messages, CommentAnalysisOutput)
+            result = self._invoke_structured(messages, context)
             self._validate_evidence(result.value, review_text)
             return result
         except AiOutputValidationError as initial_error:
-            repaired = self._provider.invoke_text(
+            repaired = self._invoke_text(
                 messages + [HumanMessage(content=self._REPAIR_MESSAGE)],
-                max_retries=0,
+                context,
             )
             output = self.parse_output(repaired.value)
             self._validate_evidence(output, review_text)
@@ -73,7 +84,26 @@ class CommentAnalysisChain:
                     repaired.token_usage_estimated
                     or (initial_has_usage and initial_error.token_usage_estimated)
                 ),
+                latency_ms=initial_error.latency_ms + repaired.latency_ms,
             )
+
+    def _invoke_structured(
+        self,
+        messages: list[SystemMessage | HumanMessage],
+        context: AiInvocationContext | None,
+    ) -> AiInvocationResult[CommentAnalysisOutput]:
+        if context is None:
+            return self._provider.invoke_structured(messages, CommentAnalysisOutput)
+        return self._provider.invoke_structured(messages, CommentAnalysisOutput, context=context)
+
+    def _invoke_text(
+        self,
+        messages: list[SystemMessage | HumanMessage],
+        context: AiInvocationContext | None,
+    ) -> AiInvocationResult[str]:
+        if context is None:
+            return self._provider.invoke_text(messages, max_retries=0)
+        return self._provider.invoke_text(messages, max_retries=0, context=context)
 
     @classmethod
     def parse_output(cls, content: str) -> CommentAnalysisOutput:

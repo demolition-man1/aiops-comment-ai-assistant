@@ -28,8 +28,8 @@ const page = reactive({
   total: 0
 })
 
-const taskTypes = ['csv_import', 'crawler_import', 'comment_analysis', 'scheduled_sync']
-const taskStatuses = ['pending', 'processing', 'success', 'failed']
+const taskTypes = ['csv_import', 'crawler_import', 'comment_analysis', 'scheduled_sync', 'operation_report', 'product_compare']
+const taskStatuses = ['pending', 'processing', 'success', 'failed', 'timed_out', 'cancelled']
 
 const statusTagType = (status?: string) => {
   if (status === 'success') return 'success'

@@ -730,13 +730,20 @@ export default {
       pending: 'Pending',
       processing: 'Processing',
       success: 'Success',
-      failed: 'Failed'
+      failed: 'Failed',
+      timed_out: 'Timed out',
+      cancelled: 'Cancelled'
     },
     taskType: {
       csv_import: 'CSV Import',
       crawler_import: 'Crawler Import',
       comment_analysis: 'Review Analysis',
-      scheduled_sync: 'Scheduled Sync'
+      scheduled_sync: 'Scheduled Sync',
+      operation_report: 'Operations report',
+      product_compare: 'Product comparison'
     }
+  },
+  jobs: {
+    created: 'AI job #{jobId} was submitted. Track its progress in Task Center.'
   }
 }

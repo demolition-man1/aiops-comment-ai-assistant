@@ -1,5 +1,6 @@
 package com.aiops.service.impl;
 
+import com.aiops.context.BaseContext;
 import com.aiops.dto.AnalysisTaskCreateDTO;
 import com.aiops.dto.CommentAiShadowTaskDTO;
 import com.aiops.dto.CrawlerImportDTO;
@@ -71,7 +72,7 @@ public class TaskCenterServiceImpl implements TaskCenterService {
         }
         if (recordKey.startsWith(ANALYSIS_PREFIX)) {
             BizAnalysisTask task = analysisTaskMapper.selectById(parseId(recordKey, ANALYSIS_PREFIX));
-            if (task == null) {
+            if (task == null || !canRead(task)) {
                 throw new BusinessException(404, "分析任务不存在");
             }
             return toAnalysisRecord(task);
@@ -128,7 +129,7 @@ public class TaskCenterServiceImpl implements TaskCenterService {
 
     private TaskVO retryAnalysisTask(Long taskId) {
         BizAnalysisTask task = analysisTaskMapper.selectById(taskId);
-        if (task == null) {
+        if (task == null || !canRead(task)) {
             throw new BusinessException(404, "分析任务不存在");
         }
         if ("csv_import".equals(task.getTaskType())) {
@@ -185,6 +186,8 @@ public class TaskCenterServiceImpl implements TaskCenterService {
     private List<TaskRecordVO> collectTaskRecords() {
         List<TaskRecordVO> tasks = new ArrayList<>();
         analysisTaskMapper.selectList(new LambdaQueryWrapper<BizAnalysisTask>().orderByDesc(BizAnalysisTask::getCreateTime))
+                .stream()
+                .filter(this::canRead)
                 .forEach(task -> tasks.add(toAnalysisRecord(task)));
         crawlTaskMapper.selectList(new LambdaQueryWrapper<BizCrawlTask>().orderByDesc(BizCrawlTask::getCreateTime))
                 .forEach(task -> tasks.add(toCrawlerRecord(task)));
@@ -228,7 +231,21 @@ public class TaskCenterServiceImpl implements TaskCenterService {
         if ("comment_ai_shadow".equals(taskType)) {
             return "评论 AI Shadow 任务";
         }
+        if ("operation_report".equals(taskType)) {
+            return "AI 运营报告任务";
+        }
+        if ("product_compare".equals(taskType)) {
+            return "AI 商品对比任务";
+        }
         return defaultIfBlank(taskType, "后台任务");
+    }
+
+    private boolean canRead(BizAnalysisTask task) {
+        if (task.getUserId() == null) {
+            return true;
+        }
+        Long currentUserId = BaseContext.getCurrentId();
+        return currentUserId != null && currentUserId.equals(task.getUserId());
     }
 
     private Integer progressOf(String status) {

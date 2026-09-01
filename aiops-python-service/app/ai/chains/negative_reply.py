@@ -4,6 +4,7 @@ from typing import Any, Protocol
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import ValidationError
 
+from app.ai.context import AiInvocationContext
 from app.ai.errors import AiOutputValidationError
 from app.ai.results import AiInvocationResult
 from app.ai.schemas import NegativeReplyOutput
@@ -14,9 +15,17 @@ class NegativeReplyProvider(Protocol):
         self,
         prompt: Any,
         schema: type[NegativeReplyOutput],
+        *,
+        context: AiInvocationContext | None = None,
     ) -> AiInvocationResult[NegativeReplyOutput]: ...
 
-    def invoke_text(self, prompt: Any, *, max_retries: int | None = None) -> AiInvocationResult[str]: ...
+    def invoke_text(
+        self,
+        prompt: Any,
+        *,
+        max_retries: int | None = None,
+        context: AiInvocationContext | None = None,
+    ) -> AiInvocationResult[str]: ...
 
 
 class NegativeReplyChain:
@@ -38,14 +47,15 @@ class NegativeReplyChain:
         rendered_prompt: str,
         *,
         reference_context: str | None = None,
+        context: AiInvocationContext | None = None,
     ) -> AiInvocationResult[NegativeReplyOutput]:
         messages = self._messages(rendered_prompt, reference_context=reference_context)
         try:
-            return self._provider.invoke_structured(messages, NegativeReplyOutput)
+            return self._invoke_structured(messages, context)
         except AiOutputValidationError as initial_error:
-            repaired = self._provider.invoke_text(
+            repaired = self._invoke_text(
                 messages + [HumanMessage(content=self._REPAIR_MESSAGE)],
-                max_retries=0,
+                context,
             )
             output = self.parse_output(repaired.value)
             initial_has_usage = initial_error.total_tokens > 0
@@ -67,7 +77,26 @@ class NegativeReplyChain:
                     repaired.token_usage_estimated
                     or (initial_has_usage and initial_error.token_usage_estimated)
                 ),
+                latency_ms=initial_error.latency_ms + repaired.latency_ms,
             )
+
+    def _invoke_structured(
+        self,
+        messages: list[SystemMessage | HumanMessage],
+        context: AiInvocationContext | None,
+    ) -> AiInvocationResult[NegativeReplyOutput]:
+        if context is None:
+            return self._provider.invoke_structured(messages, NegativeReplyOutput)
+        return self._provider.invoke_structured(messages, NegativeReplyOutput, context=context)
+
+    def _invoke_text(
+        self,
+        messages: list[SystemMessage | HumanMessage],
+        context: AiInvocationContext | None,
+    ) -> AiInvocationResult[str]:
+        if context is None:
+            return self._provider.invoke_text(messages, max_retries=0)
+        return self._provider.invoke_text(messages, max_retries=0, context=context)
 
     @classmethod
     def parse_output(cls, content: str) -> NegativeReplyOutput:

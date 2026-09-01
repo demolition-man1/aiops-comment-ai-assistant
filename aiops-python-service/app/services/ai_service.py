@@ -2,11 +2,11 @@ import json
 import re
 from typing import Any
 
-import requests
-
 from app.ai.chains.negative_reply import NegativeReplyChain
 from app.ai.chains.report import ReportChain
 from app.ai.provider import LangChainProvider
+from app.ai.registry import AiChainRegistry
+from app.ai.results import AiInvocationResult
 from app.config import settings
 from app.rag.reply_service import RagReplyService
 from app.rag.report_rag_service import ReportRagService
@@ -44,12 +44,11 @@ class AiService:
             "copywritingSuggestions": report_output.copywriting_suggestions,
             "serviceSuggestions": report_output.service_suggestions,
             "fullReport": report_output.full_report,
-            "modelName": result.model_name,
-            "tokenUsage": result.total_tokens,
             "ragUsed": bool(retrieval.context and retrieval.references),
             "references": [reference.to_payload() for reference in retrieval.references],
         }
-        return {"success": True, "data": report, "tokenUsage": report["tokenUsage"]}
+        report.update(self._invocation_metadata(result))
+        return {"success": True, "data": report, **self._invocation_metadata(result)}
 
     def generate_content(self, request: dict[str, Any]) -> dict[str, Any]:
         content_type = request.get("contentType") or "商品文案"
@@ -65,12 +64,11 @@ class AiService:
             "输出正文即可，不要解释生成过程。"
         )
         prompt = self._prompt_from_template(request, fallback_prompt)
-        content = self._chat(prompt, temperature=0.7)
+        result = self._content_generation_chain().generate(prompt)
         return {
             "success": True,
-            "generatedContent": content,
-            "modelName": settings.ai_model,
-            "tokenUsage": self._estimate_token_usage(prompt, content),
+            "generatedContent": result.value.generated_content,
+            **self._invocation_metadata(result),
         }
 
     def generate_negative_reply(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -97,27 +95,27 @@ class AiService:
         prompt = self._prompt_from_template(request, fallback_prompt)
         if settings.ai_negative_reply_engine == "langchain":
             result = self._rag_reply_service().generate(request=request, rendered_prompt=prompt)
+            invocation = result.invocation
             return {
                 "success": True,
-                "replyContent": result.invocation.value.reply_content,
-                "modelName": result.invocation.model_name,
-                "tokenUsage": result.invocation.total_tokens,
+                "replyContent": invocation.value.reply_content,
                 "ragUsed": result.rag_used,
                 "references": [reference.to_payload() for reference in result.references],
+                **self._invocation_metadata(invocation),
             }
-        content = self._chat(prompt, temperature=0.75)
+        invocation = self._negative_reply_chain().generate(prompt)
         return {
             "success": True,
-            "replyContent": content,
-            "modelName": settings.ai_model,
-            "tokenUsage": self._estimate_token_usage(prompt, content),
+            "replyContent": invocation.value.reply_content,
             "ragUsed": False,
             "references": [],
+            **self._invocation_metadata(invocation),
         }
 
     def _negative_reply_chain(self) -> NegativeReplyChain:
-        return NegativeReplyChain(
-            LangChainProvider(
+        return self._chain_registry().create(
+            "negative_reply",
+            provider=LangChainProvider(
                 model_options={
                     "max_tokens": settings.ai_negative_reply_max_tokens,
                     "extra_body": {
@@ -126,14 +124,27 @@ class AiService:
                         }
                     },
                 }
-            )
+            ),
         )
 
     def _rag_reply_service(self) -> RagReplyService:
         return RagReplyService(reply_chain=self._negative_reply_chain())
 
     def _report_chain(self) -> ReportChain:
-        return ReportChain(LangChainProvider())
+        return self._chain_registry().create("operation_report")
+
+    def _content_generation_chain(self) -> Any:
+        return self._chain_registry().create("content_generation")
+
+    def _comment_translation_chain(self) -> Any:
+        return self._chain_registry().create("comment_translation")
+
+    def _product_compare_chain(self) -> Any:
+        return self._chain_registry().create("product_compare")
+
+    @staticmethod
+    def _chain_registry() -> AiChainRegistry:
+        return AiChainRegistry()
 
     def _report_rag_service(self) -> ReportRagService:
         return ReportRagService()
@@ -171,19 +182,15 @@ class AiService:
             f"reviewScore: {review_score}. title: {comment_title}. review: {comment_content}."
         )
         prompt = self._prompt_from_template(request, fallback_prompt)
-        content = self._chat(prompt, temperature=0.2)
-        parsed = self._parse_json_object(content)
-        translated_content = self._to_plain_text(parsed.get("translatedContent")) or content
-        source_language = self._to_plain_text(parsed.get("sourceLanguage")) or "auto"
+        result = self._comment_translation_chain().generate(prompt)
         return {
             "success": True,
             "data": {
-                "translatedContent": translated_content,
-                "sourceLanguage": source_language,
-                "modelName": settings.ai_model,
-                "tokenUsage": self._estimate_token_usage(prompt, translated_content),
+                "translatedContent": result.value.translated_content,
+                "sourceLanguage": result.value.source_language,
+                **self._invocation_metadata(result),
             },
-            "tokenUsage": self._estimate_token_usage(prompt, translated_content),
+            **self._invocation_metadata(result),
         }
 
     def generate_product_compare(self, request: dict[str, Any]) -> dict[str, Any]:
@@ -202,17 +209,15 @@ class AiService:
             f"右侧商品分析结果：{json.dumps(right_analysis, ensure_ascii=False, default=str)}"
         )
         prompt = self._prompt_from_template(request, fallback_prompt)
-        content = self._chat(prompt, temperature=0.4)
-        parsed = self._parse_json_object(content)
+        result = self._product_compare_chain().generate(prompt)
         report = {
-            "compareSummary": self._to_plain_text(parsed.get("compareSummary")) or content,
-            "advantageAnalysis": self._to_plain_text(parsed.get("advantageAnalysis")),
-            "riskAnalysis": self._to_plain_text(parsed.get("riskAnalysis")),
-            "operationSuggestions": self._to_plain_text(parsed.get("operationSuggestions")),
-            "modelName": settings.ai_model,
-            "tokenUsage": self._estimate_token_usage(prompt, content),
+            "compareSummary": result.value.compare_summary,
+            "advantageAnalysis": result.value.advantage_analysis,
+            "riskAnalysis": result.value.risk_analysis,
+            "operationSuggestions": result.value.operation_suggestions,
+            **self._invocation_metadata(result),
         }
-        return {"success": True, "data": report, "tokenUsage": report["tokenUsage"]}
+        return {"success": True, "data": report, **self._invocation_metadata(result)}
 
     def _prompt_from_template(self, request: dict[str, Any], fallback_prompt: str) -> str:
         template = request.get("promptTemplate")
@@ -235,78 +240,13 @@ class AiService:
 
         return re.sub(r"\{([A-Za-z_][A-Za-z0-9_]*)\}", replace, template)
 
-    def _estimate_token_usage(self, prompt: str, content: str) -> int:
-        # A lightweight demo estimate; the Java side uses it for cost trend display.
-        return max(1, (len(prompt or "") + len(content or "")) // 4)
-
-    def _chat(self, prompt: str, temperature: float) -> str:
-        if not settings.ai_api_key:
-            raise RuntimeError("AI_API_KEY is not configured")
-        url = settings.ai_base_url.rstrip("/") + "/" + settings.ai_chat_path.lstrip("/")
-        payload = {
-            "model": settings.ai_model,
-            "messages": [
-                {"role": "system", "content": "You are a practical ecommerce operations assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            "temperature": temperature,
+    @staticmethod
+    def _invocation_metadata(result: AiInvocationResult[Any]) -> dict[str, Any]:
+        return {
+            "modelName": result.model_name,
+            "tokenUsage": result.total_tokens,
+            "inputTokens": result.input_tokens,
+            "outputTokens": result.output_tokens,
+            "tokenUsageEstimated": result.token_usage_estimated,
+            "latencyMs": result.latency_ms,
         }
-        response = requests.post(
-            url,
-            headers={
-                "Authorization": f"Bearer {settings.ai_api_key}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=settings.ai_timeout,
-        )
-        response.raise_for_status()
-        data = response.json()
-        try:
-            return str(data["choices"][0]["message"]["content"]).strip()
-        except (KeyError, IndexError, TypeError) as exc:
-            raise RuntimeError(f"Unexpected AI response format: {data}") from exc
-
-    def _parse_json_object(self, content: str) -> dict[str, Any]:
-        try:
-            value = json.loads(content)
-            return value if isinstance(value, dict) else {}
-        except json.JSONDecodeError:
-            pass
-
-        match = re.search(r"\{.*\}", content, flags=re.S)
-        if not match:
-            return {}
-        try:
-            value = json.loads(match.group(0))
-            return value if isinstance(value, dict) else {}
-        except json.JSONDecodeError:
-            return {}
-
-    def _to_plain_text(self, value: Any) -> str:
-        if value is None:
-            return ""
-        if isinstance(value, str):
-            return value.strip()
-        if isinstance(value, dict):
-            lines = []
-            for key in ("left", "right"):
-                if key in value:
-                    text = self._to_plain_text(value.get(key))
-                    if text:
-                        label = "左侧" if key == "left" else "右侧"
-                        lines.append(f"{label}：{text}")
-            for key, item in value.items():
-                if key in {"left", "right"}:
-                    continue
-                text = self._to_plain_text(item)
-                if text:
-                    lines.append(f"{key}：{text}")
-            return "\n".join(lines)
-        if isinstance(value, list):
-            return "\n".join(
-                text
-                for text in (self._to_plain_text(item) for item in value)
-                if text
-            )
-        return str(value).strip()

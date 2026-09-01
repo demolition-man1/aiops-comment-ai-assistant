@@ -5,7 +5,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
-import { aiApi, analysisApi, commentApi, pollTask, problemSolutionApi, tagApi } from '@/api/modules'
+import { aiApi, aiJobApi, analysisApi, commentApi, pollTask, problemSolutionApi, tagApi } from '@/api/modules'
 import type {
   AnalysisResult,
   Comment,
@@ -250,8 +250,9 @@ const generateReport = async () => {
   query.productId = productId
   reportLoading.value = true
   try {
-    report.value = await aiApi.productReport({ productId, language: localeStore.locale })
-    ElMessage.success(t('comments.reportGenerated'))
+    const job = await aiJobApi.createReport({ productId, language: localeStore.locale }, crypto.randomUUID())
+    ElMessage.success(t('jobs.created', { jobId: job.jobId }))
+    await router.push('/tasks')
   } finally {
     reportLoading.value = false
   }

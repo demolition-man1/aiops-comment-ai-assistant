@@ -33,7 +33,9 @@ import type {
   CommentAiHybridReadiness,
   CommentAiShadowResult,
   CommentAiShadowRun,
-  CommentAiShadowTask
+  CommentAiShadowTask,
+  AiJob,
+  AiJobCreated
 } from './types'
 
 export const authApi = {
@@ -186,6 +188,19 @@ export const reportApi = {
   categories: (params: Record<string, unknown>) =>
     http.get<CategoryAnalysis[], CategoryAnalysis[]>('/reports/categories', { params }),
   exportCsv: () => downloadFile('/reports/export')
+}
+
+export const aiJobApi = {
+  createReport: (payload: { productId?: string; sellerId?: string; language?: string; forceRefresh?: boolean }, idempotencyKey: string) =>
+    http.post<AiJobCreated, AiJobCreated>('/ai/jobs/reports', payload, {
+      headers: { 'Idempotency-Key': idempotencyKey }
+    }),
+  createProductCompare: (payload: { leftProductId: string; rightProductId: string; language?: string; forceRefresh?: boolean }, idempotencyKey: string) =>
+    http.post<AiJobCreated, AiJobCreated>('/ai/jobs/product-comparisons', payload, {
+      headers: { 'Idempotency-Key': idempotencyKey }
+    }),
+  job: (jobId: number) => http.get<AiJob, AiJob>(`/ai/jobs/${jobId}`),
+  page: (params: Record<string, unknown>) => http.get<PageResult<AiJob>, PageResult<AiJob>>('/ai/jobs', { params })
 }
 
 export const ragKnowledgeApi = {

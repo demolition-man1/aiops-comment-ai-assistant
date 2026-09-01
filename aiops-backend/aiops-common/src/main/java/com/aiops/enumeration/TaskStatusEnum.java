@@ -4,6 +4,8 @@ public enum TaskStatusEnum {
     PENDING,
     PROCESSING,
     SUCCESS,
-    FAILED
+    FAILED,
+    TIMED_OUT,
+    CANCELLED
 }
 

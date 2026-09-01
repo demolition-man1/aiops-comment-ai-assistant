@@ -13,3 +13,4 @@ class AiInvocationResult(Generic[T]):
     output_tokens: int | None
     total_tokens: int
     token_usage_estimated: bool
+    latency_ms: int = 0

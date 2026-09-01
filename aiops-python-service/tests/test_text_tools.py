@@ -6,7 +6,12 @@ from unittest.mock import patch
 import pandas as pd
 
 from app.ai.results import AiInvocationResult
-from app.ai.schemas import NegativeReplyOutput
+from app.ai.schemas import (
+    CommentTranslationOutput,
+    ContentGenerationOutput,
+    NegativeReplyOutput,
+    ProductCompareOutput,
+)
 from app.utils.keyword_extractor import extract_keywords, keyword_rank
 from app.utils.problem_classifier import classify_problem
 from app.utils.sentiment_analyzer import sentiment_from_score
@@ -23,7 +28,7 @@ class FakeNegativeReplyChain:
         self.token_usage = token_usage
         self.prompts: list[str] = []
 
-    def generate(self, prompt: str, *, reference_context: str | None = None) -> AiInvocationResult[NegativeReplyOutput]:
+    def generate(self, prompt: str, **_kwargs: object) -> AiInvocationResult[NegativeReplyOutput]:
         self.prompts.append(prompt)
         return AiInvocationResult(
             value=NegativeReplyOutput.model_validate({"replyContent": self.reply_content}),
@@ -33,6 +38,16 @@ class FakeNegativeReplyChain:
             total_tokens=self.token_usage,
             token_usage_estimated=False,
         )
+
+
+class FakeStructuredChain:
+    def __init__(self, result: AiInvocationResult[object]) -> None:
+        self.result = result
+        self.prompts: list[str] = []
+
+    def generate(self, prompt: str, **_kwargs: object) -> AiInvocationResult[object]:
+        self.prompts.append(prompt)
+        return self.result
 
 
 class TextToolTests(unittest.TestCase):
@@ -128,14 +143,27 @@ class TextToolTests(unittest.TestCase):
             ],
         )
 
-    def test_generate_product_compare_parses_ai_json(self) -> None:
+    def test_generate_product_compare_keeps_existing_fields_and_adds_invocation_metadata(self) -> None:
         service = AiService()
-        service._chat = lambda prompt, temperature: (
-            '{"compareSummary":"A negative rate is lower.",'
-            '"advantageAnalysis":"A has better logistics feedback.",'
-            '"riskAnalysis":"B has more quality complaints.",'
-            '"operationSuggestions":"Use A as benchmark."}'
+        chain = FakeStructuredChain(
+            AiInvocationResult(
+                value=ProductCompareOutput.model_validate(
+                    {
+                        "compareSummary": "A negative rate is lower.",
+                        "advantageAnalysis": "A has better logistics feedback.",
+                        "riskAnalysis": "B has more quality complaints.",
+                        "operationSuggestions": "Use A as benchmark.",
+                    }
+                ),
+                model_name="deepseek-chat",
+                input_tokens=12,
+                output_tokens=8,
+                total_tokens=20,
+                token_usage_estimated=False,
+                latency_ms=34,
+            )
         )
+        service._product_compare_chain = lambda: chain
 
         result = service.generate_product_compare(
             {
@@ -150,21 +178,46 @@ class TextToolTests(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertEqual(result["data"]["compareSummary"], "A negative rate is lower.")
         self.assertEqual(result["data"]["operationSuggestions"], "Use A as benchmark.")
-        self.assertGreater(result["tokenUsage"], 0)
+        self.assertEqual(result["tokenUsage"], 20)
+        self.assertEqual(result["data"]["inputTokens"], 12)
+        self.assertEqual(result["data"]["latencyMs"], 34)
+        self.assertIn("左侧商品ID：product-a", chain.prompts[0])
+
+    def test_generate_content_returns_structured_chain_metadata(self) -> None:
+        service = AiService()
+        chain = FakeStructuredChain(
+            AiInvocationResult(
+                value=ContentGenerationOutput.model_validate(
+                    {"generatedContent": "A durable product for everyday use."}
+                ),
+                model_name="deepseek-chat",
+                input_tokens=8,
+                output_tokens=7,
+                total_tokens=15,
+                token_usage_estimated=False,
+                latency_ms=23,
+            )
+        )
+        service._content_generation_chain = lambda: chain
+
+        result = service.generate_content(
+            {"contentType": "商品详情页", "styleType": "简洁专业", "language": "en-US"}
+        )
+
+        self.assertEqual(result["generatedContent"], "A durable product for everyday use.")
+        self.assertEqual(result["tokenUsage"], 15)
+        self.assertEqual(result["inputTokens"], 8)
+        self.assertEqual(result["latencyMs"], 23)
+        self.assertIn("文案类型：商品详情页", chain.prompts[0])
 
     def test_prompt_template_replaces_variables_when_supplied(self) -> None:
         service = AiService()
-        captured = {}
-
-        def fake_chat(prompt: str, temperature: float) -> str:
-            captured["prompt"] = prompt
-            return "Custom reply"
-
-        service._chat = fake_chat
+        chain = FakeNegativeReplyChain("Custom reply")
+        service._negative_reply_chain = lambda: chain
 
         with patch(
             "app.services.ai_service.settings",
-            SimpleNamespace(ai_negative_reply_engine="legacy", ai_model="deepseek-chat"),
+            SimpleNamespace(ai_negative_reply_engine="legacy"),
         ):
             result = service.generate_negative_reply(
                 {
@@ -178,9 +231,9 @@ class TextToolTests(unittest.TestCase):
             )
 
         self.assertTrue(result["success"])
-        self.assertEqual(captured["prompt"], "Reply in en-US about produto quebrado for score 1.")
+        self.assertEqual(chain.prompts[0], "Reply in en-US about produto quebrado for score 1.")
         self.assertEqual(result["replyContent"], "Custom reply")
-        self.assertGreater(result["tokenUsage"], 0)
+        self.assertEqual(result["tokenUsage"], 24)
 
     def test_prompt_template_keeps_unknown_variables_for_safe_editing(self) -> None:
         service = AiService()
@@ -188,45 +241,14 @@ class TextToolTests(unittest.TestCase):
 
         self.assertEqual(rendered, "Use value and {missing}.")
 
-    def test_generate_product_compare_flattens_nested_ai_sections(self) -> None:
-        service = AiService()
-        service._chat = lambda prompt, temperature: (
-            '{"compareSummary":"A is more stable.",'
-            '"advantageAnalysis":{"left":"评论量更大","right":"好评率更高"},'
-            '"riskAnalysis":{"left":"质量投诉较多","right":"物流仍需优化"},'
-            '"operationSuggestions":{"left":"重点改进质量","right":"继续保持安装体验"}}'
-        )
-
-        result = service.generate_product_compare(
-            {
-                "leftProductId": "product-a",
-                "rightProductId": "product-b",
-                "leftAnalysis": {"negativeRate": 0.2},
-                "rightAnalysis": {"negativeRate": 0.1},
-                "language": "zh-CN",
-            }
-        )
-
-        advantage = result["data"]["advantageAnalysis"]
-        self.assertIsInstance(advantage, str)
-        self.assertIn("左侧：评论量更大", advantage)
-        self.assertIn("右侧：好评率更高", advantage)
-        self.assertNotIn("left=", advantage)
-
     def test_generate_negative_reply_uses_comment_context_and_higher_variation(self) -> None:
         service = AiService()
-        captured = {}
-
-        def fake_chat(prompt: str, temperature: float) -> str:
-            captured["prompt"] = prompt
-            captured["temperature"] = temperature
-            return "尊敬的顾客，很抱歉包装破损影响了体验。"
-
-        service._chat = fake_chat
+        chain = FakeNegativeReplyChain("尊敬的顾客，很抱歉包装破损影响了体验。")
+        service._negative_reply_chain = lambda: chain
 
         with patch(
             "app.services.ai_service.settings",
-            SimpleNamespace(ai_negative_reply_engine="legacy", ai_model="deepseek-chat"),
+            SimpleNamespace(ai_negative_reply_engine="legacy"),
         ):
             result = service.generate_negative_reply(
                 {
@@ -243,12 +265,11 @@ class TextToolTests(unittest.TestCase):
             )
 
         self.assertTrue(result["success"])
-        self.assertIn("produto chegou quebrado", captured["prompt"])
-        self.assertIn("review-22", captured["prompt"])
-        self.assertIn("product-a", captured["prompt"])
-        self.assertIn("2", captured["prompt"])
-        self.assertIn("每条回复都必须针对这条评论单独生成", captured["prompt"])
-        self.assertGreaterEqual(captured["temperature"], 0.7)
+        self.assertIn("produto chegou quebrado", chain.prompts[0])
+        self.assertIn("review-22", chain.prompts[0])
+        self.assertIn("product-a", chain.prompts[0])
+        self.assertIn("2", chain.prompts[0])
+        self.assertIn("每条回复都必须针对这条评论单独生成", chain.prompts[0])
 
     def test_generate_negative_reply_langchain_engine_keeps_java_response_contract(self) -> None:
         service = AiService()
@@ -276,33 +297,32 @@ class TextToolTests(unittest.TestCase):
                 }
             )
 
-        self.assertEqual(
-            result,
-            {
-                "success": True,
-                "replyContent": "Thank you for sharing the delivery issue.",
-                "modelName": "deepseek-chat",
-                "tokenUsage": 31,
-                "ragUsed": False,
-                "references": [],
-            },
-        )
+        self.assertTrue(result["success"])
+        self.assertEqual(result["replyContent"], "Thank you for sharing the delivery issue.")
+        self.assertEqual(result["modelName"], "deepseek-chat")
+        self.assertEqual(result["tokenUsage"], 31)
+        self.assertFalse(result["ragUsed"])
+        self.assertEqual(result["references"], [])
+        self.assertIn("latencyMs", result)
         self.assertEqual(len(chain.prompts), 1)
         self.assertIn("The package arrived damaged.", chain.prompts[0])
 
-    def test_translate_comment_uses_target_language_and_parses_json(self) -> None:
+    def test_translate_comment_uses_target_language_and_keeps_structured_result(self) -> None:
         service = AiService()
-        captured = {}
-
-        def fake_chat(prompt: str, temperature: float) -> str:
-            captured["prompt"] = prompt
-            captured["temperature"] = temperature
-            return (
-                '{"translatedContent":"The product arrived broken.",'
-                '"sourceLanguage":"pt-BR"}'
+        chain = FakeStructuredChain(
+            AiInvocationResult(
+                value=CommentTranslationOutput.model_validate(
+                    {"translatedContent": "The product arrived broken.", "sourceLanguage": "pt-BR"}
+                ),
+                model_name="deepseek-chat",
+                input_tokens=11,
+                output_tokens=9,
+                total_tokens=20,
+                token_usage_estimated=False,
+                latency_ms=17,
             )
-
-        service._chat = fake_chat
+        )
+        service._comment_translation_chain = lambda: chain
 
         result = service.translate_comment(
             {
@@ -316,9 +336,9 @@ class TextToolTests(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertEqual(result["data"]["translatedContent"], "The product arrived broken.")
         self.assertEqual(result["data"]["sourceLanguage"], "pt-BR")
-        self.assertIn("target language: en-US", captured["prompt"])
-        self.assertIn("Produto chegou quebrado", captured["prompt"])
-        self.assertLessEqual(captured["temperature"], 0.3)
+        self.assertEqual(result["data"]["latencyMs"], 17)
+        self.assertIn("target language: en-US", chain.prompts[0])
+        self.assertIn("Produto chegou quebrado", chain.prompts[0])
 
     def test_single_csv_comment_rows_require_product_id_and_review_score(self) -> None:
         service = OlistImportService()

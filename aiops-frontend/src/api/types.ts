@@ -120,6 +120,35 @@ export interface Task {
   errorMessage?: string
 }
 
+export interface AiJobCreated {
+  jobId: number
+  taskStatus: 'pending' | 'processing' | 'success' | 'failed' | 'timed_out' | 'cancelled' | string
+  reused: boolean
+}
+
+export interface AiJob {
+  jobId: number
+  jobType: 'operation_report' | 'product_compare' | string
+  targetType: string
+  targetId: string
+  taskStatus: 'pending' | 'processing' | 'success' | 'failed' | 'timed_out' | 'cancelled' | string
+  jobStage?: 'preparing' | 'retrieving' | 'generating' | 'validating' | 'persisting' | string
+  progress?: number
+  resultType?: string
+  resultId?: number
+  attemptCount?: number
+  cancelRequested?: boolean
+  queueLatencyMs?: number
+  providerLatencyMs?: number
+  totalLatencyMs?: number
+  errorCode?: string
+  errorMessage?: string
+  startTime?: string
+  endTime?: string
+  createTime?: string
+  updateTime?: string
+}
+
 export interface CommentAiShadowTask {
   taskId: number
   runId?: number

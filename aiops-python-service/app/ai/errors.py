@@ -41,9 +41,11 @@ class AiOutputValidationError(AiServiceError):
         output_tokens: int | None = None,
         total_tokens: int = 0,
         token_usage_estimated: bool = False,
+        latency_ms: int = 0,
     ) -> None:
         super().__init__(public_message)
         self.input_tokens = input_tokens
         self.output_tokens = output_tokens
         self.total_tokens = total_tokens
         self.token_usage_estimated = token_usage_estimated
+        self.latency_ms = latency_ms

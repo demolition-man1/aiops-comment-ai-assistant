@@ -174,6 +174,38 @@ create table if not exists biz_analysis_task (
     index idx_analysis_task_status (task_status)
 );
 
+create table if not exists biz_ai_execution_detail (
+    task_id bigint primary key,
+    business_key varchar(191) not null,
+    idempotency_hash char(64) not null,
+    request_hash char(64) not null,
+    job_stage varchar(32) not null default 'preparing',
+    attempt_count int not null default 1,
+    parent_task_id bigint null,
+    cancel_requested tinyint not null default 0,
+    result_type varchar(32) null,
+    result_id bigint null,
+    model_name varchar(64) null,
+    input_tokens int null,
+    output_tokens int null,
+    total_tokens int null,
+    token_usage_estimated tinyint null,
+    estimated_cost decimal(12,6) null,
+    queue_latency_ms bigint null,
+    provider_latency_ms bigint null,
+    total_latency_ms bigint null,
+    error_code varchar(64) null,
+    lease_owner varchar(128) null,
+    lease_until datetime(6) null,
+    version int not null default 0,
+    create_time datetime not null default current_timestamp,
+    update_time datetime not null default current_timestamp on update current_timestamp,
+    unique key uk_ai_execution_idempotency (idempotency_hash),
+    index idx_ai_execution_business (business_key),
+    index idx_ai_execution_parent (parent_task_id),
+    index idx_ai_execution_lease (lease_until)
+);
+
 create table if not exists biz_crawl_task (
     id bigint primary key auto_increment,
     user_id bigint null,

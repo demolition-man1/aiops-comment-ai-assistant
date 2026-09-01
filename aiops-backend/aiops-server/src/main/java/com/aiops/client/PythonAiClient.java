@@ -1,5 +1,6 @@
 package com.aiops.client;
 
+import com.aiops.context.AiJobContext;
 import com.aiops.properties.PythonServiceProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -101,9 +102,24 @@ public class PythonAiClient {
 
     private String jsonBody(Map<String, Object> request) {
         try {
-            return objectMapper.writeValueAsString(request);
+            return objectMapper.writeValueAsString(withJobMetadata(request));
         } catch (JsonProcessingException exception) {
             throw new IllegalArgumentException("Failed to serialize Python AI request", exception);
         }
+    }
+
+    private Map<String, Object> withJobMetadata(Map<String, Object> request) {
+        Map<String, Object> payload = new java.util.HashMap<>(request);
+        Long jobId = AiJobContext.getJobId();
+        if (jobId == null) {
+            return payload;
+        }
+        payload.put("jobId", jobId);
+        payload.put("jobType", AiJobContext.getJobType());
+        Object targetId = payload.get("targetId");
+        if (targetId != null) {
+            payload.put("targetReference", targetId);
+        }
+        return payload;
     }
 }
