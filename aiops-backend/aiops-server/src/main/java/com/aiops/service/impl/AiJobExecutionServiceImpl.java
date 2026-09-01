@@ -11,6 +11,7 @@ import com.aiops.service.aijob.AiJobCompletionService;
 import com.aiops.service.aijob.AiJobExecutionResult;
 import com.aiops.service.aijob.AiJobHandlerRegistry;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class AiJobExecutionServiceImpl implements AiJobExecutionService {
     private final AiJobCompletionService completionService;
     private final ObjectProvider<AiJobExecutionService> selfProvider;
 
+    @Autowired
     public AiJobExecutionServiceImpl(BizAnalysisTaskMapper taskMapper,
                                      BizAiExecutionDetailMapper executionDetailMapper,
                                      @Qualifier("aiJobExecutor") TaskExecutor aiJobExecutor,

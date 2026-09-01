@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -45,5 +46,14 @@ class AiJobExecutionServiceImplTest {
         assertThat(AiJobExecutionServiceImpl.class
                 .getMethod("claim", Long.class, String.class)
                 .isAnnotationPresent(Transactional.class)).isTrue();
+    }
+
+    @Test
+    void productionConstructorIsExplicitlyAutowired() {
+        long autowiredConstructorCount = java.util.Arrays.stream(AiJobExecutionServiceImpl.class.getConstructors())
+                .filter(constructor -> constructor.isAnnotationPresent(Autowired.class))
+                .count();
+
+        assertThat(autowiredConstructorCount).isEqualTo(1);
     }
 }
