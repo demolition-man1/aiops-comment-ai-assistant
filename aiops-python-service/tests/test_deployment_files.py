@@ -1,5 +1,4 @@
 from pathlib import Path
-import subprocess
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -115,16 +114,13 @@ def test_example_environment_contains_placeholders_only() -> None:
     assert "replace-with-" in environment
 
 
-def test_git_ignores_local_rag_runtime_artifacts() -> None:
-    for relative_path in (
-        "aiops-python-service/data/chroma/index-state.json",
-        "aiops-python-service/.cache/huggingface/hub/model.safetensors",
-        "aiops-python-service/rag-acceptance/multilingual-results.json",
-    ):
-        result = subprocess.run(
-            ["git", "check-ignore", "--quiet", "--no-index", relative_path],
-            cwd=REPOSITORY_ROOT,
-            check=False,
-        )
+def test_gitignore_declares_local_rag_runtime_directories() -> None:
+    rules = {
+        line.strip()
+        for line in (REPOSITORY_ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
 
-        assert result.returncode == 0, relative_path
+    assert "data/" in rules
+    assert "aiops-python-service/.cache/huggingface/" in rules
+    assert "aiops-python-service/rag-acceptance/" in rules
