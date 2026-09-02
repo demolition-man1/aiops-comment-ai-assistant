@@ -49,9 +49,9 @@ public class ReportPdfRenderer {
             throw new BusinessException(400, "报告归档不能为空");
         }
 
-        PdfLabels labels = PdfLabels.forLanguage(language);
+        PdfLabels labels = labelsForLanguage(language);
         try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-            BaseFont baseFont = createBaseFont();
+            BaseFont baseFont = createBaseFont(language);
             Font titleFont = new Font(baseFont, 20, Font.BOLD, HEADING_COLOR);
             Font subtitleFont = new Font(baseFont, 10, Font.NORMAL, MUTED_COLOR);
             Font headingFont = new Font(baseFont, 13, Font.BOLD, BRAND_COLOR);
@@ -98,7 +98,7 @@ public class ReportPdfRenderer {
         }
     }
 
-    private BaseFont createBaseFont() throws DocumentException, IOException {
+    private BaseFont createBaseFont(String language) throws DocumentException, IOException {
         List<String> candidates = new ArrayList<>();
         if (!fontPath.isBlank()) {
             candidates.add(fontPath);
@@ -107,6 +107,10 @@ public class ReportPdfRenderer {
         candidates.add("C:/Windows/Fonts/simhei.ttf");
         candidates.add("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc,0");
         candidates.add("/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf");
+        if (isLatinLanguage(language)) {
+            candidates.add("C:/Windows/Fonts/arial.ttf");
+            candidates.add("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
+        }
 
         for (String candidate : candidates) {
             if (!fontFileExists(candidate)) {
@@ -119,6 +123,11 @@ public class ReportPdfRenderer {
             }
         }
         return BaseFont.createFont("STSong-Light", "UniGB-UCS2-H", BaseFont.NOT_EMBEDDED);
+    }
+
+    private boolean isLatinLanguage(String language) {
+        String normalized = language == null ? "" : language.trim().toLowerCase(Locale.ROOT);
+        return normalized.startsWith("en") || normalized.startsWith("pt");
     }
 
     private boolean fontFileExists(String candidate) {
@@ -208,11 +217,15 @@ public class ReportPdfRenderer {
     private record PdfSection(String title, String content) {
     }
 
-    private record PdfLabels(String title, String untitled, String archiveId, String status,
-                             String target, String model, String reportTime, String archiveTime,
-                             String painPoints, String advantages, String disadvantages,
-                             String operationSuggestions, String copywritingSuggestions,
-                             String serviceSuggestions, String riskTips, String fullReport, String page) {
+    static PdfLabels labelsForLanguage(String language) {
+        return PdfLabels.forLanguage(language);
+    }
+
+    static record PdfLabels(String title, String untitled, String archiveId, String status,
+                            String target, String model, String reportTime, String archiveTime,
+                            String painPoints, String advantages, String disadvantages,
+                            String operationSuggestions, String copywritingSuggestions,
+                            String serviceSuggestions, String riskTips, String fullReport, String page) {
 
         private static PdfLabels forLanguage(String language) {
             String normalized = language == null ? "zh-cn" : language.trim().toLowerCase(Locale.ROOT);
