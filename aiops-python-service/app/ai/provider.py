@@ -109,6 +109,61 @@ class LangChainProvider:
             latency_ms=latency_ms,
         )
 
+    def stream_text(
+        self,
+        prompt: Any,
+        *,
+        context: AiInvocationContext | None = None,
+        on_chunk: Callable[[str], None],
+        max_retries: int | None = None,
+    ) -> AiInvocationResult[str]:
+        runnable = self._model()
+        if not callable(getattr(runnable, "stream", None)):
+            result = self.invoke_text(prompt, context=context, max_retries=max_retries)
+            on_chunk(result.value)
+            return result
+
+        retries = self._settings.ai_max_retries if max_retries is None else max_retries
+        started_at = time.monotonic_ns()
+        for attempt in range(retries + 1):
+            chunks: list[str] = []
+            last_raw: Any = None
+            emitted = False
+            try:
+                self._ensure_not_cancelled(context)
+                config = self._runnable_config(context)
+                stream = runnable.stream(prompt) if config is None else runnable.stream(prompt, config=config)
+                for raw in stream:
+                    self._ensure_not_cancelled(context)
+                    text = self._chunk_text(getattr(raw, "content", raw))
+                    last_raw = raw
+                    if not text:
+                        continue
+                    chunks.append(text)
+                    on_chunk(text)
+                    emitted = True
+                self._ensure_not_cancelled(context)
+                content = "".join(chunks).strip()
+                if not content:
+                    raise AiOutputValidationError("AI provider returned an empty response")
+                input_tokens, output_tokens, total_tokens, estimated = self._token_usage(prompt, content, last_raw)
+                return AiInvocationResult(
+                    value=content,
+                    model_name=self._model_name(last_raw),
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    total_tokens=total_tokens,
+                    token_usage_estimated=estimated,
+                    latency_ms=self._elapsed_ms(started_at),
+                )
+            except Exception as exception:
+                error = self._classify_error(exception)
+                if emitted or not self._is_retryable(error) or attempt == retries:
+                    raise error from exception
+                delay = min(0.5 * (2**attempt), 2.0) + self._jitter(0.0, 0.25)
+                self._sleep(delay)
+        raise AiProviderTemporaryError("AI provider is temporarily unavailable")
+
     def _model(self) -> Any:
         if self._chat_model is not None:
             return self._chat_model
@@ -274,3 +329,13 @@ class LangChainProvider:
         if isinstance(value, (dict, list)):
             return json.dumps(value, ensure_ascii=False, default=str)
         return str(value).strip()
+
+    @staticmethod
+    def _chunk_text(value: Any) -> str:
+        if isinstance(value, str):
+            return value
+        if isinstance(value, BaseModel):
+            return value.model_dump_json(by_alias=True)
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, ensure_ascii=False, default=str)
+        return str(value)

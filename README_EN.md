@@ -143,6 +143,8 @@ docker compose up -d --build
 docker compose ps
 ```
 
+To show live text previews while generating negative-review replies and marketing content, set `AI_TEXT_STREAMING_ENABLED=true` in the local `.env` file, then rerun the build command above. The switch is disabled by default. Operations reports, product comparisons, translations, and comment analysis still expose results only after structured-output validation completes.
+
 Default endpoints:
 
 - Web application: `http://localhost:5174`
@@ -255,6 +257,7 @@ AI_BASE_URL=https://api.deepseek.com
 AI_CHAT_PATH=/v1/chat/completions
 AI_API_KEY=your-ai-api-key
 AI_MODEL=deepseek-v4-flash
+AI_TEXT_STREAMING_ENABLED=false
 AI_NEGATIVE_REPLY_ENGINE=langchain
 AI_NEGATIVE_REPLY_THINKING_ENABLED=false
 AI_NEGATIVE_REPLY_MAX_TOKENS=320
@@ -287,7 +290,7 @@ Default frontend URL:
 
 If the port is occupied, Vite automatically switches to the next available port, such as `5174`.
 
-After logging in, open the Data Import page and click "Import Sample Data" to quickly create demo data. For single CSV upload, the page previews field mapping, estimated rows, and the first 20 rows before upload. OSS upload and task creation happen only after clicking "Start Import". After import, maintain business tags in "Tag Library", maintain handling playbooks in "Solution Library", and customize AI instructions in "Prompt Templates". In "Review Analytics", run analysis only or click "Analyze and Generate Report" to complete analysis and localized report generation in one flow. Once RAG is enabled and the index is rebuilt, new reports retain review-evidence and solution references for the current product or seller; open a report or archive detail in "Data Reports" to follow those references. Archive the report to export a PDF in the active Chinese, English, or Portuguese locale. Use "AI Call Logs" to review call volume, success rate, tokens, and estimated cost. In "Comment AI Evaluation", complete sampling, manual annotation, and evaluation; only a run that passes every gate can explicitly activate independent Hybrid issue-label decisions.
+After logging in, open the Data Import page and click "Import Sample Data" to quickly create demo data. For single CSV upload, the page previews field mapping, estimated rows, and the first 20 rows before upload. OSS upload and task creation happen only after clicking "Start Import". After import, maintain business tags in "Tag Library", maintain handling playbooks in "Solution Library", and customize AI instructions in "Prompt Templates". In "Review Analytics", run analysis only or click "Analyze and Generate Report" to complete analysis and localized report generation in one flow. Once RAG is enabled and the index is rebuilt, new reports retain review-evidence and solution references for the current product or seller; open a report or archive detail in "Data Reports" to follow those references. Archive the report to export a PDF in the active Chinese, English, or Portuguese locale. Use "AI Call Logs" to review call volume, success rate, tokens, and estimated cost. With text previews enabled, negative-reply and AI content jobs render temporary text in the task card and automatically load the stored final result when the job succeeds. In "Comment AI Evaluation", complete sampling, manual annotation, and evaluation; only a run that passes every gate can explicitly activate independent Hybrid issue-label decisions.
 
 ## Configuration
 
@@ -312,6 +315,7 @@ After logging in, open the Data Import page and click "Import Sample Data" to qu
 | `AI_BASE_URL` | OpenAI-compatible API base URL |
 | `AI_API_KEY` | LLM API key |
 | `AI_MODEL` | Model name |
+| `AI_TEXT_STREAMING_ENABLED` | Enables temporary text previews for negative replies and AI content jobs; defaults to `false`, while saved data remains authoritative |
 | `AI_NEGATIVE_REPLY_ENGINE` | Negative-reply engine: `langchain`; temporarily use `legacy` for rollback during troubleshooting |
 | `AI_NEGATIVE_REPLY_THINKING_ENABLED` | Enables model thinking for negative replies; defaults to `false` to reduce short-reply latency |
 | `AI_NEGATIVE_REPLY_MAX_TOKENS` | Maximum output tokens for a negative reply; range `64` to `1024`, default `320` |

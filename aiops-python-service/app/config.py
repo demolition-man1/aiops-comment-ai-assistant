@@ -97,6 +97,9 @@ class Settings:
     ai_api_key: str = os.getenv("AI_API_KEY", "")
     ai_model: str = os.getenv("AI_MODEL", "deepseek-v4-flash")
     ai_timeout: int = _int_env("AI_TIMEOUT", 30)
+    ai_text_streaming_enabled: bool = field(
+        default_factory=lambda: _bool_env("AI_TEXT_STREAMING_ENABLED", False)
+    )
     ai_negative_reply_engine: str = field(
         default_factory=lambda: _choice_env(
             "AI_NEGATIVE_REPLY_ENGINE", "langchain", {"langchain", "legacy"}

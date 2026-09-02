@@ -22,6 +22,7 @@ class AiJobProgressPublisher:
         self._settings = provider_settings
         self._clock = clock or (lambda: datetime.now(timezone.utc))
         self._progress_by_job: dict[int, int] = {}
+        self._text_sequence_by_job: dict[int, int] = {}
 
     def publish(self, context: AiInvocationContext | None, stage: str, progress: int) -> bool:
         if context is None or context.job_id is None or context.job_id <= 0:
@@ -44,6 +45,27 @@ class AiJobProgressPublisher:
         except Exception:
             return False
         self._progress_by_job[context.job_id] = progress
+        return True
+
+    def publish_text_delta(self, context: AiInvocationContext | None, text: str) -> bool:
+        if context is None or context.job_id is None or context.job_id <= 0:
+            return False
+        if context.job_type not in {"negative_reply", "content"} or not text:
+            return False
+        sequence = self._text_sequence_by_job.get(context.job_id, 0) + 1
+        payload = {
+            "eventType": "text_delta",
+            "jobId": context.job_id,
+            "jobType": context.job_type,
+            "occurredAt": self._clock().astimezone(timezone.utc).isoformat(),
+            "text": text,
+            "deltaId": sequence,
+        }
+        try:
+            self._client().publish(self.EVENT_CHANNEL, json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+        except Exception:
+            return False
+        self._text_sequence_by_job[context.job_id] = sequence
         return True
 
     def is_cancel_requested(self, job_id: int | None) -> bool:

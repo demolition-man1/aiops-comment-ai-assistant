@@ -151,7 +151,7 @@ export interface AiJob {
 
 export interface AiJobEvent {
   eventId?: number
-  eventType: 'snapshot' | 'stage' | 'completed' | 'failed' | 'timed_out' | 'cancelled' | string
+  eventType: 'snapshot' | 'stage' | 'text_delta' | 'completed' | 'failed' | 'timed_out' | 'cancelled' | string
   jobId: number
   jobType: AiJob['jobType']
   taskStatus: AiJob['taskStatus']
@@ -160,6 +160,8 @@ export interface AiJobEvent {
   resultType?: string
   resultId?: number
   occurredAt?: string
+  textDelta?: string
+  deltaId?: number
 }
 
 export interface CommentAiShadowTask {

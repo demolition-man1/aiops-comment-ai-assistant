@@ -8,5 +8,7 @@ public interface AiJobEventService {
 
     void publishStage(Long jobId, String stage, Integer progress);
 
+    void publishTextDelta(Long jobId, String textDelta, Long deltaId);
+
     void publishTerminal(Long jobId);
 }

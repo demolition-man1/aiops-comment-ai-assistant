@@ -49,6 +49,9 @@ public class AiJobRedisSubscriber {
             int progress = event.path("progress").asInt(-1);
             if (jobId > 0 && "stage".equals(eventType) && JOB_TYPES.contains(jobType)) {
                 eventService.publishStage(jobId, stage, progress);
+            } else if (jobId > 0 && "text_delta".equals(eventType)
+                    && Set.of("negative_reply", "content").contains(jobType)) {
+                eventService.publishTextDelta(jobId, event.path("text").asText(), event.path("deltaId").asLong(0));
             }
         } catch (Exception ignored) {
             // Redis progress delivery is best effort; MySQL remains authoritative.

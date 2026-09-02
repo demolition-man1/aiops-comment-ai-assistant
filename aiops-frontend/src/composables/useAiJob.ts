@@ -10,7 +10,9 @@ export function useAiJob() {
   const job = ref<AiJob>()
   const connected = ref(false)
   const reconnecting = ref(false)
+  const previewText = ref('')
   const lastEventId = ref<number>()
+  const lastDeltaId = ref<number>()
   let controller: AbortController | undefined
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -23,6 +25,12 @@ export function useAiJob() {
   }
 
   const applyEvent = (event: AiJobEvent) => {
+    if (event.eventType === 'text_delta') {
+      if (!event.textDelta || (event.deltaId != null && event.deltaId <= (lastDeltaId.value || 0))) return
+      previewText.value += event.textDelta
+      lastDeltaId.value = event.deltaId ?? lastDeltaId.value
+      return
+    }
     lastEventId.value = event.eventId ?? lastEventId.value
     job.value = {
       ...(job.value || { jobId: event.jobId, jobType: event.jobType, targetType: '', targetId: '', taskStatus: 'pending' }),
@@ -51,6 +59,8 @@ export function useAiJob() {
       if (connection.signal.aborted || controller !== connection) return
       connected.value = false
       reconnecting.value = true
+      previewText.value = ''
+      lastDeltaId.value = undefined
       await refresh(jobId)
       if (!isTerminal.value && controller === connection) {
         reconnectTimer = setTimeout(() => connect(jobId), 1000)
@@ -61,6 +71,8 @@ export function useAiJob() {
   const start = async (jobId: number) => {
     stop()
     lastEventId.value = undefined
+    lastDeltaId.value = undefined
+    previewText.value = ''
     await refresh(jobId)
     if (isTerminal.value) return
     connect(jobId)
@@ -77,5 +89,5 @@ export function useAiJob() {
     return created
   }
 
-  return { job, connected, reconnecting, isTerminal, refresh, start, stop, cancel, retry }
+  return { job, connected, reconnecting, previewText, isTerminal, refresh, start, stop, cancel, retry }
 }

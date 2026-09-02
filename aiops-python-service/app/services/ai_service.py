@@ -78,7 +78,7 @@ class AiService:
         )
         prompt = self._prompt_from_template(request, fallback_prompt)
         self._publish(context, "generating", 55)
-        result = self._generate_content_chain(prompt, context)
+        result = self._generate_content_chain(prompt, context, stream_text=self._streaming_enabled(context))
         self._publish(context, "validating", 85)
         return {
             "success": True,
@@ -111,7 +111,12 @@ class AiService:
         prompt = self._prompt_from_template(request, fallback_prompt)
         if settings.ai_negative_reply_engine == "langchain":
             self._publish(context, "retrieving", 30)
-            result = self._rag_reply_service().generate(request=request, rendered_prompt=prompt, context=context)
+            result = self._rag_reply_service().generate(
+                request=request,
+                rendered_prompt=prompt,
+                context=context,
+                stream_text=self._streaming_enabled(context),
+            )
             self._publish(context, "validating", 85)
             invocation = result.invocation
             return {
@@ -122,7 +127,7 @@ class AiService:
                 **self._invocation_metadata(invocation),
             }
         self._publish(context, "generating", 55)
-        invocation = self._generate_negative_reply_chain(prompt, context)
+        invocation = self._generate_negative_reply_chain(prompt, context, stream_text=self._streaming_enabled(context))
         self._publish(context, "validating", 85)
         return {
             "success": True,
@@ -266,13 +271,21 @@ class AiService:
             return chain.generate(prompt, reference_context=reference_context)
         return chain.generate(prompt, reference_context=reference_context, context=context)
 
-    def _generate_content_chain(self, prompt: str, context: AiInvocationContext | None) -> Any:
+    def _generate_content_chain(self, prompt: str, context: AiInvocationContext | None, *, stream_text: bool = False) -> Any:
         chain = self._content_generation_chain()
-        return chain.generate(prompt) if context is None else chain.generate(prompt, context=context)
+        return chain.generate(prompt, context=context, stream_text=stream_text)
 
-    def _generate_negative_reply_chain(self, prompt: str, context: AiInvocationContext | None) -> Any:
+    def _generate_negative_reply_chain(self, prompt: str, context: AiInvocationContext | None, *, stream_text: bool = False) -> Any:
         chain = self._negative_reply_chain()
-        return chain.generate(prompt) if context is None else chain.generate(prompt, context=context)
+        return chain.generate(prompt, context=context, stream_text=stream_text)
+
+    @staticmethod
+    def _streaming_enabled(context: AiInvocationContext | None) -> bool:
+        return bool(
+            getattr(settings, "ai_text_streaming_enabled", False)
+            and context is not None
+            and context.job_type in {"negative_reply", "content"}
+        )
 
     def _generate_translation_chain(self, prompt: str, context: AiInvocationContext | None) -> Any:
         chain = self._comment_translation_chain()

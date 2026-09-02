@@ -770,6 +770,7 @@ export default {
     progress: 'AI job progress', live: 'Live', reconnecting: 'Reconnecting',
     cancellationRequested: 'Cancellation requested', resultReady: 'Result ready', cancel: 'Cancel job', retry: 'Retry job', openResult: 'Open result',
     queueLatency: 'Queue latency', providerLatency: 'Provider latency', totalLatency: 'Total latency',
+    preview: 'Live preview', validating: 'Validating final result',
     stages: { preparing: 'Preparing', retrieving: 'Retrieving context', generating: 'Generating', validating: 'Validating', persisting: 'Saving result' }
   }
 }

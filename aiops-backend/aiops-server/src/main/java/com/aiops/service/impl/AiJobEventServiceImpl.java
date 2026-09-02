@@ -77,6 +77,23 @@ public class AiJobEventServiceImpl implements AiJobEventService {
     }
 
     @Override
+    public void publishTextDelta(Long jobId, String textDelta, Long deltaId) {
+        if (textDelta == null || textDelta.isBlank() || deltaId == null || deltaId <= 0) {
+            return;
+        }
+        BizAnalysisTask task = taskMapper.selectById(jobId);
+        BizAiExecutionDetail detail = executionDetailMapper.selectById(jobId);
+        if (task == null || detail == null || isTerminal(task.getTaskStatus())
+                || !("negative_reply".equals(task.getTaskType()) || "content".equals(task.getTaskType()))) {
+            return;
+        }
+        broadcast(jobId, new AiJobEventVO(
+                (long) defaultVersion(detail.getVersion()), "text_delta", task.getId(), task.getTaskType(),
+                task.getTaskStatus(), detail.getJobStage(), task.getProgress(), detail.getResultType(), detail.getResultId(),
+                LocalDateTime.now(), textDelta, deltaId));
+    }
+
+    @Override
     public void publishTerminal(Long jobId) {
         BizAnalysisTask task = taskMapper.selectById(jobId);
         BizAiExecutionDetail detail = executionDetailMapper.selectById(jobId);
@@ -144,7 +161,9 @@ public class AiJobEventServiceImpl implements AiJobEventService {
                 task.getProgress(),
                 detail.getResultType(),
                 detail.getResultId(),
-                task.getUpdateTime() == null ? LocalDateTime.now() : task.getUpdateTime());
+                task.getUpdateTime() == null ? LocalDateTime.now() : task.getUpdateTime(),
+                null,
+                null);
     }
 
     private boolean isValidStage(String stage) {

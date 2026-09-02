@@ -143,6 +143,8 @@ docker compose up -d --build
 docker compose ps
 ```
 
+如需在差评回复和营销文案生成时显示实时文本预览，可在本地 `.env` 中设置 `AI_TEXT_STREAMING_ENABLED=true`，然后重新执行上述构建命令。该开关默认关闭；运营报告、商品对比、翻译和评论分析仍会在结构化结果校验完成后才显示最终结果。
+
 启动完成后访问：
 
 - Web 管理端：`http://localhost:5174`
@@ -255,6 +257,7 @@ AI_BASE_URL=https://api.deepseek.com
 AI_CHAT_PATH=/v1/chat/completions
 AI_API_KEY=your-ai-api-key
 AI_MODEL=deepseek-v4-flash
+AI_TEXT_STREAMING_ENABLED=false
 AI_NEGATIVE_REPLY_ENGINE=langchain
 AI_NEGATIVE_REPLY_THINKING_ENABLED=false
 AI_NEGATIVE_REPLY_MAX_TOKENS=320
@@ -287,7 +290,7 @@ npm run dev
 
 如果端口被占用，Vite 会自动切到下一个端口，例如 `5174`。
 
-登录后进入“数据导入”页面，可以先点击“一键导入示例数据”快速生成可演示数据；上传单个 CSV 时，页面会先展示字段映射、预计导入行数和前 20 行预览，点击“开始导入”后才会上传到 OSS 并创建导入任务。完成导入后，可在“标签库”维护业务标签，在“方案库”维护问题处理方案，在“Prompt 模板”维护不同 AI 场景的提示词。进入“评论分析”页面后，可以只运行评论分析，也可以点击“分析并生成报告”自动完成分析任务、结果加载和 AI 运营报告生成。启用 RAG 并重建索引后，新报告会附带当前商品或商家的评论证据和解决方案来源；在“数据报表”的报告或归档详情中可跳转核查。报告归档后，可按当前中、英、葡界面语言导出 PDF。AI 调用后可在“AI 调用日志”页面查看调用量、成功率、token 和成本估算。进入“评论 AI 对照评估”后，完成抽样、人工标注和评估；仅当准入门槛全部通过时，才可显式启用独立的 Hybrid 问题标签决策。
+登录后进入“数据导入”页面，可以先点击“一键导入示例数据”快速生成可演示数据；上传单个 CSV 时，页面会先展示字段映射、预计导入行数和前 20 行预览，点击“开始导入”后才会上传到 OSS 并创建导入任务。完成导入后，可在“标签库”维护业务标签，在“方案库”维护问题处理方案，在“Prompt 模板”维护不同 AI 场景的提示词。进入“评论分析”页面后，可以只运行评论分析，也可以点击“分析并生成报告”自动完成分析任务、结果加载和 AI 运营报告生成。启用 RAG 并重建索引后，新报告会附带当前商品或商家的评论证据和解决方案来源；在“数据报表”的报告或归档详情中可跳转核查。报告归档后，可按当前中、英、葡界面语言导出 PDF。AI 调用后可在“AI 调用日志”页面查看调用量、成功率、token 和成本估算。启用文本预览后，差评回复和 AI 文案任务会在任务卡片中逐步显示生成内容；任务成功时页面会自动加载数据库中保存的正式结果。进入“评论 AI 对照评估”后，完成抽样、人工标注和评估；仅当准入门槛全部通过时，才可显式启用独立的 Hybrid 问题标签决策。
 
 ## 环境配置
 
@@ -312,6 +315,7 @@ npm run dev
 | `AI_BASE_URL` | OpenAI 兼容接口地址 |
 | `AI_API_KEY` | 大模型 API Key |
 | `AI_MODEL` | 模型名称 |
+| `AI_TEXT_STREAMING_ENABLED` | 是否为差评回复和 AI 文案任务启用临时文本预览，默认 `false`；正式结果仍以保存后的数据为准 |
 | `AI_NEGATIVE_REPLY_ENGINE` | 差评回复引擎：`langchain`，异常排查时可临时切换为 `legacy` |
 | `AI_NEGATIVE_REPLY_THINKING_ENABLED` | 差评回复是否启用模型思考模式，默认 `false`，关闭可缩短短回复生成耗时 |
 | `AI_NEGATIVE_REPLY_MAX_TOKENS` | 差评回复最大输出 Token，范围 `64` 至 `1024`，默认 `320` |

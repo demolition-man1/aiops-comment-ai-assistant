@@ -1,4 +1,5 @@
 import json
+from collections.abc import Callable
 from typing import Any, Protocol
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -27,6 +28,14 @@ class NegativeReplyProvider(Protocol):
         context: AiInvocationContext | None = None,
     ) -> AiInvocationResult[str]: ...
 
+    def stream_text(
+        self,
+        prompt: Any,
+        *,
+        context: AiInvocationContext | None = None,
+        on_chunk: Callable[[str], None],
+    ) -> AiInvocationResult[str]: ...
+
 
 class NegativeReplyChain:
     _SYSTEM_MESSAGE = (
@@ -38,6 +47,11 @@ class NegativeReplyChain:
         "Regenerate the reply as exactly one JSON object with the required replyContent field. "
         "Do not include Markdown, explanations, or any additional JSON object."
     )
+    _STREAM_MESSAGE = (
+        "You are an ecommerce customer-service supervisor. Use only facts in the current review. "
+        "Do not claim refunds, compensation, logistics actions, order checks, or completed actions that were not provided. "
+        "Return only the final concise, sincere, professional reply text. Do not return JSON, Markdown, or explanations."
+    )
 
     def __init__(self, provider: NegativeReplyProvider) -> None:
         self._provider = provider
@@ -48,7 +62,10 @@ class NegativeReplyChain:
         *,
         reference_context: str | None = None,
         context: AiInvocationContext | None = None,
+        stream_text: bool = False,
     ) -> AiInvocationResult[NegativeReplyOutput]:
+        if stream_text:
+            return self._stream_reply(rendered_prompt, reference_context, context)
         messages = self._messages(rendered_prompt, reference_context=reference_context)
         try:
             return self._invoke_structured(messages, context)
@@ -79,6 +96,33 @@ class NegativeReplyChain:
                 ),
                 latency_ms=initial_error.latency_ms + repaired.latency_ms,
             )
+
+    def _stream_reply(
+        self,
+        rendered_prompt: str,
+        reference_context: str | None,
+        context: AiInvocationContext | None,
+    ) -> AiInvocationResult[NegativeReplyOutput]:
+        messages = self._messages(rendered_prompt, reference_context=reference_context, system_message=self._STREAM_MESSAGE)
+        publisher = getattr(context, "progress_publisher", None)
+        result = self._provider.stream_text(
+            messages,
+            context=context,
+            on_chunk=lambda text: publisher.publish_text_delta(context, text) if publisher is not None else None,
+        )
+        try:
+            output = NegativeReplyOutput(replyContent=result.value)
+        except ValidationError as exception:
+            raise AiOutputValidationError("AI provider returned an invalid text response") from exception
+        return AiInvocationResult(
+            value=output,
+            model_name=result.model_name,
+            input_tokens=result.input_tokens,
+            output_tokens=result.output_tokens,
+            total_tokens=result.total_tokens,
+            token_usage_estimated=result.token_usage_estimated,
+            latency_ms=result.latency_ms,
+        )
 
     def _invoke_structured(
         self,
@@ -118,8 +162,9 @@ class NegativeReplyChain:
         rendered_prompt: str,
         *,
         reference_context: str | None = None,
+        system_message: str | None = None,
     ) -> list[SystemMessage | HumanMessage]:
-        messages: list[SystemMessage | HumanMessage] = [SystemMessage(content=cls._SYSTEM_MESSAGE)]
+        messages: list[SystemMessage | HumanMessage] = [SystemMessage(content=system_message or cls._SYSTEM_MESSAGE)]
         if reference_context:
             messages.append(
                 SystemMessage(

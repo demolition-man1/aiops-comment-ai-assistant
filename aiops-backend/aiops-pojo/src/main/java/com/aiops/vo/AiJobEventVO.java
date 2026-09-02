@@ -12,5 +12,7 @@ public record AiJobEventVO(
         Integer progress,
         String resultType,
         Long resultId,
-        LocalDateTime occurredAt) {
+        LocalDateTime occurredAt,
+        String textDelta,
+        Long deltaId) {
 }

@@ -770,6 +770,7 @@ export default {
     progress: 'Progresso da tarefa de IA', live: 'Ao vivo', reconnecting: 'Reconectando',
     cancellationRequested: 'Cancelamento solicitado', resultReady: 'Resultado pronto', cancel: 'Cancelar tarefa', retry: 'Tentar novamente', openResult: 'Abrir resultado',
     queueLatency: 'Latência da fila', providerLatency: 'Latência do provedor', totalLatency: 'Latência total',
+    preview: 'Prévia ao vivo', validating: 'Validando resultado final',
     stages: { preparing: 'Preparando', retrieving: 'Buscando contexto', generating: 'Gerando', validating: 'Validando', persisting: 'Salvando resultado' }
   }
 }

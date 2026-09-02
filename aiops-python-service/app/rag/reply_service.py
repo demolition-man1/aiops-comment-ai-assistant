@@ -40,25 +40,43 @@ class RagReplyService:
         request: dict[str, Any],
         rendered_prompt: str,
         context: AiInvocationContext | None = None,
+        stream_text: bool = False,
     ) -> RagReplyResult:
         retrieval = self._retrieve_or_empty(request)
         use_rag = bool(retrieval.context and retrieval.references)
         if context is None:
-            invocation = self._reply_chain.generate(
+            invocation = self._generate_reply(
                 rendered_prompt,
                 reference_context=retrieval.context if use_rag else None,
+                stream_text=stream_text,
             )
         else:
-            invocation = self._reply_chain.generate(
+            invocation = self._generate_reply(
                 rendered_prompt,
                 reference_context=retrieval.context if use_rag else None,
                 context=context,
+                stream_text=stream_text,
             )
         return RagReplyResult(
             invocation=invocation,
             rag_used=use_rag,
             references=retrieval.references if use_rag else [],
         )
+
+    def _generate_reply(
+        self,
+        rendered_prompt: str,
+        *,
+        reference_context: str | None,
+        context: AiInvocationContext | None = None,
+        stream_text: bool = False,
+    ) -> AiInvocationResult[NegativeReplyOutput]:
+        kwargs: dict[str, Any] = {"reference_context": reference_context}
+        if context is not None:
+            kwargs["context"] = context
+        if stream_text:
+            kwargs["stream_text"] = True
+        return self._reply_chain.generate(rendered_prompt, **kwargs)
 
     def _retrieve_or_empty(self, request: dict[str, Any]) -> RagRetrievalResult:
         try:
