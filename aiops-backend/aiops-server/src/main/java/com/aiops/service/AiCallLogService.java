@@ -13,4 +13,6 @@ public interface AiCallLogService {
     void record(Long userId, String businessType, String targetType, String targetId,
                 Long promptTemplateId, String modelName, String callStatus,
                 Integer tokenUsage, Long latencyMs, String errorMessage);
+
+    void completeJob(Long jobId, Long queueLatencyMs, Long totalLatencyMs, String errorCode);
 }

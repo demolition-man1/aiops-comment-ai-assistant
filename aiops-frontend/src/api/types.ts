@@ -337,6 +337,7 @@ export interface PromptTemplate {
 export interface AiCallLog {
   id: number
   userId?: number
+  jobId?: number
   businessType: string
   targetType?: string
   targetId?: string
@@ -346,6 +347,9 @@ export interface AiCallLog {
   tokenUsage?: number
   estimatedCost?: number
   latencyMs?: number
+  queueLatencyMs?: number
+  totalLatencyMs?: number
+  errorCode?: string
   errorMessage?: string
   createTime?: string
 }
@@ -358,6 +362,8 @@ export interface AiCallLogOverview {
   totalTokens: number
   totalCost: number
   avgLatencyMs: number
+  avgQueueLatencyMs: number
+  avgTotalLatencyMs: number
 }
 
 export interface TaskRecord {

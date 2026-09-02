@@ -1,6 +1,8 @@
 package com.aiops.service.impl;
 
 import com.aiops.dto.AiCallLogQueryDTO;
+import com.aiops.context.AiJobContext;
+import com.aiops.context.BaseContext;
 import com.aiops.entity.BizAiCallLog;
 import com.aiops.mapper.BizAiCallLogMapper;
 import com.aiops.result.PageResult;
@@ -46,8 +48,11 @@ public class AiCallLogServiceImpl implements AiCallLogService {
         BigDecimal totalCost = logs.stream().map(BizAiCallLog::getEstimatedCost).filter(value -> value != null)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         long latencyCount = logs.stream().filter(log -> log.getLatencyMs() != null).count();
-        long totalLatency = logs.stream().map(BizAiCallLog::getLatencyMs).filter(value -> value != null)
-                .mapToLong(Long::longValue).sum();
+        long totalLatency = sum(logs, BizAiCallLog::getLatencyMs);
+        long queueCount = logs.stream().filter(log -> log.getQueueLatencyMs() != null).count();
+        long totalQueue = sum(logs, BizAiCallLog::getQueueLatencyMs);
+        long totalDurationCount = logs.stream().filter(log -> log.getTotalLatencyMs() != null).count();
+        long totalDuration = sum(logs, BizAiCallLog::getTotalLatencyMs);
         BigDecimal successRate = totalCalls == 0
                 ? BigDecimal.ZERO
                 : BigDecimal.valueOf(successCalls)
@@ -55,7 +60,9 @@ public class AiCallLogServiceImpl implements AiCallLogService {
                 .divide(BigDecimal.valueOf(totalCalls), 2, RoundingMode.HALF_UP);
         return new AiCallLogOverviewVO(totalCalls, successCalls, failedCalls, successRate, totalTokens,
                 totalCost.setScale(6, RoundingMode.HALF_UP),
-                latencyCount == 0 ? 0 : Math.round((double) totalLatency / latencyCount));
+                latencyCount == 0 ? 0 : Math.round((double) totalLatency / latencyCount),
+                queueCount == 0 ? 0 : Math.round((double) totalQueue / queueCount),
+                totalDurationCount == 0 ? 0 : Math.round((double) totalDuration / totalDurationCount));
     }
 
     @Override
@@ -63,6 +70,7 @@ public class AiCallLogServiceImpl implements AiCallLogService {
                        Long promptTemplateId, String modelName, String callStatus,
                        Integer tokenUsage, Long latencyMs, String errorMessage) {
         BizAiCallLog log = new BizAiCallLog();
+        log.setJobId(AiJobContext.getJobId());
         log.setUserId(userId);
         log.setBusinessType(blankToDefault(businessType, "unknown"));
         log.setTargetType(blankToNull(targetType));
@@ -74,8 +82,18 @@ public class AiCallLogServiceImpl implements AiCallLogService {
         log.setEstimatedCost(estimateCost(log.getTokenUsage()));
         log.setLatencyMs(latencyMs == null || latencyMs < 0 ? 0 : latencyMs);
         log.setErrorMessage(trimError(errorMessage));
+        log.setErrorCode(errorCode(errorMessage));
         log.setCreateTime(LocalDateTime.now());
         aiCallLogMapper.insert(log);
+    }
+
+    @Override
+    public void completeJob(Long jobId, Long queueLatencyMs, Long totalLatencyMs, String errorCode) {
+        if (jobId == null) {
+            return;
+        }
+        aiCallLogMapper.updateJobObservability(jobId, nonNegative(queueLatencyMs), nonNegative(totalLatencyMs),
+                normalizeErrorCode(errorCode));
     }
 
     private LambdaQueryWrapper<BizAiCallLog> buildWrapper(AiCallLogQueryDTO query) {
@@ -83,7 +101,10 @@ public class AiCallLogServiceImpl implements AiCallLogService {
         String callStatus = blankToNull(query.getCallStatus());
         String targetType = blankToNull(query.getTargetType());
         String targetId = blankToNull(query.getTargetId());
+        Long userId = BaseContext.getCurrentId();
         return new LambdaQueryWrapper<BizAiCallLog>()
+                .eq(userId != null, BizAiCallLog::getUserId, userId)
+                .isNotNull(userId == null, BizAiCallLog::getUserId)
                 .eq(businessType != null, BizAiCallLog::getBusinessType, businessType)
                 .eq(callStatus != null, BizAiCallLog::getCallStatus, callStatus)
                 .eq(targetType != null, BizAiCallLog::getTargetType, targetType)
@@ -101,9 +122,10 @@ public class AiCallLogServiceImpl implements AiCallLogService {
     }
 
     private AiCallLogVO toVO(BizAiCallLog log) {
-        return new AiCallLogVO(log.getId(), log.getUserId(), log.getBusinessType(), log.getTargetType(),
+        return new AiCallLogVO(log.getId(), log.getJobId(), log.getUserId(), log.getBusinessType(), log.getTargetType(),
                 log.getTargetId(), log.getPromptTemplateId(), log.getModelName(), log.getCallStatus(),
-                log.getTokenUsage(), log.getEstimatedCost(), log.getLatencyMs(), log.getErrorMessage(),
+                log.getTokenUsage(), log.getEstimatedCost(), log.getLatencyMs(), log.getQueueLatencyMs(),
+                log.getTotalLatencyMs(), log.getErrorCode(), log.getErrorMessage(),
                 log.getCreateTime());
     }
 
@@ -129,5 +151,31 @@ public class AiCallLogServiceImpl implements AiCallLogService {
 
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private long sum(List<BizAiCallLog> logs, java.util.function.Function<BizAiCallLog, Long> extractor) {
+        return logs.stream().map(extractor).filter(value -> value != null).mapToLong(Long::longValue).sum();
+    }
+
+    private Long nonNegative(Long value) {
+        return value == null ? null : Math.max(0, value);
+    }
+
+    private String errorCode(String errorMessage) {
+        if (errorMessage == null || errorMessage.isBlank()) return null;
+        String message = errorMessage.toLowerCase();
+        if (message.contains("timeout")) return "provider_timeout";
+        if (message.contains("401") || message.contains("403") || message.contains("auth")) return "authentication";
+        if (message.contains("429") || message.contains("rate limit")) return "rate_limited";
+        if (message.contains("reject")) return "provider_rejected";
+        if (message.contains("validation") || message.contains("invalid output")) return "invalid_output";
+        if (message.contains("connection") || message.contains("temporar")) return "provider_temporary";
+        return "internal";
+    }
+
+    private String normalizeErrorCode(String value) {
+        return value != null && List.of("configuration", "authentication", "rate_limited", "provider_timeout",
+                "provider_temporary", "provider_rejected", "invalid_output", "worker_interrupted", "cancelled", "internal")
+                .contains(value) ? value : "internal";
     }
 }

@@ -67,6 +67,17 @@ aiops:
     stale-processing-minutes: ${aiops.config.task-maintenance.stale-processing-minutes:30}
     lock-wait-seconds: ${aiops.config.task-maintenance.lock-wait-seconds:1}
     lock-lease-seconds: ${aiops.config.task-maintenance.lock-lease-seconds:60}
+  ai-job:
+    core-pool-size: ${AIOPS_AI_JOB_CORE_POOL_SIZE:2}
+    max-pool-size: ${AIOPS_AI_JOB_MAX_POOL_SIZE:4}
+    queue-capacity: ${AIOPS_AI_JOB_QUEUE_CAPACITY:100}
+    global-concurrency: ${AIOPS_AI_JOB_GLOBAL_CONCURRENCY:4}
+    per-user-concurrency: ${AIOPS_AI_JOB_PER_USER_CONCURRENCY:2}
+    lease-seconds: ${AIOPS_AI_JOB_LEASE_SECONDS:45}
+    heartbeat-seconds: ${AIOPS_AI_JOB_HEARTBEAT_SECONDS:15}
+    timeout-seconds: ${AIOPS_AI_JOB_TIMEOUT_SECONDS:120}
+    recovery-enabled: ${AIOPS_AI_JOB_RECOVERY_ENABLED:true}
+    recovery-interval-seconds: ${AIOPS_AI_JOB_RECOVERY_INTERVAL_SECONDS:60}
   aliyun:
     oss:
       endpoint: ${aiops.config.aliyun.oss.endpoint}

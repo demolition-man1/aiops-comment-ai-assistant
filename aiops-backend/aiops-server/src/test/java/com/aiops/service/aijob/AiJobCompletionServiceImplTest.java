@@ -36,7 +36,7 @@ class AiJobCompletionServiceImplTest {
         detail.setTaskId(33L);
         detail.setCancelRequested(1);
         when(taskMapper.selectById(33L)).thenReturn(task);
-        when(executionDetailMapper.selectByIdForUpdate(33L)).thenReturn(detail);
+        when(executionDetailMapper.selectById(33L)).thenReturn(detail);
         AtomicBoolean persisted = new AtomicBoolean(false);
 
         AiJobExecutionResult result = new AiJobCompletionServiceImpl(taskMapper, executionDetailMapper)
@@ -50,7 +50,34 @@ class AiJobCompletionServiceImplTest {
         ArgumentCaptor<BizAnalysisTask> taskCaptor = ArgumentCaptor.forClass(BizAnalysisTask.class);
         verify(taskMapper).updateById(taskCaptor.capture());
         assertThat(taskCaptor.getValue().getTaskStatus()).isEqualTo("cancelled");
-        verify(executionDetailMapper).selectByIdForUpdate(33L);
+        verify(executionDetailMapper, never()).selectByIdForUpdate(33L);
+        verify(executionDetailMapper, never()).updateById(any(BizAiExecutionDetail.class));
+    }
+
+    @Test
+    void cancellationArrivingDuringProviderCallPreventsLatePersistence() {
+        BizAnalysisTask task = new BizAnalysisTask();
+        task.setId(34L);
+        task.setTaskStatus("processing");
+        BizAiExecutionDetail beforeProvider = new BizAiExecutionDetail();
+        beforeProvider.setTaskId(34L);
+        beforeProvider.setCancelRequested(0);
+        BizAiExecutionDetail afterProvider = new BizAiExecutionDetail();
+        afterProvider.setTaskId(34L);
+        afterProvider.setCancelRequested(1);
+        when(taskMapper.selectById(34L)).thenReturn(task);
+        when(executionDetailMapper.selectById(34L)).thenReturn(beforeProvider);
+        when(executionDetailMapper.selectByIdForUpdate(34L)).thenReturn(afterProvider);
+        AtomicBoolean persisted = new AtomicBoolean(false);
+
+        AiJobExecutionResult result = new AiJobCompletionServiceImpl(taskMapper, executionDetailMapper)
+                .complete(34L, () -> {
+                    persisted.set(true);
+                    return new AiJobExecutionResult("operation_report", 74L, "model", null, null, null, null, 2L);
+                });
+
+        assertThat(result).isNull();
+        assertThat(persisted).isTrue();
         verify(executionDetailMapper, never()).updateById(any(BizAiExecutionDetail.class));
     }
 }

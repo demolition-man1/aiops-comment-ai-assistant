@@ -280,7 +280,27 @@ export default {
     tokenUsage: 'Tokens',
     estimatedCost: 'Custo estimado',
     latencyMs: 'Latência',
-    errorMessage: 'Mensagem de erro'
+    jobId: 'ID da tarefa',
+    queueLatency: 'Latência da fila',
+    providerLatency: 'Latência do provedor',
+    totalLatency: 'Latência total',
+    errorCategory: 'Categoria da falha',
+    failureCategories: {
+      cancelled: 'Cancelado',
+      timeout: 'Tempo de chamada esgotado',
+      provider_timeout: 'Tempo do provedor esgotado',
+      provider_rate_limited: 'Limite do provedor atingido',
+      provider_auth: 'Autenticação do provedor falhou',
+      authentication: 'Autenticação do provedor falhou',
+      rate_limited: 'Limite do provedor atingido',
+      provider_rejected: 'Solicitação recusada pelo provedor',
+      provider_temporary: 'Provedor temporariamente indisponível',
+      invalid_output: 'Saída inválida do provedor',
+      configuration: 'Erro de configuração do serviço',
+      worker_interrupted: 'Executor interrompido',
+      internal: 'Erro interno do serviço',
+      unknown: 'Erro desconhecido'
+    }
   },
   importCenter: {
     title: 'Central de Importação de Dados',
@@ -749,6 +769,7 @@ export default {
     created: 'A tarefa de IA #{jobId} foi enviada. Acompanhe o progresso na Central de tarefas.',
     progress: 'Progresso da tarefa de IA', live: 'Ao vivo', reconnecting: 'Reconectando',
     cancellationRequested: 'Cancelamento solicitado', resultReady: 'Resultado pronto', cancel: 'Cancelar tarefa', retry: 'Tentar novamente', openResult: 'Abrir resultado',
+    queueLatency: 'Latência da fila', providerLatency: 'Latência do provedor', totalLatency: 'Latência total',
     stages: { preparing: 'Preparando', retrieving: 'Buscando contexto', generating: 'Gerando', validating: 'Validando', persisting: 'Salvando resultado' }
   }
 }

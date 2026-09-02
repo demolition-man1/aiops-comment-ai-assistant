@@ -18,6 +18,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TaskMaintenanceServiceImpl implements TaskMaintenanceService {
 
+    private static final List<String> AI_JOB_TYPES = List.of(
+            "operation_report", "product_compare", "negative_reply", "content");
+
     private final BizAnalysisTaskMapper taskMapper;
     private final CacheService cacheService;
     private final TaskMaintenanceProperties properties;
@@ -32,7 +35,11 @@ public class TaskMaintenanceServiceImpl implements TaskMaintenanceService {
         List<BizAnalysisTask> tasks = taskMapper.selectList(new LambdaQueryWrapper<BizAnalysisTask>()
                 .eq(BizAnalysisTask::getTaskStatus, "processing")
                 .lt(BizAnalysisTask::getUpdateTime, cutoff));
+        int failedCount = 0;
         for (BizAnalysisTask task : tasks) {
+            if (task.getTaskType() != null && AI_JOB_TYPES.contains(task.getTaskType())) {
+                continue;
+            }
             task.setTaskStatus("failed");
             task.setProgress(100);
             task.setErrorMessage("定时任务检测到任务长时间处于处理中，已自动标记失败");
@@ -41,7 +48,8 @@ public class TaskMaintenanceServiceImpl implements TaskMaintenanceService {
             taskMapper.updateById(task);
             cacheService.set(String.format(RedisKeyConstant.TASK_STATUS, task.getId()), "failed", Duration.ofHours(2));
             cacheService.set(String.format(RedisKeyConstant.TASK_PROGRESS, task.getId()), 100, Duration.ofHours(2));
+            failedCount++;
         }
-        return tasks.size();
+        return failedCount;
     }
 }

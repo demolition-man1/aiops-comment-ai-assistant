@@ -14,6 +14,6 @@ public class AiJobStartupRecovery implements ApplicationListener<ApplicationRead
 
     @Override
     public void onApplicationEvent(ApplicationReadyEvent event) {
-        recoveryService.resubmitPendingJobs();
+        recoveryService.recoverJobs();
     }
 }

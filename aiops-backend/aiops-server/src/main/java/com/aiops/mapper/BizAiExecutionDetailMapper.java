@@ -24,4 +24,20 @@ public interface BizAiExecutionDetailMapper extends BaseMapper<BizAiExecutionDet
     int claimLease(@Param("taskId") Long taskId, @Param("version") Integer version,
                    @Param("leaseOwner") String leaseOwner, @Param("leaseUntil") LocalDateTime leaseUntil,
                    @Param("now") LocalDateTime now);
+
+    @Update("""
+            update biz_ai_execution_detail
+            set lease_until = #{leaseUntil}, update_time = #{now}
+            where task_id = #{taskId} and lease_owner = #{leaseOwner} and lease_until > #{now}
+            """)
+    int renewLease(@Param("taskId") Long taskId, @Param("leaseOwner") String leaseOwner,
+                   @Param("leaseUntil") LocalDateTime leaseUntil, @Param("now") LocalDateTime now);
+
+    @Update("""
+            update biz_ai_execution_detail
+            set lease_owner = null, lease_until = null, update_time = #{now}
+            where task_id = #{taskId} and lease_owner = #{leaseOwner}
+            """)
+    int releaseLease(@Param("taskId") Long taskId, @Param("leaseOwner") String leaseOwner,
+                     @Param("now") LocalDateTime now);
 }

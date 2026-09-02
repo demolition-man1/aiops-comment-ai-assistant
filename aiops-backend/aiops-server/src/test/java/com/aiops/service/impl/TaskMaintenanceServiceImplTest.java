@@ -56,4 +56,20 @@ class TaskMaintenanceServiceImplTest {
         verify(cacheService).set(eq(String.format(RedisKeyConstant.TASK_STATUS, 33L)), eq("failed"), any(Duration.class));
         verify(cacheService).set(eq(String.format(RedisKeyConstant.TASK_PROGRESS, 33L)), eq(100), any(Duration.class));
     }
+
+    @Test
+    void excludesDurableAiJobsFromGenericStaleTaskMaintenance() {
+        TaskMaintenanceProperties properties = new TaskMaintenanceProperties();
+        BizAnalysisTask aiTask = new BizAnalysisTask();
+        aiTask.setId(34L);
+        aiTask.setTaskType("operation_report");
+        aiTask.setTaskStatus("processing");
+        aiTask.setUpdateTime(LocalDateTime.now().minusHours(2));
+        when(taskMapper.selectList(any())).thenReturn(List.of(aiTask));
+
+        TaskMaintenanceServiceImpl service = new TaskMaintenanceServiceImpl(taskMapper, cacheService, properties);
+
+        assertThat(service.failStaleProcessingTasks()).isZero();
+        verify(taskMapper, org.mockito.Mockito.never()).updateById(any(BizAnalysisTask.class));
+    }
 }

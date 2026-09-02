@@ -280,7 +280,27 @@ export default {
     tokenUsage: 'Tokens',
     estimatedCost: 'Estimated Cost',
     latencyMs: 'Latency',
-    errorMessage: 'Error Message'
+    jobId: 'Job ID',
+    queueLatency: 'Queue latency',
+    providerLatency: 'Provider latency',
+    totalLatency: 'Total latency',
+    errorCategory: 'Failure category',
+    failureCategories: {
+      cancelled: 'Cancelled',
+      timeout: 'Call timed out',
+      provider_timeout: 'Provider timed out',
+      provider_rate_limited: 'Provider rate limited',
+      provider_auth: 'Provider authentication failed',
+      authentication: 'Provider authentication failed',
+      rate_limited: 'Provider rate limited',
+      provider_rejected: 'Provider rejected request',
+      provider_temporary: 'Provider temporarily unavailable',
+      invalid_output: 'Invalid provider output',
+      configuration: 'Service configuration error',
+      worker_interrupted: 'Worker interrupted',
+      internal: 'Internal service error',
+      unknown: 'Unknown error'
+    }
   },
   importCenter: {
     title: 'Data Import Center',
@@ -749,6 +769,7 @@ export default {
     created: 'AI job #{jobId} was submitted. Track its progress in Task Center.',
     progress: 'AI job progress', live: 'Live', reconnecting: 'Reconnecting',
     cancellationRequested: 'Cancellation requested', resultReady: 'Result ready', cancel: 'Cancel job', retry: 'Retry job', openResult: 'Open result',
+    queueLatency: 'Queue latency', providerLatency: 'Provider latency', totalLatency: 'Total latency',
     stages: { preparing: 'Preparing', retrieving: 'Retrieving context', generating: 'Generating', validating: 'Validating', persisting: 'Saving result' }
   }
 }

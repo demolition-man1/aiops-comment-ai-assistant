@@ -15,6 +15,7 @@ const exporting = ref(false)
 const retryingKey = ref('')
 const drawerVisible = ref(false)
 const selectedTask = ref<TaskRecord>()
+const selectedAiJob = ref<AiJob>()
 const tasks = ref<TaskRecord[]>([])
 const aiJobs = ref<Record<number, AiJob>>({})
 
@@ -77,7 +78,11 @@ const resetFilters = async () => {
 }
 
 const openDetail = async (row: TaskRecord) => {
-  selectedTask.value = await taskCenterApi.detail(row.recordKey)
+  const task = await taskCenterApi.detail(row.recordKey)
+  selectedTask.value = task
+  selectedAiJob.value = ['operation_report', 'product_compare', 'negative_reply', 'content'].includes(task.taskType)
+    ? await aiJobApi.job(task.sourceId)
+    : undefined
   drawerVisible.value = true
 }
 
@@ -224,6 +229,9 @@ onMounted(loadTasks)
         <el-descriptions-item :label="t('tasks.sourceTable')">{{ selectedTask.sourceTable }}</el-descriptions-item>
         <el-descriptions-item :label="t('tasks.startTime')">{{ selectedTask.startTime || t('common.dash') }}</el-descriptions-item>
         <el-descriptions-item :label="t('tasks.endTime')">{{ selectedTask.endTime || t('common.dash') }}</el-descriptions-item>
+        <el-descriptions-item v-if="selectedAiJob" :label="t('jobs.queueLatency')">{{ selectedAiJob.queueLatencyMs ?? 0 }}ms</el-descriptions-item>
+        <el-descriptions-item v-if="selectedAiJob" :label="t('jobs.providerLatency')">{{ selectedAiJob.providerLatencyMs ?? 0 }}ms</el-descriptions-item>
+        <el-descriptions-item v-if="selectedAiJob" :label="t('jobs.totalLatency')">{{ selectedAiJob.totalLatencyMs ?? 0 }}ms</el-descriptions-item>
         <el-descriptions-item :label="t('tasks.errorMessage')">
           <span class="task-error">{{ selectedTask.errorMessage || t('common.dash') }}</span>
         </el-descriptions-item>

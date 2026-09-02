@@ -138,6 +138,7 @@ create table if not exists sys_prompt_template (
 
 create table if not exists biz_ai_call_log (
     id bigint primary key auto_increment,
+    job_id bigint null,
     user_id bigint null,
     business_type varchar(64) not null,
     target_type varchar(32) null,
@@ -148,11 +149,15 @@ create table if not exists biz_ai_call_log (
     token_usage int null,
     estimated_cost decimal(12,6) null,
     latency_ms bigint null,
+    queue_latency_ms bigint null,
+    total_latency_ms bigint null,
+    error_code varchar(64) null,
     error_message text null,
     create_time datetime not null default current_timestamp,
     index idx_ai_call_log_business (business_type),
     index idx_ai_call_log_status (call_status),
     index idx_ai_call_log_target (target_type, target_id),
+    index idx_ai_call_log_job (job_id),
     index idx_ai_call_log_create_time (create_time)
 );
 

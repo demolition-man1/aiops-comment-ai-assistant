@@ -19,7 +19,9 @@ const overview = reactive<AiCallLogOverview>({
   successRate: 0,
   totalTokens: 0,
   totalCost: 0,
-  avgLatencyMs: 0
+  avgLatencyMs: 0,
+  avgQueueLatencyMs: 0,
+  avgTotalLatencyMs: 0
 })
 
 const query = reactive({
@@ -42,6 +44,10 @@ const displayBusinessType = (value?: string) => {
 
 const formatCost = (value?: number) => Number(value || 0).toFixed(6)
 const formatPercent = (value?: number) => `${Number(value || 0).toFixed(2)}%`
+const formatLatency = (value?: number) => `${Number(value || 0)}ms`
+const displayErrorCategory = (value?: string) => value
+  ? t(`aiLogs.failureCategories.${value}`)
+  : t('common.dash')
 
 const loadLogs = async () => {
   loading.value = true
@@ -93,7 +99,7 @@ onMounted(loadLogs)
       <MetricCard :title="t('aiLogs.totalTokens')" :value="overview.totalTokens" :hint="t('aiLogs.costHint', { cost: formatCost(overview.totalCost) })" tone="amber">
         <Coins :size="22" />
       </MetricCard>
-      <MetricCard :title="t('aiLogs.avgLatency')" :value="`${overview.avgLatencyMs || 0}ms`" :hint="t('aiLogs.latencyHint')" tone="red">
+      <MetricCard :title="t('aiLogs.totalLatency')" :value="formatLatency(overview.avgTotalLatencyMs)" :hint="`${t('aiLogs.queueLatency')}: ${formatLatency(overview.avgQueueLatencyMs)} · ${t('aiLogs.providerLatency')}: ${formatLatency(overview.avgLatencyMs)}`" tone="red">
         <Timer :size="22" />
       </MetricCard>
     </div>
@@ -140,15 +146,24 @@ onMounted(loadLogs)
         </el-table-column>
         <el-table-column prop="targetType" :label="t('aiLogs.targetType')" width="130" show-overflow-tooltip />
         <el-table-column prop="targetId" :label="t('aiLogs.targetId')" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="jobId" :label="t('aiLogs.jobId')" width="100" />
         <el-table-column prop="modelName" :label="t('common.model')" width="140" show-overflow-tooltip />
         <el-table-column prop="tokenUsage" :label="t('aiLogs.tokenUsage')" width="120" />
         <el-table-column :label="t('aiLogs.estimatedCost')" width="140">
           <template #default="{ row }">{{ formatCost(row.estimatedCost) }}</template>
         </el-table-column>
-        <el-table-column :label="t('aiLogs.latencyMs')" width="120">
-          <template #default="{ row }">{{ row.latencyMs || 0 }}ms</template>
+        <el-table-column :label="t('aiLogs.queueLatency')" width="120">
+          <template #default="{ row }">{{ formatLatency(row.queueLatencyMs) }}</template>
         </el-table-column>
-        <el-table-column prop="errorMessage" :label="t('aiLogs.errorMessage')" min-width="240" show-overflow-tooltip />
+        <el-table-column :label="t('aiLogs.providerLatency')" width="120">
+          <template #default="{ row }">{{ formatLatency(row.latencyMs) }}</template>
+        </el-table-column>
+        <el-table-column :label="t('aiLogs.totalLatency')" width="120">
+          <template #default="{ row }">{{ formatLatency(row.totalLatencyMs) }}</template>
+        </el-table-column>
+        <el-table-column :label="t('aiLogs.errorCategory')" min-width="160" show-overflow-tooltip>
+          <template #default="{ row }">{{ displayErrorCategory(row.errorCode) }}</template>
+        </el-table-column>
         <el-table-column prop="createTime" :label="t('common.createdAt')" width="180" show-overflow-tooltip />
       </el-table>
 

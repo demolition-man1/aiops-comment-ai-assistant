@@ -26,4 +26,8 @@ public class AiCallLogOverviewVO {
     private BigDecimal totalCost;
     @Schema(description = "平均耗时毫秒")
     private Long avgLatencyMs;
+    @Schema(description = "平均排队耗时毫秒")
+    private Long avgQueueLatencyMs;
+    @Schema(description = "平均总耗时毫秒")
+    private Long avgTotalLatencyMs;
 }

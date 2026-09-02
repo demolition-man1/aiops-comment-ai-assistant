@@ -23,7 +23,7 @@ public class AiJobCompletionServiceImpl implements AiJobCompletionService {
     @Transactional
     public AiJobExecutionResult complete(Long taskId, Supplier<AiJobExecutionResult> persistAction) {
         BizAnalysisTask task = taskMapper.selectById(taskId);
-        BizAiExecutionDetail detail = executionDetailMapper.selectByIdForUpdate(taskId);
+        BizAiExecutionDetail detail = executionDetailMapper.selectById(taskId);
         if (task == null || detail == null) {
             throw new BusinessException(404, "AI 任务不存在");
         }
@@ -32,6 +32,10 @@ public class AiJobCompletionServiceImpl implements AiJobCompletionService {
             return null;
         }
         AiJobExecutionResult result = persistAction.get();
+        detail = executionDetailMapper.selectByIdForUpdate(taskId);
+        if (detail == null) {
+            throw new BusinessException(404, "AI 任务不存在");
+        }
         if (Integer.valueOf(1).equals(detail.getCancelRequested())) {
             markCancelled(task);
             return null;

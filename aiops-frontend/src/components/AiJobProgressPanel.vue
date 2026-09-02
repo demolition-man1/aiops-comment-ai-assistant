@@ -33,6 +33,11 @@ watch(() => props.job.jobId, start)
       <span v-else-if="live.connected" class="muted">{{ t('jobs.live') }}</span>
     </div>
     <el-progress :percentage="Number(currentJob?.progress ?? props.job.progress ?? 0)" :stroke-width="7" />
+    <div v-if="currentJob?.queueLatencyMs !== undefined || currentJob?.providerLatencyMs !== undefined" class="timing-line muted">
+      {{ t('jobs.queueLatency') }} {{ currentJob?.queueLatencyMs ?? 0 }}ms ·
+      {{ t('jobs.providerLatency') }} {{ currentJob?.providerLatencyMs ?? 0 }}ms ·
+      {{ t('jobs.totalLatency') }} {{ currentJob?.totalLatencyMs ?? 0 }}ms
+    </div>
     <div class="ai-job-actions">
       <el-tooltip :content="t('jobs.cancel')">
         <el-button v-if="isActive(currentJob?.taskStatus || props.job.taskStatus)" circle size="small" type="danger" plain @click="live.cancel">
@@ -56,4 +61,5 @@ watch(() => props.job.jobId, start)
 <style scoped>
 .ai-job-progress { display: grid; gap: 8px; min-width: 180px; }
 .ai-job-actions { display: flex; justify-content: flex-end; gap: 6px; min-height: 28px; }
+.timing-line { font-size: 12px; white-space: nowrap; }
 </style>

@@ -280,7 +280,27 @@ export default {
     tokenUsage: 'Token',
     estimatedCost: '估算成本',
     latencyMs: '耗时',
-    errorMessage: '错误信息'
+    jobId: '任务 ID',
+    queueLatency: '排队耗时',
+    providerLatency: '模型耗时',
+    totalLatency: '总耗时',
+    errorCategory: '失败类别',
+    failureCategories: {
+      cancelled: '已取消',
+      timeout: '调用超时',
+      provider_timeout: '模型服务超时',
+      provider_rate_limited: '模型服务限流',
+      provider_auth: '模型服务认证失败',
+      authentication: '模型服务认证失败',
+      rate_limited: '模型服务限流',
+      provider_rejected: '模型服务拒绝请求',
+      provider_temporary: '模型服务暂时不可用',
+      invalid_output: '模型输出无效',
+      configuration: '服务配置错误',
+      worker_interrupted: '执行器中断',
+      internal: '服务内部错误',
+      unknown: '未知错误'
+    }
   },
   importCenter: {
     title: '数据导入中心',
@@ -749,6 +769,7 @@ export default {
     created: 'AI 任务 #{jobId} 已提交，可在任务中心查看进度',
     progress: 'AI 任务进度', live: '实时连接中', reconnecting: '正在恢复连接',
     cancellationRequested: '已请求取消', resultReady: '结果已生成', cancel: '取消任务', retry: '重试任务', openResult: '打开结果',
+    queueLatency: '排队耗时', providerLatency: '模型耗时', totalLatency: '总耗时',
     stages: { preparing: '准备中', retrieving: '检索上下文', generating: '生成中', validating: '校验结果', persisting: '保存结果' }
   }
 }

@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 public class BizAiCallLog {
     @TableId(type = IdType.AUTO)
     private Long id;
+    private Long jobId;
     private Long userId;
     private String businessType;
     private String targetType;
@@ -23,6 +24,9 @@ public class BizAiCallLog {
     private Integer tokenUsage;
     private BigDecimal estimatedCost;
     private Long latencyMs;
+    private Long queueLatencyMs;
+    private Long totalLatencyMs;
+    private String errorCode;
     private String errorMessage;
     private LocalDateTime createTime;
 }
